@@ -460,6 +460,50 @@ details.more summary{cursor:pointer;font-weight:700;color:var(--primary);padding
 .step-label b{color:var(--ink)}
 .desk-only{display:block}
 .tabbar{display:none}
+.cta-col{display:grid;gap:6px}
+.signin-btn{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-weight:800;color:var(--primary);border:1.5px solid var(--primary);border-radius:999px;padding:0 14px;height:40px;font-size:14px;white-space:nowrap}
+.signin-btn svg{width:18px;height:18px}
+.signin-btn.on,.signin-btn:hover{background:var(--tag)}
+.me-btn{width:40px;height:40px;border-radius:999px;background:var(--primary);color:#fff;display:grid;place-items:center;font-weight:800;text-decoration:none}
+.auth-wrap{max-width:440px}
+.auth-card{display:grid;gap:14px;padding:22px}
+.auth-card .pg-title{margin:0}
+.lead-s{margin:0;color:var(--muted)}
+.tel-row{display:grid;grid-template-columns:auto 1fr;gap:8px}
+.tel-row .cc{display:grid;place-items:center;border:1px solid var(--field);border-radius:12px;padding:0 12px;font-weight:700;background:#fff}
+.code-in{font-size:26px;letter-spacing:.5em;text-align:center;font-variant-numeric:tabular-nums}
+.seg.three{grid-template-columns:repeat(3,1fr)}
+.acc{justify-items:center;text-align:center}
+.avatar.big{width:72px;height:72px;font-size:30px}
+.acc-btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.site-footer a{color:var(--primary);font-weight:700}
+@media (max-width: 600px){ .signin-btn span{display:none} .signin-btn{padding:0;width:40px;justify-content:center} .hdr-right{gap:8px} }
+.chan-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 0}
+.chan-pill{font-size:13px;font-weight:800;background:var(--tag);color:var(--primary);border-radius:999px;padding:4px 12px}
+.sms-frame{background:#fff;border:1px solid var(--line);border-radius:22px;padding:10px 12px;margin-top:12px}
+.sms-head{text-align:center;font-size:12.5px;font-weight:700;color:var(--muted);padding:4px 0 8px;border-bottom:1px solid var(--line)}
+.sms-frame .bub.me{background:#2F7CF6;border-bottom-right-radius:6px}
+.sms-frame .bub.them{background:#E9E9EB;border:0;color:#111}
+.bub small{display:block;font-size:11px;opacity:.7;margin-top:4px}
+.privacy-note{font-size:13px;color:var(--muted);margin:4px 0 0}
+.mbar .cta-col{width:100%}
+.mbar .privacy-note{display:none}
+.inbox-btn{position:relative;display:grid;place-items:center;width:42px;height:42px;border-radius:999px;color:var(--ink);text-decoration:none}
+.inbox-btn.on,.inbox-btn:hover{background:var(--tag);color:var(--primary)}
+.inbox-btn .badge{position:absolute;top:4px;right:2px;min-width:18px;height:18px;border-radius:999px;background:var(--primary);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;padding:0 5px}
+.thread-row{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+.thread-row .last{margin:4px 0 0;font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60vw}
+.thread-row.unread h3,.thread-row.unread .last{color:var(--ink);font-weight:800}
+.dot-new{width:10px;height:10px;border-radius:999px;background:var(--primary);flex:none;margin-left:auto}
+.bubbles{display:flex;flex-direction:column;gap:8px;margin:16px 0}
+.bub{max-width:80%;padding:10px 14px;border-radius:18px;font-size:15px;line-height:1.4;white-space:pre-wrap}
+.bub.me{align-self:flex-end;background:var(--primary);color:#fff;border-bottom-right-radius:6px}
+.bub.them{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:6px}
+.bub.typing{color:var(--muted);letter-spacing:.2em}
+.reply{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;position:sticky;bottom:0;background:var(--page);padding:8px 0 12px}
+.reply textarea{min-height:48px}
+.quick{display:flex;flex-wrap:wrap;gap:6px}
+.quick .pill{height:auto;min-height:36px;padding:6px 12px;text-align:left;white-space:normal}
 .ctag{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:3px 10px;background:var(--tag);color:var(--primary);width:max-content}
 .ctag.ct-salon_sale{background:#E6F0FA;color:#1E4E7E}
 .ctag.ct-service{background:#FFF1D6;color:#7A4B00}
@@ -586,7 +630,7 @@ try { const s = localStorage.getItem('nailmatch-lang'); if (s === 'vi' || s === 
 
 const T = {
 vi: {
-  demoBar:'Bản demo – dữ liệu mẫu, không lưu thông tin',
+  demoBar:'Bản demo – dữ liệu mẫu',
   navAds:'Tin đăng', navSeekers:'Tìm thợ', navDirectory:'Danh bạ tiệm', navPrices:'Bảng giá', navContact:'Liên hệ',
   login:'Đăng nhập', postAd:'Đăng tin', menu:'Mở menu',
   heroTitle:'Tìm việc nail, tiệm sang nhượng và dịch vụ gần bạn',
@@ -699,7 +743,7 @@ vi: {
   starsLabel:(n)=>`${n}/5 sao`, agoDays:(n)=>n===0?'Hôm nay':`${n} ngày trước`
 },
 en: {
-  demoBar:'Demo – sample data, nothing is saved',
+  demoBar:'Demo – sample data',
   navAds:'Ads', navSeekers:'Job seekers', navDirectory:'Directory', navPrices:'Prices', navContact:'Contact',
   login:'Log in', postAd:'Post an ad', menu:'Open menu',
   heroTitle:'Find nail jobs, salons for sale, and services near you',
@@ -857,6 +901,68 @@ Object.assign(T.en, {
   m_moreBad:n=>`Show ${n} more that miss a must-have`,
   r_lic:'Texas license', r_days:'Work days', r_pay:'Pay', r_dist:'Distance'
 });
+Object.assign(T.vi, {
+  msgBtn:'Nhắn tin', msgPrivacy:'🔒 Số điện thoại được ẩn. Nhắn qua NailMatch.', msgTo:n=>`Nhắn ${n}`, msgQuick:'Chọn nhanh', msgPh:'Viết tin nhắn…', msgSend:'Gửi',
+  msgDemo:'Bản demo: tin nhắn và SMS là mô phỏng.', msgSent:'Đã gửi! Chúng tôi báo cho người nhận bằng tin nhắn, không lộ số của bạn.',
+  inbox:'Tin nhắn', inboxEmpty:'Chưa có tin nhắn. Bấm “Nhắn tin” ở tin đăng hoặc hồ sơ thợ.', inboxNote:'🔒 Cả hai bên đều không thấy số điện thoại của nhau. Có tin mới, NailMatch sẽ gửi SMS báo bạn.',
+  you:'Bạn', phonePrivate:'Số này được giữ kín, không hiện trên web. Có người nhắn, chúng tôi sẽ SMS báo bạn.',
+  q_ad:['Chào anh/chị, tiệm còn tuyển không ạ?','Em quan tâm, khi nào em qua làm thử được ạ?'],
+  q_salon_sale:['Tiệm còn sang không ạ?','Tuần này em qua xem tiệm được không ạ?'],
+  q_service:['Chào bạn, cho mình xin thêm thông tin và giá nhé.'],
+  q_tech:['Chào bạn, bạn còn tìm việc không?','Tiệm mình đang tuyển, bạn qua làm thử được không?'],
+  r_ad:'Cảm ơn em đã nhắn! Tiệm vẫn đang tuyển. Thứ Ba 10 giờ sáng em qua làm thử được không?',
+  r_salon_sale:'Dạ tiệm vẫn còn. Chiều các ngày trong tuần anh/chị qua xem được ạ.',
+  r_service:'Cảm ơn bạn! Mình sẽ gửi thông tin chi tiết ngay.',
+  r_tech:'Dạ em vẫn đang tìm việc. Tiệm cần thợ những ngày nào ạ?'
+});
+Object.assign(T.en, {
+  msgBtn:'Message', msgPrivacy:'🔒 Phone numbers are hidden. Message through NailMatch.', msgTo:n=>`Message ${n}`, msgQuick:'Quick picks', msgPh:'Write a message…', msgSend:'Send',
+  msgDemo:'Demo: messages and texts are simulated.', msgSent:'Sent! We notified them by text — your number stays private.',
+  inbox:'Messages', inboxEmpty:'No messages yet. Tap “Message” on any ad or tech profile.', inboxNote:'🔒 Neither side sees the other’s phone number. We text you when a new message arrives.',
+  you:'You', phonePrivate:'Kept private — never shown on the site. We text you when someone messages you.',
+  q_ad:['Hi, is this job still open?','I’m interested. When can I come in for a trial?'],
+  q_salon_sale:['Is the salon still for sale?','Can I visit this week?'],
+  q_service:['Hi, I’d like more info and pricing.'],
+  q_tech:['Hi, are you still looking for work?','We’re hiring. Can you come in for a trial?'],
+  r_ad:'Thanks for reaching out! Yes, still hiring. Can you come in Tuesday at 10am for a trial?',
+  r_salon_sale:'Yes, still available. Weekday afternoons work for a visit.',
+  r_service:'Thanks! I’ll send you the details shortly.',
+  r_tech:'Hi! Yes, I’m still looking. What days do you need someone?'
+});
+Object.assign(T.vi, {
+  rb_web:'Chat trên web', rb_sms:'SMS (số được ẩn)', rb_both:'Web + SMS',
+  rbField:'Nhận tin nhắn qua', rbHint:'SMS gửi từ số của NailMatch, người khác không thấy số thật của bạn.',
+  theyGet:v=>`Bên kia nhận tin qua: ${v}`, replyVia:'Bạn muốn nhận trả lời qua',
+  viaWeb:'qua web', viaSms:'qua SMS', smsHead:'📱 SMS từ NailMatch · (726) 237-5859', smsDemo:'Bản demo: mô phỏng tin SMS trên điện thoại của bạn. Trả lời SMS này cũng hiện lại trên web.',
+  switchWeb:'Chuyển sang chat web', switchSms:'Chuyển sang nhận SMS', clearMsgs:'Xóa tin nhắn demo',
+  savedLocal:'Tin nhắn được lưu trên trình duyệt này (bản demo). Bản thật sẽ lưu theo tài khoản, đổi máy vẫn thấy.', smsLogin:'SMS sẽ gửi tới số bạn dùng để đăng nhập.'
+});
+Object.assign(T.en, {
+  rb_web:'Web chat', rb_sms:'SMS (number hidden)', rb_both:'Web + SMS',
+  rbField:'Receive messages by', rbHint:'Texts come from a NailMatch number, so nobody sees your real number.',
+  theyGet:v=>`They receive messages by: ${v}`, replyVia:'Get replies by',
+  viaWeb:'via web', viaSms:'via SMS', smsHead:'📱 SMS from NailMatch · (726) 237-5859', smsDemo:'Demo: this simulates the texts on your phone. Replying by text also shows up on the web.',
+  switchWeb:'Switch to web chat', switchSms:'Switch to SMS', clearMsgs:'Clear demo messages',
+  savedLocal:'Messages are saved in this browser (demo). The real app saves them to your account, on any device.', smsLogin:'Texts go to the number you sign in with.'
+});
+Object.assign(T.vi, {
+  signIn:'Đăng nhập', authTitle:'Đăng nhập / Đăng ký', authLead:'Chỉ cần số điện thoại, không cần mật khẩu. Số của bạn luôn được giữ kín.',
+  authNew:'Chưa có tài khoản? Nhập số là tự tạo tài khoản mới.', phoneLbl:'Số điện thoại', errPhone:'Nhập đủ 10 số điện thoại Mỹ.',
+  codeLbl:'Mã 6 số', codeSentTo:p=>`Đã gửi mã tới ${p}.`, codeDemo:'Bản demo: nhập 6 số bất kỳ, vd 123456.', verify:'Xác nhận', changeNum:'Đổi số', errCode:'Nhập đủ 6 số.',
+  profTitle:'Chào bạn mới! 👋', profLead:'Cho mình biết tên và bạn là ai.', nameLbl:'Tên hoặc tên tiệm', roleLbl:'Bạn là', done:'Xong',
+  role_salon:'Chủ tiệm', role_tech:'Thợ nail', role_other:'Khác',
+  welcome:n=>`Chào ${n}!`, account:'Tài khoản', signOut:'Đăng xuất', myMsgs:'Tin nhắn của tôi', postNew:'Đăng tin mới',
+  needLogin:'Đăng nhập để nhắn tin và xem tin nhắn.', support:'Hỗ trợ: nhắn/gọi', smsTo:p=>`SMS sẽ gửi tới số của bạn: ${p}`
+});
+Object.assign(T.en, {
+  signIn:'Sign in', authTitle:'Sign in / Sign up', authLead:'Just your phone number, no password. Your number always stays private.',
+  authNew:'No account yet? Enter your number and we create one for you.', phoneLbl:'Phone number', errPhone:'Enter a 10-digit US phone number.',
+  codeLbl:'6-digit code', codeSentTo:p=>`We sent a code to ${p}.`, codeDemo:'Demo: enter any 6 digits, e.g. 123456.', verify:'Verify', changeNum:'Change number', errCode:'Enter all 6 digits.',
+  profTitle:'Welcome! 👋', profLead:'Tell us your name and who you are.', nameLbl:'Your name or salon name', roleLbl:'I am a', done:'Done',
+  role_salon:'Salon owner', role_tech:'Nail tech', role_other:'Other',
+  welcome:n=>`Welcome, ${n}!`, account:'Account', signOut:'Sign out', myMsgs:'My messages', postNew:'Post an ad',
+  needLogin:'Sign in to send and read messages.', support:'Support: text/call', smsTo:p=>`Texts go to your number: ${p}`
+});
 const SHORT = {acrylic_full:['Bột','Acrylic'], acrylic_fill:['Fill bột','Fill'], dip:['Dip','Dip'], gelx:['Gel-X','Gel-X'], hard_gel:['Gel cứng','Hard gel'], gel_polish:['Sơn gel','Gel polish'], manicure:['Tay nước','Manicure'], pedicure:['Chân nước','Pedicure'], ombre_french:['Ombre/French','Ombre/French'], art_basic:['Vẽ cơ bản','Basic art'], art_advanced:['Vẽ 3D','3D art'], waxing:['Wax','Wax'], lashes:['Nối mi','Lashes']};
 function svcShort(id){ const x = SHORT[id]; return x ? x[lang === 'vi' ? 0 : 1] : id; }
 function t(k, ...a){ const v = (T[lang][k] !== undefined ? T[lang][k] : T.vi[k]); if (v === undefined) return k; return typeof v === 'function' ? v(...a) : v; }
@@ -888,6 +994,7 @@ const OPTS = {
   speed: mk([['45','≤ 45 phút','≤ 45 min'],['60','≤ 60 phút','≤ 60 min'],['90','≤ 90 phút','≤ 90 min']]),
   tips: mk([['tech_keeps','Thợ giữ 100% tip','Tech keeps 100%'],['shared','Chia tip','Shared'],['not_stated','Không ghi','Not stated']]),
   arrangement: mk([['w2','Nhân viên (W-2)','Employee (W-2)'],['1099','Thầu (1099)','Contractor (1099)'],['not_stated','Không ghi','Not stated']]),
+  receiveBy: mk([['both','Web + SMS','Web + SMS'],['web','Chat trên web','Web chat'],['sms','SMS (số được ẩn)','SMS (number hidden)']]),
   contactBy: mk([['call','Gọi điện','Call'],['text','Nhắn tin','Text'],['both','Gọi hoặc nhắn','Call or text']]),
   languages: mk([['vi','Tiếng Việt','Vietnamese'],['en','Tiếng Anh','English'],['es','Tiếng Tây Ban Nha','Spanish']]),
   travel: mk([['5','5 dặm','5 miles'],['10','10 dặm','10 miles'],['20','20 dặm','20 miles'],['30','30 dặm','30 miles']]),
@@ -1218,7 +1325,7 @@ const state = {
   search:{st:'TX', city:'San Antonio', zip:'', within:20},
   center:{lat:CITIES['San Antonio'][0], lng:CITIES['San Antonio'][1], name:'San Antonio'},
   cat:'all', filters:emptyFilters(), tf:emptyTechFilters(), tmp:null,
-  revealed:new Set(), forms:{}, menu:false, dir:{q:'', city:''}, login:{phone:'', sent:false}, modal:null, alert:null,
+  revealed:new Set(), user:loadUser(), auth:{step:'phone', phone:'', err:false, role:'tech'}, after:null, threads:loadThreads(), msgTo:null, msgChan:'web', forms:{}, menu:false, dir:{q:'', city:''}, login:{phone:'', sent:false}, modal:null, alert:null,
   match:{side:'salon', adId:'h1', techId:'t1'}, pf:'', extraPf:{}, extraRv:{}, pm:null
 };
 
@@ -1237,6 +1344,7 @@ const ICON = {
   user:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
   phoneLg:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>',
   freeTag:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+  mail:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
   home:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>',
   bag:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>',
   plus:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
@@ -1305,11 +1413,106 @@ function avatarOf(tc){ const pf = tc.portfolio ? tc.portfolio : allPortfolio(tc)
   return src ? `<img class="avatar" src="${src}" alt="">` : `<span class="avatar ini">${esc((tc.name || '?').slice(0, 1))}</span>`; }
 function where(zip, city){ const d = ZIPS[zip] ? dist(zip) : null; return `${ICON.pin}${esc(placeName(zip, city) || 'TX')}${d !== null ? ` · ${d} ${t('milesS')}` : ''}`; }
 function factChips(list){ return `<div class="facts">${list.filter(Boolean).map(x => `<span class="fact">${esc(x)}</span>`).join('')}</div>`; }
-function contactBlock(id, phone){
-  const d = String(phone).replace(/\D/g, '');
-  return state.revealed.has(id)
-    ? `<div class="cta-row"><a class="btn btn-primary" href="tel:${d}">${ICON.phone}${fmtPhone(phone)}</a><a class="btn btn-ghost" href="sms:${d}">${ICON.chat}${t('textS')}</a></div>`
-    : `<div class="cta-row"><button class="btn btn-primary btn-block" type="button" data-act="reveal" data-v="${id}">${ICON.phone}${t('showPhone')}</button></div>`;
+function loadUser(){ try { return JSON.parse(localStorage.getItem('nailmatch_user_v1') || 'null'); } catch (e) { return null; } }
+function saveUser(){ try { if (state.user) localStorage.setItem('nailmatch_user_v1', JSON.stringify(state.user)); else localStorage.removeItem('nailmatch_user_v1'); } catch (e) {} }
+function accounts(){ try { return JSON.parse(localStorage.getItem('nailmatch_accounts_v1') || '{}'); } catch (e) { return {}; } }
+function saveAccount(u){ try { const a = accounts(); a[u.phone] = u; localStorage.setItem('nailmatch_accounts_v1', JSON.stringify(a)); } catch (e) {} }
+const maskPhone = p => { const d = String(p).replace(/\D/g, ''); return `(•••) •••-${d.slice(-4)}`; };
+function viewLogin(){
+  const a = state.auth;
+  if (state.user && a.step !== 'profile') return viewAccount();
+  let body;
+  if (a.step === 'code') body = `<h1 class="pg-title">${t('codeLbl')}</h1><p class="lead-s">${t('codeSentTo', fmtPhone(a.phone))}</p>
+      <div class="fq${a.err ? ' has-err' : ''}"><label class="flabel" for="au-code">${t('codeLbl')}</label><input id="au-code" class="code-in" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">${a.err ? `<p class="err">${t('errCode')}</p>` : ''}<p class="hint">${t('codeDemo')}</p></div>
+      <button class="btn btn-primary btn-block" type="button" data-act="auverify">${t('verify')}</button>
+      <p style="text-align:center;margin-top:12px"><button class="btn-link" type="button" data-act="auback">${t('changeNum')}</button></p>`;
+  else if (a.step === 'profile') body = `<h1 class="pg-title">${t('profTitle')}</h1><p class="lead-s">${t('profLead')}</p>
+      <div class="fq${a.err ? ' has-err' : ''}"><label class="flabel" for="au-name">${t('nameLbl')}</label><input id="au-name" type="text" maxlength="40" value="${esc(a.name || '')}">${a.err ? `<p class="err">${t('errRequired')}</p>` : ''}</div>
+      <div class="fq"><span class="flabel">${t('roleLbl')}</span><div class="seg three" role="radiogroup">${['salon','tech','other'].map(r => `<button type="button" role="radio" aria-checked="${a.role === r}" class="${a.role === r ? 'on' : ''}" data-act="aurole" data-v="${r}">${t('role_' + r)}</button>`).join('')}</div></div>
+      <button class="btn btn-primary btn-block" type="button" data-act="audone">${t('done')}</button>`;
+  else body = `<h1 class="pg-title">${t('authTitle')}</h1><p class="lead-s">${t('authLead')}</p>
+      <div class="fq${a.err ? ' has-err' : ''}"><label class="flabel" for="au-phone">${t('phoneLbl')}</label><div class="tel-row"><span class="cc">🇺🇸 +1</span><input id="au-phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(210) 555-0123" value="${esc(a.phone || '')}"></div>${a.err ? `<p class="err">${t('errPhone')}</p>` : ''}</div>
+      <button class="btn btn-primary btn-block" type="button" data-act="ausend">${t('sendCode')}</button>
+      <p class="hint" style="text-align:center;margin-top:12px">${t('authNew')}</p>`;
+  return `<div class="wrap auth-wrap page"><div class="card auth-card">${body}</div></div>`;
+}
+function viewAccount(){
+  const u = state.user;
+  if (!u) return viewLogin();
+  return `<div class="wrap narrow page"><div class="card auth-card acc">
+    <span class="avatar ini big">${esc((u.name || '?').slice(0, 1).toUpperCase())}</span>
+    <h1 class="pg-title" style="margin:8px 0 2px">${esc(u.name)}</h1><p class="biz">${t('role_' + (u.role || 'other'))} · ${maskPhone(u.phone)}</p>
+    <div class="acc-btns"><a class="btn btn-primary" href="#inbox">${ICON.mail}${t('myMsgs')}</a><a class="btn btn-ghost" href="#post">${t('postNew')}</a></div>
+    <button class="btn-link" type="button" data-act="signout" style="margin-top:14px">${t('signOut')}</button></div></div>`;
+}
+function loginGate(){ return `<div class="wrap narrow page"><div class="card auth-card" style="text-align:center"><p style="font-size:34px;margin:0">🔒</p><p class="lead-s">${t('needLogin')}</p><a class="btn btn-primary btn-block" href="#login">${t('signIn')}</a></div></div>`; }
+function afterAuth(){
+  const nx = state.after; state.after = null;
+  if (nx && nx.msgTo){ location.hash = nx.hash || '#home'; setTimeout(() => { state.msgTo = nx.msgTo; state.msgChan = 'web'; openModal('msg'); }, 60); }
+  else location.hash = nx && nx.hash ? nx.hash : '#account';
+}
+const RB_FROM = {call:'sms', text:'web', both:'both'};
+ADS.forEach(a => { if (!a.receiveBy) a.receiveBy = RB_FROM[a.contactBy] || 'both'; });
+TECHS.forEach(x => { if (!x.receiveBy) x.receiveBy = RB_FROM[x.contactBy] || 'both'; });
+const rbText = v => t('rb_' + (v || 'both'));
+/* demo persistence: browser storage only */
+function loadThreads(){ try { const v = JSON.parse(localStorage.getItem('nailmatch_threads_v1') || '[]'); return Array.isArray(v) ? v.map(x => Object.assign(x, {typing:false})) : []; } catch (e) { return []; } }
+function saveThreads(){ try { localStorage.setItem('nailmatch_threads_v1', JSON.stringify(state.threads.map(x => Object.assign({}, x, {typing:false})))); } catch (e) {} }
+function contactBlock(id){
+  const tg = contactTarget(id);
+  return `<div class="cta-col"><button class="btn btn-primary btn-block" type="button" data-act="msgopen" data-v="${id}">${ICON.chat}${t('msgBtn')}</button><p class="privacy-note">${t('msgPrivacy')}${tg ? ` · ${esc(t('theyGet', rbText(tg.rb)))}` : ''}</p></div>`;
+}
+function contactTarget(id){
+  const ad = ADS.find(a => a.id === id); if (ad) return {id, kind:ad.type === 'hiring' ? 'ad' : ad.type, name:adBiz(ad), title:titleOf(ad), rb:ad.receiveBy};
+  const tc = TECHS.find(x => x.id === id); if (tc) return {id, kind:'tech', name:tc.name, title:(tc.services || []).slice(0, 3).map(x => svcShort(x.id)).join(' · '), rb:tc.receiveBy};
+  return null;
+}
+function unreadCount(){ return state.threads.filter(x => x.unread).length; }
+function viewInbox(){
+  if (!state.user) return loginGate();
+  const th = state.threads.slice().sort((a, b) => b.updated - a.updated);
+  return `<div class="wrap narrow page"><h1 class="pg-title">${t('inbox')}</h1><p class="hint">${t('inboxNote')}</p><p class="privacy-note" style="margin-bottom:12px">${t('savedLocal')}</p>
+    ${th.length ? `<div class="list">${th.map(x => { const last = x.msgs[x.msgs.length - 1];
+      return `<a class="card thread-row${x.unread ? ' unread' : ''}" href="#inbox-${x.id}"><div class="mname"><h3>${esc(x.name)}</h3><p class="biz">${esc(x.title)}</p><p class="last">${x.channel === 'sms' ? '📱 ' : '💬 '}${last.me ? t('you') + ': ' : ''}${esc(last.text)}</p></div>${x.unread ? '<span class="dot-new" aria-label="new"></span>' : ''}</a>`; }).join('')}</div>`
+      : `<p class="empty-s">${t('inboxEmpty')}</p>`}
+    ${th.length ? `<p style="text-align:center;margin-top:18px"><button type="button" class="btn-link" data-act="msgclear">${t('clearMsgs')}</button></p>` : ''}</div>`;
+}
+function viewThread(id){
+  if (!state.user) return loginGate();
+  const x = state.threads.find(z => z.id === id);
+  if (!x) return notFound();
+  if (x.unread){ x.unread = false; saveThreads(); }
+  const sms = x.channel === 'sms';
+  const back = x.kind === 'tech' ? `#tech-${x.to}` : `#ad-${x.to}`;
+  return `<div class="wrap narrow page"><a class="back" href="#inbox">${ICON.back}${t('inbox')}</a>
+    <div class="thread-head"><div><h1 class="pg-title" style="margin:0">${esc(x.name)}</h1><a class="biz" href="${back}">${esc(x.title)}</a></div></div>
+    <p class="privacy-note">${t('inboxNote')} ${esc(t('theyGet', rbText(x.rb)))}.</p>
+    <div class="chan-row"><span class="chan-pill">${sms ? '📱 ' + t('rb_sms') : '💬 ' + t('rb_web')}</span><button type="button" class="btn-link" data-act="thchan" data-v="${x.id}">${sms ? t('switchWeb') : t('switchSms')}</button></div>
+    <div class="${sms ? 'sms-frame' : ''}">${sms ? `<div class="sms-head">${t('smsHead')}</div>` : ''}
+    <div class="bubbles">${x.msgs.map(m => `<div class="bub ${m.me ? 'me' : 'them'}">${esc(m.text)}${!m.me && m.via ? `<small>${m.via === 'sms' ? t('viaSms') : t('viaWeb')}</small>` : ''}</div>`).join('')}${x.typing ? '<div class="bub them typing">…</div>' : ''}</div></div>
+    ${sms ? `<p class="privacy-note">${t('smsDemo')}</p>` : ''}
+    <div class="reply"><label class="sr" for="th-text">${t('msgPh')}</label><textarea id="th-text" rows="2" maxlength="500" placeholder="${esc(t('msgPh'))}"></textarea><button class="btn btn-primary" type="button" data-act="thsend" data-v="${x.id}">${t('msgSend')}</button></div>
+  </div>`;
+}
+function modalMsg(){
+  const tg = contactTarget(state.msgTo); if (!tg) return '';
+  const quick = t('q_' + tg.kind) || [];
+  return `<div class="modal-head"><h2 id="m-title">${esc(t('msgTo', tg.name))}</h2><button class="x" type="button" data-act="mclose" aria-label="${t('close')}">×</button></div>
+    <p class="biz" style="margin:0">${esc(tg.title)}</p>
+    <div class="fq"><span class="flabel">${t('msgQuick')}</span><div class="quick">${quick.map((q, i) => `<button type="button" class="pill sm" data-act="msgquick" data-v="${i}">${esc(q)}</button>`).join('')}</div></div>
+    <div class="fq"><label class="flabel" for="msg-text">${t('message')}</label><textarea id="msg-text" rows="4" maxlength="500" placeholder="${esc(t('msgPh'))}"></textarea><p class="err" id="msg-err" hidden>${t('errRequired')}</p></div>
+    <div class="fq"><span class="flabel">${t('replyVia')}</span><div class="seg" role="radiogroup">${['web','sms'].map(c => `<button type="button" role="radio" aria-checked="${state.msgChan === c}" class="${state.msgChan === c ? 'on' : ''}" data-act="msgchan" data-v="${c}">${c === 'web' ? '💬 ' + t('rb_web') : '📱 ' + t('rb_sms')}</button>`).join('')}</div>
+      ${state.msgChan === 'sms' ? `<p class="hint" style="margin:6px 0 0">${t('smsTo', fmtPhone(state.user.phone))}</p>` : ''}</div>
+    <p class="privacy-note">${t('msgPrivacy')} ${esc(t('theyGet', rbText(tg.rb)))}.</p><p class="hint" style="margin:0">${t('msgDemo')}</p>
+    <div class="modal-foot"><span></span><button class="btn btn-primary" type="button" data-act="msgsend">${t('msgSend')}</button></div>`;
+}
+function addMessage(th, text){
+  th.msgs.push({me:true, text}); th.updated = Date.now(); saveThreads();
+  if (!th.replied){
+    th.replied = true; th.typing = true;
+    setTimeout(() => { th.typing = false; th.msgs.push({me:false, text:t('r_' + th.kind), via:th.rb === 'web' ? 'web' : 'sms'}); th.updated = Date.now(); saveThreads();
+      const r = route(); if (r.view === 'thread' && r.id === th.id) render(); else { th.unread = true; render(); } }, 2200);
+  }
 }
 
 /* ---------- cards ---------- */
@@ -1421,7 +1624,7 @@ function viewAd(id){
       <p class="biz">${esc(adBiz(ad))}</p>
       <span class="loc">${where(ad.zip, ad.city)} · ${postedText(ad.daysAgo)}</span>
       ${factChips([opt('jobType', h.jobType), h.techsNeeded > 1 ? t('techsN', h.techsNeeded) : '', h.experience ? opt('experience', h.experience) : '', h.license === 'required' ? (lang === 'vi' ? 'Cần bằng' : 'License') : '', h.days ? daysText(h.days) : '', h.hours ? `${fmtTime(h.hours[0])}–${fmtTime(h.hours[1])}` : '', h.tips === 'tech_keeps' ? opt('tips', 'tech_keeps') : ''])}
-      <div class="desk-only">${contactBlock(ad.id, ad.phone)}</div>
+      <div class="desk-only">${contactBlock(ad.id)}</div>
     </div>
     <h2 class="sec">${t('need')}</h2>${svcCardsStatic(must)}
     ${plus.length ? `<h2 class="sec">${t('plusH')}</h2>${svcCardsStatic(plus)}` : ''}
@@ -1449,7 +1652,7 @@ function viewOtherAd(ad){
     <div class="card dhead">${catTag(ad)}${top}<h1>${esc(titleOf(ad))}</h1><p class="biz">${esc(adBiz(ad))}</p>
       <span class="loc">${where(ad.zip, ad.city)} · ${postedText(ad.daysAgo)}</span>
       ${factChips(facts)}
-      <div class="desk-only">${contactBlock(ad.id, ad.phone)}</div></div>
+      <div class="desk-only">${contactBlock(ad.id)}</div></div>
     ${extra}
   </div>`;
 }
@@ -1477,7 +1680,7 @@ function viewTech(id){
     <div class="card dhead"><div class="tc-head big">${avatarOf(tc)}<div><h1>${esc(tc.name)}</h1><span class="loc">${where(tc.zip, tc.city)}</span>${ratingLine(tc) ? `<div>${ratingLine(tc)}</div>` : ''}</div></div>
       ${factChips([tc.years ? opt('years', tc.years) : '', (tc.jobType || []).map(j => opt('jobType', j)).join(' / '), tc.license ? opt('techLicense', tc.license) + ' (' + t('selfReported') + ')' : '', techPay(tc.payWanted), tc.days ? daysText(tc.days) : ''])}
       ${tc.about ? `<p class="desc">${esc(L(tc.about))}</p>` : ''}
-      <div class="desk-only">${contactBlock(tc.id, tc.phone)}</div></div>
+      <div class="desk-only">${contactBlock(tc.id)}</div></div>
     <div class="sps big">${svcs.map(x => svcPill(x.id, 'lv-' + x.level) ).join('')}</div>
     <p class="legend"><span><i class="dot f"></i>${opt('level','very_good')}</span><span><i class="dot"></i>${opt('level','good')}</span><span><i class="dot" style="border-style:dashed;border-color:var(--field)"></i>${opt('level','learning')}</span></p>
     <div class="sec-head"><h2>${t('workS')}</h2><a class="btn-link" href="#portfolio-${tc.id}">${t('seeAll')} (${pf.length}) →</a></div>${portfolioGrid(pf, 6)}
@@ -1599,9 +1802,9 @@ const FORMS = {
     {title:{vi:'Liên hệ',en:'Contact'}, fields:[
       {k:'businessName', type:'text', req:1, label:{vi:'Tên tiệm',en:'Salon name'}, ph:{vi:'VD: Mây Nail Studio',en:'e.g. Mây Nail Studio'}},
       {k:'city', type:'select', req:1, label:{vi:'Thành phố',en:'City'}, options:CITY_OPTS},
-      {k:'phone', type:'tel', req:1, label:{vi:'Số điện thoại',en:'Phone'}},
+      {k:'phone', type:'tel', req:1, hintKey:'phonePrivate', label:{vi:'Số điện thoại (giữ kín)',en:'Phone (kept private)'}},
+      {k:'receiveBy', type:'chips', opt:'receiveBy', hintKey:'rbHint', label:{vi:'Nhận tin nhắn qua',en:'Receive messages by'}},
       {k:'zip', type:'zip', more:1, label:{vi:'Mã ZIP',en:'ZIP code'}},
-      {k:'contactBy', type:'chips', opt:'contactBy', more:1, label:{vi:'Cách liên hệ',en:'Contact by'}}
     ]}
   ]},
   sale: {title:{vi:'Sang tiệm',en:'Salon for sale'}, steps:[
@@ -1620,10 +1823,10 @@ const FORMS = {
     ]},
     {title:{vi:'Liên hệ',en:'Contact'}, fields:[
       {k:'city', type:'select', req:1, label:{vi:'Thành phố',en:'City'}, options:CITY_OPTS},
-      {k:'phone', type:'tel', req:1, label:{vi:'Số điện thoại',en:'Phone'}},
+      {k:'phone', type:'tel', req:1, hintKey:'phonePrivate', label:{vi:'Số điện thoại (giữ kín)',en:'Phone (kept private)'}},
+      {k:'receiveBy', type:'chips', opt:'receiveBy', hintKey:'rbHint', label:{vi:'Nhận tin nhắn qua',en:'Receive messages by'}},
       {k:'businessName', type:'text', more:1, label:{vi:'Tên tiệm (để trống = giấu tên)',en:'Salon name (blank = hidden)'}},
       {k:'zip', type:'zip', more:1, label:{vi:'Mã ZIP',en:'ZIP code'}},
-      {k:'contactBy', type:'chips', opt:'contactBy', more:1, label:{vi:'Cách liên hệ',en:'Contact by'}}
     ]}
   ]},
   service: {title:{vi:'Đăng dịch vụ',en:'Post a service'}, steps:[
@@ -1635,9 +1838,9 @@ const FORMS = {
     {title:{vi:'Liên hệ',en:'Contact'}, fields:[
       {k:'businessName', type:'text', req:1, label:{vi:'Tên doanh nghiệp',en:'Business name'}},
       {k:'area', type:'select', req:1, label:{vi:'Khu vực phục vụ',en:'Area served'}, options:[{v:'all_tx', vi:'Toàn Texas', en:'All of Texas'}].concat(CITY_OPTS)},
-      {k:'phone', type:'tel', req:1, label:{vi:'Số điện thoại',en:'Phone'}},
+      {k:'phone', type:'tel', req:1, hintKey:'phonePrivate', label:{vi:'Số điện thoại (giữ kín)',en:'Phone (kept private)'}},
+      {k:'receiveBy', type:'chips', opt:'receiveBy', hintKey:'rbHint', label:{vi:'Nhận tin nhắn qua',en:'Receive messages by'}},
       {k:'zip', type:'zip', more:1, label:{vi:'Mã ZIP',en:'ZIP code'}},
-      {k:'contactBy', type:'chips', opt:'contactBy', more:1, label:{vi:'Cách liên hệ',en:'Contact by'}}
     ]}
   ]},
   profile: {title:{vi:'Hồ sơ thợ',en:'Tech profile'}, profile:true, steps:[
@@ -1663,21 +1866,21 @@ const FORMS = {
     {title:{vi:'Liên hệ',en:'Contact'}, fields:[
       {k:'name', type:'text', req:1, label:{vi:'Tên hoặc nickname',en:'Name or nickname'}},
       {k:'city', type:'select', req:1, label:{vi:'Thành phố',en:'City'}, options:CITY_OPTS},
-      {k:'phone', type:'tel', req:1, label:{vi:'Số điện thoại',en:'Phone'}},
+      {k:'phone', type:'tel', req:1, hintKey:'phonePrivate', label:{vi:'Số điện thoại (giữ kín)',en:'Phone (kept private)'}},
+      {k:'receiveBy', type:'chips', opt:'receiveBy', hintKey:'rbHint', label:{vi:'Nhận tin nhắn qua',en:'Receive messages by'}},
       {k:'travel', type:'chips', opt:'travel', label:{vi:'Đi làm xa tối đa',en:'Will travel up to'}},
       {k:'zip', type:'zip', more:1, label:{vi:'Mã ZIP',en:'ZIP code'}},
-      {k:'contactBy', type:'chips', opt:'contactBy', more:1, label:{vi:'Cách liên hệ',en:'Contact by'}}
     ]}
   ]}
 };
 const DEFAULTS = {
-  sale:{contactBy:'both', chairs:0, tables:0, staff:0, photos:[], city:'San Antonio'},
-  service:{contactBy:'both', area:'San Antonio'},
-  hiring:{contactBy:'both', techsNeeded:1, services:{}, days:[], languages:[], photos:[]},
-  profile:{contactBy:'both', travel:'10', services:{}, jobType:[], days:[], languages:[], photos:[], reviews:[]}
+  sale:{contactBy:'both', receiveBy:'both', chairs:0, tables:0, staff:0, photos:[], city:'San Antonio'},
+  service:{contactBy:'both', receiveBy:'both', area:'San Antonio'},
+  hiring:{contactBy:'both', receiveBy:'both', techsNeeded:1, services:{}, days:[], languages:[], photos:[]},
+  profile:{contactBy:'both', receiveBy:'both', travel:'10', services:{}, jobType:[], days:[], languages:[], photos:[], reviews:[]}
 };
 function getForm(type){
-  if (!state.forms[type]) state.forms[type] = {step:0, data:Object.assign({city:'San Antonio'}, JSON.parse(JSON.stringify(DEFAULTS[type]))), errors:{}, done:false, titleEdited:false, assist:{text:'', out:null}, aboutDrafted:false};
+  if (!state.forms[type]) state.forms[type] = {step:0, data:Object.assign({city:'San Antonio'}, JSON.parse(JSON.stringify(DEFAULTS[type])), state.user ? {phone:state.user.phone} : {}), errors:{}, done:false, titleEdited:false, assist:{text:'', out:null}, aboutDrafted:false};
   return state.forms[type];
 }
 function fid(type, k){ return `f-${type}-${k}`; }
@@ -1765,7 +1968,7 @@ function autoTitle(type, d){
 function previewObject(type, fs){
   const d = fs.data;
   const title = fs.titleEdited ? d.title : autoTitle(type, d);
-  const base = {id:'preview', businessName:d.private ? null : d.businessName, zip:d.zip, city:type === 'service' ? (d.area === 'all_tx' ? '' : d.area) : d.city, phone:d.phone, contactBy:d.contactBy, daysAgo:0, title};
+  const base = {id:'preview', businessName:d.private ? null : d.businessName, zip:d.zip, city:type === 'service' ? (d.area === 'all_tx' ? '' : d.area) : d.city, phone:d.phone, contactBy:d.contactBy, receiveBy:d.receiveBy, daysAgo:0, title};
   if (type === 'hiring'){
     const services = Object.keys(d.services).map(id => ({id, need:d.services[id]}));
     return Object.assign(base, {type:'hiring', hiring:{services, jobType:d.jobType, payType:d.payType, commissionPct:num(d.commissionPct), amount:num(d.amount), experience:d.experience, license:d.license, days:d.days}});
@@ -2046,7 +2249,7 @@ function renderModal(){
   const root = document.getElementById('modal-root');
   if (!state.modal){ root.innerHTML = ''; return; }
   const scroll = root.querySelector('.modal') ? root.querySelector('.modal').scrollTop : 0;
-  const html = state.modal === 'filters' ? modalFilters() : state.modal === 'tfilters' ? modalTechFilters() : state.modal === 'pfadd' ? modalPfAdd() : state.modal === 'rvadd' ? modalRvAdd() : modalAlerts();
+  const html = state.modal === 'filters' ? modalFilters() : state.modal === 'tfilters' ? modalTechFilters() : state.modal === 'pfadd' ? modalPfAdd() : state.modal === 'rvadd' ? modalRvAdd() : state.modal === 'msg' ? modalMsg() : modalAlerts();
   root.innerHTML = `<div class="modal-bg" data-act="mbg"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="m-title">${html}</div></div>`;
   root.querySelector('.modal').scrollTop = scroll;
 }
@@ -2067,7 +2270,8 @@ function toast(msg){ const el = document.getElementById('toast'); el.textContent
 /* ---------- layout + routing ---------- */
 function route(){
   let h = (location.hash || '').replace(/^#/, '') || 'home';
-  if (['directory','contact','login','prices','services','for-sale','matching'].includes(h)) h = 'home';
+  if (['directory','contact','prices','services','for-sale','matching'].includes(h)) h = 'home';
+  if (h.startsWith('inbox-')) return {view:'thread', id:h.slice(6)};
   if (h.startsWith('ad-')) return {view:'ad', id:h.slice(3)};
   if (h.startsWith('tech-')) return {view:'tech', id:h.slice(5)};
   if (h.startsWith('portfolio-')) return {view:'portfolio', id:h.slice(10)};
@@ -2082,6 +2286,8 @@ function header(r){
     <a class="brand" href="#home"><span class="logo">${ICON.drop}</span><span>NailMatch</span></a>
     <nav class="main-nav" aria-label="Main">${nav.map(([h, k]) => `<a href="#${h}"${isOn(h) ? ' class="active" aria-current="page"' : ''}>${t(k)}</a>`).join('')}</nav>
     <div class="hdr-right">
+      ${state.user ? `<a class="me-btn${r.view === 'account' ? ' on' : ''}" href="#account" aria-label="${t('account')}">${esc((state.user.name || '?').slice(0, 1).toUpperCase())}</a>` : `<a class="signin-btn${r.view === 'login' ? ' on' : ''}" href="#login">${ICON.user}<span>${t('signIn')}</span></a>`}
+      <a class="inbox-btn${r.view === 'inbox' || r.view === 'thread' ? ' on' : ''}" href="#inbox" aria-label="${t('inbox')}">${ICON.mail}${unreadCount() ? `<span class="badge">${unreadCount()}</span>` : ''}</a>
       <div class="lang" role="group" aria-label="Language"><button type="button" data-act="lang" data-v="vi" class="${lang === 'vi' ? 'on' : ''}" aria-pressed="${lang === 'vi'}">VI</button><button type="button" data-act="lang" data-v="en" class="${lang === 'en' ? 'on' : ''}" aria-pressed="${lang === 'en'}">EN</button></div>
       <a class="btn btn-primary hdr-post" href="#post">${t('postAd')}</a>
     </div></div>
@@ -2094,7 +2300,7 @@ function tabBar(r){
 function mobileBar(r){
   if (r.view === 'ad' || r.view === 'tech'){
     const item = r.view === 'ad' ? ADS.find(a => a.id === r.id) : TECHS.find(x => x.id === r.id);
-    return item ? contactBlock(item.id, item.phone) : '';
+    return item ? contactBlock(item.id) : '';
   }
   return '';
 }
@@ -2109,15 +2315,19 @@ function render(){
     case 'tech': main = viewTech(r.id); break;
     case 'portfolio': main = viewPortfolio(r.id); break;
     case 'post': main = viewPostChoose(); break;
+    case 'inbox': main = viewInbox(); break;
+    case 'login': main = viewLogin(); break;
+    case 'account': main = viewAccount(); break;
+    case 'thread': main = viewThread(r.id); break;
     case 'form': main = r.type ? viewForm(r.type) : notFound(); break;
     default: main = notFound();
   }
   const mb = mobileBar(r);
   document.documentElement.lang = lang;
   document.getElementById('app').innerHTML = header(r) + `<main id="main">${main}</main>
-    <footer class="site-footer"><div class="wrap"><span>${t('footS')}</span><span>${t('photoCredit')}</span></div></footer>
-    ${mb ? `<div class="mbar">${mb}</div>` : (r.view === 'form' ? '' : tabBar(r))}`;
-  document.body.classList.toggle('has-mbar', !!mb || r.view !== 'form');
+    <footer class="site-footer"><div class="wrap"><span>${t('footS')}</span><span>${t('support')} <a href="sms:+17262375859">(726) 237-5859</a></span><span>${t('photoCredit')}</span></div></footer>
+    ${mb ? `<div class="mbar">${mb}</div>` : (r.view === 'form' || r.view === 'thread' ? '' : tabBar(r))}`;
+  document.body.classList.toggle('has-mbar', !!mb || (r.view !== 'form' && r.view !== 'thread'));
   renderModal();
 }
 
@@ -2159,6 +2369,40 @@ const ACT = {
   alerts(){ openModal('alerts'); },
   mclose(){ closeModal(); },
   mbg(el, e){ if (e.target === el) closeModal(); },
+  msgopen(el){ if (!state.user){ state.after = {hash:location.hash, msgTo:el.dataset.v}; location.hash = '#login'; return; } state.msgTo = el.dataset.v; state.msgChan = 'web'; openModal('msg'); setTimeout(() => { const ta = document.getElementById('msg-text'); if (ta) ta.focus(); }, 30); },
+  msgquick(el){ const tg = contactTarget(state.msgTo); const ta = document.getElementById('msg-text'); ta.value = t('q_' + tg.kind)[Number(el.dataset.v)]; document.getElementById('msg-err').hidden = true; ta.focus(); },
+  msgsend(){
+    const ta = document.getElementById('msg-text'), text = ta.value.trim();
+    if (!text){ document.getElementById('msg-err').hidden = false; ta.focus(); return; }
+    const tg = contactTarget(state.msgTo);
+    let th = state.threads.find(x => x.to === tg.id);
+    if (!th){ th = {id:'m' + Date.now().toString(36), to:tg.id, kind:tg.kind, name:tg.name, title:tg.title, rb:tg.rb || 'both', msgs:[], updated:Date.now()}; state.threads.push(th); }
+    th.channel = state.msgChan;
+    addMessage(th, text);
+    state.modal = null; toast(t('msgSent')); location.hash = '#inbox-' + th.id;
+  },
+  msgchan(el){ const ta = document.getElementById('msg-text'), keep = ta ? ta.value : ''; state.msgChan = el.dataset.v; renderModal(); const nt = document.getElementById('msg-text'); if (nt){ nt.value = keep; } },
+  thchan(el){ const th = state.threads.find(x => x.id === el.dataset.v); th.channel = th.channel === 'sms' ? 'web' : 'sms'; saveThreads(); render(); },
+  msgclear(){ state.threads = []; saveThreads(); render(); },
+  ausend(){ const v = document.getElementById('au-phone').value, d = v.replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+    state.auth.phone = v; if (d.length !== 10){ state.auth.err = true; render(); return; }
+    state.auth = {step:'code', phone:d, err:false, role:'tech'}; render(); setTimeout(() => { const c = document.getElementById('au-code'); if (c) c.focus(); }, 30); },
+  auback(){ state.auth.step = 'phone'; state.auth.err = false; render(); },
+  auverify(){ const c = document.getElementById('au-code').value.replace(/\D/g, '');
+    if (c.length !== 6){ state.auth.err = true; render(); return; }
+    const known = accounts()[state.auth.phone];
+    if (known){ state.user = known; saveUser(); state.auth = {step:'phone', phone:'', err:false, role:'tech'}; toast(t('welcome', known.name)); afterAuth(); }
+    else { state.auth.step = 'profile'; state.auth.err = false; render(); } },
+  aurole(el){ const n = document.getElementById('au-name'); state.auth.name = n ? n.value : ''; state.auth.role = el.dataset.v; render(); },
+  audone(){ const n = document.getElementById('au-name').value.trim();
+    if (!n){ state.auth.err = true; state.auth.name = ''; render(); return; }
+    state.user = {phone:state.auth.phone, name:n, role:state.auth.role}; saveUser(); saveAccount(state.user);
+    state.auth = {step:'phone', phone:'', err:false, role:'tech'}; toast(t('welcome', n)); afterAuth(); },
+  signout(){ state.user = null; saveUser(); location.hash = '#home'; render(); },
+  thsend(el){
+    const ta = document.getElementById('th-text'), text = ta.value.trim(); if (!text) return;
+    const th = state.threads.find(x => x.id === el.dataset.v); addMessage(th, text); render();
+  },
   tf(el){
     const g = el.dataset.g, v = el.dataset.v, f = state.tmp;
     if (Array.isArray(f[g])) f[g] = f[g].includes(v) ? f[g].filter(x => x !== v) : f[g].concat(v);
