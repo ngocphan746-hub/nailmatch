@@ -678,6 +678,10 @@ details.more summary{cursor:pointer;font-weight:700;color:var(--primary);padding
 @media (min-width: 961px) and (max-width: 1140px){ .main-nav{gap:16px;font-size:15px} .hdr{gap:16px} }
 @media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important}}
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -923,7 +927,7 @@ en: {
 }};
 Object.assign(T.vi, {
   nav_home:'Trang chủ', nav_jobs:'Việc làm', nav_techs:'Thợ', nav_post:'Đăng', nav_match:'Ghép',
-  h_title:'Nơi tiệm nail và thợ nail Texas gặp nhau.', h_sub:'Miễn phí 100% · Không phí · Không gói tháng', h_salon:'Tôi cần thợ', h_tech:'Tôi tìm việc',
+  h_title:'Nơi tiệm nail và thợ nail gặp nhau.', h_sub:'Miễn phí 100% · Không phí · Không gói tháng', h_salon:'Tôi cần thợ', h_tech:'Tôi tìm việc',
   lane_salon:'Tiệm', lane_tech:'Thợ', s1:'Đăng tin', s2:'Xem % hợp', s3:'Gọi thợ', t1:'Tạo hồ sơ', t2:'Được ghép', t3:'Tiệm gọi',
   newJobs:'Việc mới', seeAll:'Xem tất cả', jobsTitle:'Việc làm', techsTitle:'Thợ tìm việc', allSvc2:'Tất cả',
   need:'Cần', plusH:'Điểm cộng', matchTechs:'Thợ hợp nhất', matchSalons:'Tiệm hợp nhất', textS:'Nhắn',
@@ -935,7 +939,7 @@ Object.assign(T.vi, {
 });
 Object.assign(T.en, {
   nav_home:'Home', nav_jobs:'Jobs', nav_techs:'Techs', nav_post:'Post', nav_match:'Match',
-  h_title:'Where Texas salons and nail techs connect.', h_sub:'100% free · No fees · No subscription', h_salon:'I need techs', h_tech:'I need a job',
+  h_title:'Where nail salons and nail techs connect.', h_sub:'100% free · No fees · No subscription', h_salon:'I need techs', h_tech:'I need a job',
   lane_salon:'Salon', lane_tech:'Tech', s1:'Post a job', s2:'See match %', s3:'Call techs', t1:'Make profile', t2:'Get matched', t3:'Salons call',
   newJobs:'New jobs', seeAll:'See all', jobsTitle:'Jobs', techsTitle:'Techs looking for work', allSvc2:'All',
   need:'Needs', plusH:'A plus', matchTechs:'Best-matching techs', matchSalons:'Best-matching salons', textS:'Text',
@@ -2915,6 +2919,500 @@ document.addEventListener('submit', e => {
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && state.modal) closeModal(); });
 window.addEventListener('hashchange', () => { state.menu = false; state.modal = null; render(); window.scrollTo(0, 0); });
+
+/* ================= LIVE MODE (Firebase) =================
+   Runs only when the Firebase SDK loaded. Otherwise the page stays a pure demo. */
+const FB_CFG = {
+  apiKey: "AIzaSyDfawqsLXd-NmgCSHYXkZztYPPcUjEMeHk",
+  authDomain: "nailmatch-9bc36.firebaseapp.com",
+  projectId: "nailmatch-9bc36",
+  storageBucket: "nailmatch-9bc36.firebasestorage.app",
+  messagingSenderId: "384067412987",
+  appId: "1:384067412987:web:74ec84b41ceb7d4442615e"
+};
+const LIVE = (() => { try { return !!(window.firebase && window.firebase.initializeApp && window.firebase.firestore && window.firebase.auth && window.firebase.storage); } catch (e) { return false; } })();
+if (LIVE) initLive();
+
+function initLive(){
+  firebase.initializeApp(FB_CFG);
+  const auth = firebase.auth(), db = firebase.firestore(), stg = firebase.storage();
+  const TS = () => firebase.firestore.FieldValue.serverTimestamp();
+  const ms = x => x && typeof x.toMillis === 'function' ? x.toMillis() : (typeof x === 'number' ? x : 0);
+  const EST = {serverTimestamps:'estimate'};
+  const digits10 = v => String(v || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+  const L_ = state.live = {threads:[], threadsReady:false, msgs:{}, msgSub:null, readMarked:{}, cr:null, unsubs:[]};
+
+  /* ---------- texts ---------- */
+  Object.assign(T.vi, {
+    footS:'NailMatch · Miễn phí', demoBar:'Bản thử nghiệm · Tin có nhãn “Tin mẫu” chỉ là ví dụ', sampleTag:'Tin mẫu',
+    sampleNote:'Đây là tin mẫu để bạn xem thử, không phải tiệm/thợ thật.', sampleNoMsg:'Đây là tin mẫu nên không nhắn tin được.', sampleNoContact:'Tin mẫu – không liên hệ được.',
+    ownPost:'Đây là tin của bạn.', withGoogle:'Tiếp tục với Google', orWord:'hoặc', sendLink:'Gửi link đăng nhập',
+    authLead:'Không cần mật khẩu. Số điện thoại và email của bạn luôn được giữ kín.', authNew:'Chưa có tài khoản? Đăng nhập lần đầu là tự tạo tài khoản.',
+    emailSentTitle:'Kiểm tra email', emailSentTo:e => `Đã gửi link đăng nhập tới ${e}. Mở email trên máy này và bấm vào link để vào.`, emailSpam:'Không thấy email? Xem mục Spam / Quảng cáo.',
+    emailConfirmTitle:'Xác nhận email', emailConfirmLead:'Nhập lại email bạn đã dùng để nhận link đăng nhập.', confirmBtn:'Xác nhận',
+    codeHintLive:'Mã SMS có hiệu lực trong vài phút.', sending:'Đang gửi…', loadingTxt:'Đang tải…',
+    publishing:'Đang đăng…', uploading:(i, n) => `Đang tải ảnh/video ${i}/${n}…`, published:'Đã đăng! Mọi người đã thấy tin của bạn.', publishErr:'Đăng không được, thử lại nhé.',
+    loginToPost:'Đăng nhập để đăng tin – thông tin bạn vừa nhập vẫn được giữ.', doneText:'Tin đã được đăng lên NailMatch. Khi có người nhắn, bạn sẽ thấy trong mục Tin nhắn.',
+    doneTitle:'Đã đăng tin!', doneProfileTitle:'Đã đăng hồ sơ!', viewMyAd:'Xem tin', viewMyProfile:'Xem hồ sơ',
+    myPosts:'Tin của tôi', noPosts:'Bạn chưa đăng tin nào.', delPost:'Xóa tin', confirmDel:'Xóa tin này? Không khôi phục được.', deleted:'Đã xóa.',
+    inboxNote:'🔒 Tin nhắn lưu theo tài khoản – đổi máy vẫn thấy. Hai bên không thấy số điện thoại của nhau.',
+    msgPrivacyLive:'🔒 Người nhận chỉ thấy tên bạn, không thấy số điện thoại.', msgSent:'Đã gửi!', applySent:'Đã gửi hồ sơ ứng tuyển!',
+    verifiedDemo:'đã nhập số bằng', applicantsTitle:'Thợ đang tìm việc trên NailMatch:', fileTooBig:'File quá lớn (tối đa 50 MB).',
+    e_phone:'Số điện thoại không hợp lệ.', e_many:'Thử quá nhiều lần. Đợi vài phút rồi thử lại.', e_code:'Mã không đúng.', e_expired:'Mã đã hết hạn, gửi lại mã mới.',
+    e_domain:'Trang này chưa được phép đăng nhập (Authorized domains).', e_off:'Cách đăng nhập này chưa được bật trong Firebase.', e_net:'Mất mạng, kiểm tra kết nối rồi thử lại.',
+    e_perm:'Chưa có quyền đọc/ghi dữ liệu (Firebase rules).', e_gen:'Có lỗi, thử lại nhé.', e_link:'Link đăng nhập đã hết hạn hoặc đã dùng. Gửi link mới nhé.'
+  });
+  Object.assign(T.en, {
+    footS:'NailMatch · Free', demoBar:'Beta · Posts marked “Sample” are examples', sampleTag:'Sample',
+    sampleNote:'This is a sample post to show how it works – not a real salon or tech.', sampleNoMsg:'This is a sample post, so messaging is off.', sampleNoContact:'Sample post – contact is off.',
+    ownPost:'This is your post.', withGoogle:'Continue with Google', orWord:'or', sendLink:'Send sign-in link',
+    authLead:'No password needed. Your phone and email always stay private.', authNew:'New here? Signing in the first time creates your account.',
+    emailSentTitle:'Check your email', emailSentTo:e => `We sent a sign-in link to ${e}. Open it on this device to sign in.`, emailSpam:'Don’t see it? Check Spam / Promotions.',
+    emailConfirmTitle:'Confirm your email', emailConfirmLead:'Enter the email you used to get the sign-in link.', confirmBtn:'Confirm',
+    codeHintLive:'The SMS code expires in a few minutes.', sending:'Sending…', loadingTxt:'Loading…',
+    publishing:'Posting…', uploading:(i, n) => `Uploading photo/video ${i}/${n}…`, published:'Posted! Everyone can see it now.', publishErr:'Couldn’t post. Please try again.',
+    loginToPost:'Sign in to post – what you entered is kept.', doneText:'Your post is live on NailMatch. When someone messages you, it shows up in Messages.',
+    doneTitle:'Your ad is live!', doneProfileTitle:'Your profile is live!', viewMyAd:'View post', viewMyProfile:'View profile',
+    myPosts:'My posts', noPosts:'You haven’t posted anything yet.', delPost:'Delete', confirmDel:'Delete this post? This can’t be undone.', deleted:'Deleted.',
+    inboxNote:'🔒 Messages are saved to your account – on any device. Neither side sees the other’s phone number.',
+    msgPrivacyLive:'🔒 They only see your name, never your phone number.', msgSent:'Sent!', applySent:'Application sent!',
+    verifiedDemo:'license # provided', applicantsTitle:'Techs looking for work on NailMatch:', fileTooBig:'File too large (max 50 MB).',
+    e_phone:'That phone number isn’t valid.', e_many:'Too many tries. Wait a few minutes and try again.', e_code:'Wrong code.', e_expired:'Code expired. Send a new one.',
+    e_domain:'This site isn’t allowed to sign in yet (Authorized domains).', e_off:'This sign-in method isn’t turned on in Firebase.', e_net:'No connection. Check your internet and try again.',
+    e_perm:'No permission to read/write data (Firebase rules).', e_gen:'Something went wrong. Please try again.', e_link:'This sign-in link expired or was already used. Send a new one.'
+  });
+  function errText(e){
+    const c = (e && e.code) || '';
+    const k = {'auth/invalid-phone-number':'e_phone','auth/missing-phone-number':'e_phone','auth/too-many-requests':'e_many','auth/quota-exceeded':'e_many','auth/invalid-verification-code':'e_code',
+      'auth/code-expired':'e_expired','auth/unauthorized-domain':'e_domain','auth/operation-not-allowed':'e_off','auth/network-request-failed':'e_net','permission-denied':'e_perm',
+      'auth/invalid-action-code':'e_link','auth/expired-action-code':'e_link','auth/invalid-email':'errEmail'}[c];
+    return k ? t(k) : t('e_gen') + (c ? ` (${c})` : '');
+  }
+
+  /* ---------- style ---------- */
+  const st = document.createElement('style');
+  st.textContent = `.ct-sample{background:#FFF1D6;color:#8A5A00;border:1px solid #F1D49A}.sample-note{background:#FFF8E8;border:1px solid #F1D49A;color:#7A5200;border-radius:12px;padding:10px 14px;margin:0 0 12px;font-size:14px}
+  .gbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;border:1px solid var(--line,#ddd);background:#fff;color:#222;border-radius:12px;padding:13px 16px;font:inherit;font-weight:600;cursor:pointer}
+  .gbtn svg{width:20px;height:20px}.or-sep{display:flex;align-items:center;gap:10px;color:#888;font-size:13px;margin:16px 0}.or-sep:before,.or-sep:after{content:"";flex:1;height:1px;background:#e5e5e5}
+  .auth-msg{color:#B3261E;font-size:14px;margin:8px 0 0}.bub small.tm{display:block;opacity:.6;font-size:11px;margin-top:2px}.mypost{position:relative}.mypost .del{margin-top:6px}
+  button[disabled]{opacity:.6;pointer-events:none}.cta-note{margin:0;font-size:14px;color:#6B5A60;text-align:center;width:100%;padding:6px 0}`;
+  document.head.appendChild(st);
+
+  /* ---------- trim + mark samples ---------- */
+  const KEEP_ADS = ['h1','h2','h3','h4','p1','v1'], KEEP_T = ['t1','t2','t3'];
+  for (let i = ADS.length - 1; i >= 0; i--) if (!KEEP_ADS.includes(ADS[i].id)) ADS.splice(i, 1);
+  for (let i = TECHS.length - 1; i >= 0; i--) if (!KEEP_T.includes(TECHS[i].id)) TECHS.splice(i, 1);
+  ADS.forEach(a => { a.sample = true; }); TECHS.forEach(x => { x.sample = true; });
+  /* messaging is web-only for now: hide the SMS/receive-by choices in forms */
+  Object.values(FORMS).forEach(F => F.steps.forEach(s => { s.fields = s.fields.filter(f => f.k !== 'receiveBy' && f.k !== 'contactBy'); }));
+
+  state.user = null; state.threads = []; state.myProfile = null; state.pendingUser = null;
+  state.auth = {step:'start', method:'phone', phone:'', email:'', msg:'', busy:false, role:'tech'};
+
+  /* ---------- "after login" memory (survives redirects / email link) ---------- */
+  function setAfter(o){ state.after = o; try { localStorage.setItem('nm_after', JSON.stringify({o, t:Date.now()})); } catch (e) {} }
+  function takeAfter(){ let o = state.after; if (!o){ try { const v = JSON.parse(localStorage.getItem('nm_after') || 'null'); if (v && Date.now() - v.t < 3600e3) o = v.o; } catch (e) {} }
+    state.after = null; try { localStorage.removeItem('nm_after'); } catch (e) {} return o; }
+  const origAfterAuth = afterAuth;
+  afterAuth = function(){ state.after = takeAfter(); origAfterAuth(); };
+
+  /* ---------- rendering helpers ---------- */
+  function renderKeep(){
+    const ids = ['th-text','msg-text','ap-note'], vals = {}, foc = document.activeElement && document.activeElement.id;
+    ids.forEach(i => { const e = document.getElementById(i); if (e) vals[i] = {v:e.value, s:e.selectionStart}; });
+    render();
+    ids.forEach(i => { const e = document.getElementById(i); if (e && vals[i]) e.value = vals[i].v; });
+    if (foc){ const e = document.getElementById(foc); if (e){ try { e.focus({preventScroll:true}); if (vals[foc]) e.setSelectionRange(vals[foc].s, vals[foc].s); } catch (_) {} } }
+  }
+  function softRender(){ const v = route().view; if (v === 'form' || v === 'login') return; renderKeep(); }
+
+  /* ---------- public data: ads + tech profiles ---------- */
+  const daysSince = x => Math.max(0, Math.floor((Date.now() - (ms(x) || Date.now())) / 86400000));
+  function fromDoc(doc){
+    try {
+      const d = doc.data(EST), o = d.ad || {};
+      return Object.assign({}, o, {id:doc.id, live:true, ownerUid:d.ownerUid, ownerName:d.ownerName || '', daysAgo:daysSince(d.createdAt)});
+    } catch (e) { return null; }
+  }
+  function replaceLive(arr, list){ for (let i = arr.length - 1; i >= 0; i--) if (arr[i].live) arr.splice(i, 1); arr.unshift(...list); }
+  db.collection('ads').orderBy('createdAt', 'desc').limit(300).onSnapshot(snap => {
+    replaceLive(ADS, snap.docs.map(fromDoc).filter(a => a && ['hiring','salon_sale','service'].includes(a.type) && (a.type !== 'hiring' || (a.hiring && a.hiring.services))));
+    softRender();
+  }, e => console.warn('ads', e));
+  db.collection('techs').orderBy('updatedAt', 'desc').limit(300).onSnapshot(snap => {
+    replaceLive(TECHS, snap.docs.map(fromDoc).filter(x => x && x.name && Array.isArray(x.services)));
+    if (state.user) state.myProfile = TECHS.find(x => x.live && x.id === state.user.uid) || null;
+    softRender();
+  }, e => console.warn('techs', e));
+
+  /* ---------- auth ---------- */
+  function startUserListeners(){
+    stopUserListeners();
+    const uid = state.user.uid;
+    L_.unsubs.push(db.collection('threads').where('members', 'array-contains', uid).onSnapshot(snap => {
+      L_.threads = snap.docs.map(d => Object.assign({id:d.id}, d.data(EST))); L_.threadsReady = true; softRender();
+    }, e => { console.warn('threads', e); L_.threadsReady = true; softRender(); }));
+    state.myProfile = TECHS.find(x => x.live && x.id === uid) || null;
+  }
+  function stopUserListeners(){ L_.unsubs.forEach(u => { try { u(); } catch (e) {} }); L_.unsubs = []; L_.threads = []; L_.threadsReady = false; unsubMsgs(); }
+  function freshAuth(){ return {step:'start', method:state.auth.method || 'phone', phone:'', email:'', msg:'', busy:false, role:'tech'}; }
+
+  auth.onAuthStateChanged(async u => {
+    if (!u){ stopUserListeners(); state.user = null; state.pendingUser = null; state.myProfile = null; render(); return; }
+    let d = null;
+    try { const doc = await db.collection('users').doc(u.uid).get(); d = doc.exists ? doc.data() : null; } catch (e) { console.warn('user doc', e); }
+    const base = {uid:u.uid, email:u.email || (d && d.email) || '', phone:(d && d.phone) || (u.phoneNumber ? digits10(u.phoneNumber) : '')};
+    if (d && d.name){
+      state.user = Object.assign(base, {name:d.name, role:d.role || 'other'}); state.pendingUser = null;
+      startUserListeners();
+      if (state.auth.pending || route().view === 'login'){ state.auth = freshAuth(); toast(t('welcome', state.user.name)); afterAuth(); }
+      render();
+    } else {
+      state.user = null; state.pendingUser = Object.assign(base, {name:u.displayName || ''});
+      state.auth = Object.assign(freshAuth(), {step:'profile', name:u.displayName || '', role:'tech'});
+      if (route().view !== 'login') location.hash = '#login'; else render();
+    }
+  });
+  /* email-link return */
+  try {
+    if (auth.isSignInWithEmailLink(location.href)){
+      let em = null; try { em = localStorage.getItem('nm_email'); } catch (e) {}
+      state.emailLinkHref = location.href;
+      history.replaceState(null, '', location.pathname + '#login');
+      if (em) finishEmail(em); else state.auth = Object.assign(freshAuth(), {step:'emailconfirm', method:'email'});
+    }
+  } catch (e) { console.warn(e); }
+  function finishEmail(em){
+    state.auth.pending = true; state.auth.busy = true;
+    auth.signInWithEmailLink(em, state.emailLinkHref).then(() => { try { localStorage.removeItem('nm_email'); } catch (e) {} })
+      .catch(e => { state.auth = Object.assign(freshAuth(), {method:'email', msg:errText(e)}); render(); });
+  }
+  let rv = null;
+  function recaptcha(){
+    if (!rv){ let el = document.getElementById('recap'); if (!el){ el = document.createElement('div'); el.id = 'recap'; document.body.appendChild(el); }
+      rv = new firebase.auth.RecaptchaVerifier('recap', {size:'invisible'}); }
+    return rv;
+  }
+  function resetRecaptcha(){ try { if (rv) rv.clear(); } catch (e) {} rv = null; const el = document.getElementById('recap'); if (el) el.remove(); }
+
+  const GICON = '<svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+  viewLogin = function(){
+    const a = state.auth;
+    if (state.user && a.step !== 'profile') return viewAccount();
+    const msg = a.msg ? `<p class="auth-msg" role="alert">${esc(a.msg)}</p>` : '';
+    const dis = a.busy ? ' disabled' : '';
+    let body;
+    if (a.step === 'code') body = `<h1 class="pg-title">${t('codeLbl')}</h1><p class="lead-s">${t('codeSentTo', fmtPhone(a.phone))}</p>
+      <div class="fq"><label class="flabel" for="au-code">${t('codeLbl')}</label><input id="au-code" class="code-in" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">${msg}<p class="hint">${t('codeHintLive')}</p></div>
+      <button class="btn btn-primary btn-block" type="button" data-act="auverify"${dis}>${a.busy ? t('sending') : t('verify')}</button>
+      <p style="text-align:center;margin-top:12px"><button class="btn-link" type="button" data-act="auback">${t('changeNum')}</button></p>`;
+    else if (a.step === 'emailsent') body = `<p style="font-size:40px;margin:0;text-align:center">✉️</p><h1 class="pg-title" style="text-align:center">${t('emailSentTitle')}</h1>
+      <p class="lead-s">${esc(t('emailSentTo', a.email))}</p><p class="hint">${t('emailSpam')}</p>
+      <p style="text-align:center;margin-top:12px"><button class="btn-link" type="button" data-act="auback">${t('changeEmail')}</button></p>`;
+    else if (a.step === 'emailconfirm') body = `<h1 class="pg-title">${t('emailConfirmTitle')}</h1><p class="lead-s">${t('emailConfirmLead')}</p>
+      <div class="fq"><label class="flabel" for="au-email">${t('emailLbl')}</label><input id="au-email" type="email" inputmode="email" autocomplete="email" placeholder="ten@gmail.com">${msg}</div>
+      <button class="btn btn-primary btn-block" type="button" data-act="auemailconfirm"${dis}>${t('confirmBtn')}</button>`;
+    else if (a.step === 'profile'){
+      const p = state.pendingUser || {};
+      body = `<h1 class="pg-title">${t('profTitle')}</h1><p class="lead-s">${t('profLead')}</p>
+      <div class="fq"><label class="flabel" for="au-name">${t('nameLbl')}</label><input id="au-name" type="text" maxlength="40" value="${esc(a.name || '')}"></div>
+      ${!p.phone ? `<div class="fq"><label class="flabel" for="au-ph2">${t('phoneOpt')}</label><div class="tel-row"><span class="cc">🇺🇸 +1</span><input id="au-ph2" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(210) 555-0123" value="${esc(a.phone2 || '')}"></div></div>` : ''}
+      <div class="fq"><span class="flabel">${t('roleLbl')}</span><div class="seg three" role="radiogroup">${['salon','tech','other'].map(r => `<button type="button" role="radio" aria-checked="${a.role === r}" class="${a.role === r ? 'on' : ''}" data-act="aurole" data-v="${r}">${t('role_' + r)}</button>`).join('')}</div></div>
+      ${msg}<button class="btn btn-primary btn-block" type="button" data-act="audone"${dis}>${a.busy ? t('sending') : t('done')}</button>
+      <p style="text-align:center;margin-top:12px"><button class="btn-link" type="button" data-act="signout">${t('signOut')}</button></p>`;
+    } else {
+      const viaEmail = a.method === 'email';
+      body = `<h1 class="pg-title">${t('authTitle')}</h1><p class="lead-s">${t('authLead')}</p>
+      <button class="gbtn" type="button" data-act="augoogle"${dis}>${GICON}<span>${t('withGoogle')}</span></button>
+      <div class="or-sep">${t('orWord')}</div>
+      <div class="seg" role="radiogroup">${['phone','email'].map(m => `<button type="button" role="radio" aria-checked="${a.method === m}" class="${a.method === m ? 'on' : ''}" data-act="aumethod" data-v="${m}">${m === 'phone' ? '📱 ' + t('byPhone') : '✉️ ' + t('byEmail')}</button>`).join('')}</div>
+      ${viaEmail
+        ? `<div class="fq"><label class="flabel" for="au-email">${t('emailLbl')}</label><input id="au-email" type="email" inputmode="email" autocomplete="email" placeholder="ten@gmail.com" value="${esc(a.email || '')}"></div>`
+        : `<div class="fq"><label class="flabel" for="au-phone">${t('phoneLbl')}</label><div class="tel-row"><span class="cc">🇺🇸 +1</span><input id="au-phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(210) 555-0123" value="${esc(a.phone || '')}"></div></div>`}
+      ${msg}<button class="btn btn-primary btn-block" type="button" data-act="ausend"${dis}>${a.busy ? t('sending') : viaEmail ? t('sendLink') : t('sendCode')}</button>
+      <p class="hint" style="text-align:center;margin-top:12px">${t('authNew')}</p>`;
+    }
+    return `<div class="wrap auth-wrap page"><div class="card auth-card">${body}</div></div>`;
+  };
+  Object.assign(ACT, {
+    aumethod(el){ state.auth = Object.assign(freshAuth(), {method:el.dataset.v}); render(); },
+    augoogle(){
+      const a = state.auth; a.msg = ''; a.pending = true;
+      const pv = new firebase.auth.GoogleAuthProvider(); pv.setCustomParameters({prompt:'select_account'});
+      auth.signInWithPopup(pv).catch(e => {
+        if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') return auth.signInWithRedirect(pv);
+        if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+        a.msg = errText(e); render();
+      });
+    },
+    ausend(){
+      const a = state.auth; a.msg = '';
+      if (a.method === 'email'){
+        const v = document.getElementById('au-email').value.trim().toLowerCase(); a.email = v;
+        if (!isEmail(v)){ a.msg = t('errEmail'); render(); return; }
+        a.busy = true; render();
+        auth.sendSignInLinkToEmail(v, {url:location.origin + location.pathname, handleCodeInApp:true})
+          .then(() => { try { localStorage.setItem('nm_email', v); } catch (e) {} state.auth = Object.assign(freshAuth(), {method:'email', step:'emailsent', email:v}); render(); })
+          .catch(e => { a.busy = false; a.msg = errText(e); render(); });
+        return;
+      }
+      const raw = document.getElementById('au-phone').value, d = digits10(raw); a.phone = raw;
+      if (d.length !== 10){ a.msg = t('errPhone'); render(); return; }
+      a.busy = true; render();
+      auth.signInWithPhoneNumber('+1' + d, recaptcha())
+        .then(cr => { L_.cr = cr; state.auth = Object.assign(freshAuth(), {method:'phone', step:'code', phone:d}); render(); setTimeout(() => { const c = document.getElementById('au-code'); if (c) c.focus(); }, 30); })
+        .catch(e => { console.warn(e); resetRecaptcha(); a.busy = false; a.msg = errText(e); render(); });
+    },
+    auverify(){
+      const a = state.auth, c = document.getElementById('au-code').value.replace(/\D/g, '');
+      if (c.length !== 6){ a.msg = t('errCode'); render(); return; }
+      if (!L_.cr){ state.auth = freshAuth(); render(); return; }
+      a.busy = true; a.msg = ''; a.pending = true; render();
+      L_.cr.confirm(c).catch(e => { a.busy = false; a.msg = errText(e); render(); });
+    },
+    auback(){ resetRecaptcha(); state.auth = Object.assign(freshAuth(), {method:state.auth.method}); render(); },
+    auemailconfirm(){
+      const v = document.getElementById('au-email').value.trim().toLowerCase();
+      if (!isEmail(v)){ state.auth.msg = t('errEmail'); render(); return; }
+      finishEmail(v); render();
+    },
+    aurole(el){ const n = document.getElementById('au-name'), p2 = document.getElementById('au-ph2'); state.auth.name = n ? n.value : ''; if (p2) state.auth.phone2 = p2.value; state.auth.role = el.dataset.v; render(); },
+    async audone(){
+      const a = state.auth, p = state.pendingUser; if (!p) return;
+      const n = document.getElementById('au-name').value.trim(), p2el = document.getElementById('au-ph2');
+      a.name = n; if (p2el) a.phone2 = p2el.value;
+      if (!n){ a.msg = t('errRequired'); render(); return; }
+      const ph = p.phone || (p2el && digits10(p2el.value).length === 10 ? digits10(p2el.value) : '');
+      a.busy = true; a.msg = ''; render();
+      try {
+        await db.collection('users').doc(p.uid).set({name:n, role:a.role || 'other', phone:ph, email:p.email || '', createdAt:TS()}, {merge:true});
+        state.user = {uid:p.uid, name:n, role:a.role || 'other', phone:ph, email:p.email || ''}; state.pendingUser = null;
+        state.auth = freshAuth(); startUserListeners(); toast(t('welcome', n)); afterAuth(); render();
+      } catch (e) { a.busy = false; a.msg = errText(e); render(); }
+    },
+    async accphone(){
+      const d = digits10(document.getElementById('acc-ph').value); if (d.length !== 10){ toast(t('errPhone')); return; }
+      try { await db.collection('users').doc(state.user.uid).set({phone:d}, {merge:true}); state.user.phone = d; render(); } catch (e) { toast(errText(e)); }
+    },
+    signout(){ resetRecaptcha(); auth.signOut(); state.auth = freshAuth(); location.hash = '#home'; }
+  });
+
+  /* ---------- account page: my posts ---------- */
+  const origAccount = viewAccount;
+  viewAccount = function(){
+    const h = origAccount(); if (!state.user) return h;
+    const uid = state.user.uid, mine = ADS.filter(a => a.live && a.ownerUid === uid), prof = TECHS.find(x => x.live && x.id === uid);
+    const rows = (prof ? [`<div class="mypost">${techCard(prof)}<button class="btn-link del" type="button" data-act="livedel" data-k="techs" data-v="${prof.id}">🗑 ${t('delPost')}</button></div>`] : [])
+      .concat(mine.map(a => `<div class="mypost">${adCard(a)}<button class="btn-link del" type="button" data-act="livedel" data-k="ads" data-v="${a.id}">🗑 ${t('delPost')}</button></div>`));
+    const sec = `<section style="margin-top:18px"><h2 class="sec">${t('myPosts')}</h2>${rows.length ? `<div class="list">${rows.join('')}</div>` : `<p class="empty-s">${t('noPosts')}</p>`}</section>`;
+    const i = h.lastIndexOf('</div>'); return h.slice(0, i) + sec + h.slice(i);
+  };
+  ACT.livedel = async function(el){
+    if (!confirm(t('confirmDel'))) return;
+    try { await db.collection(el.dataset.k).doc(el.dataset.v).delete(); toast(t('deleted')); } catch (e) { toast(errText(e)); }
+  };
+
+  /* ---------- sample labels + contact rules ---------- */
+  const SAMPLE_TAG = () => `<span class="ctag ct-sample">${esc(t('sampleTag'))}</span>`;
+  const findItem = id => ADS.find(a => a.id === id) || TECHS.find(x => x.id === id);
+  const ownerOf = it => it ? (it.ownerUid || (it.live ? it.id : null)) : null;
+  const origAdCard = adCard; adCard = function(ad, o){
+    let h = origAdCard(ad, o);
+    if (ad.sample) h = h.replace('<div class="jtop">', '<div class="jtop">' + SAMPLE_TAG());
+    if (ad.live && ad.type === 'salon_sale'){ const u = (ad.picUrls || [])[0]; h = u ? h.replace(/(<img class="thumb" src=")[^"]*"/, '$1' + esc(u) + '"') : h.replace(/<img class="thumb"[^>]*>/, '').replace('card jcard sale', 'card jcard'); }
+    return h; };
+  const origTechCard = techCard; techCard = function(tc, o){ let h = origTechCard(tc, o); if (tc.sample) h = h.replace('</h3>', '</h3>' + SAMPLE_TAG()); return h; };
+  const withNote = f => function(x){ const h = f.apply(null, arguments); const it = typeof x === 'string' ? findItem(x) : x; return it && it.sample ? h.replace('<div class="card dhead">', `<p class="sample-note">ℹ️ ${esc(t('sampleNote'))}</p><div class="card dhead">`) : h; };
+  viewAd = withNote(viewAd); viewTech = withNote(viewTech);
+  const vAd = viewAd; viewAd = function(id){ let h = vAd(id); const ad = ADS.find(a => a.id === id); if (ad && ad.live && ad.type === 'salon_sale' && (ad.picUrls || []).length){ const i = h.lastIndexOf('</div>'); h = h.slice(0, i) + salonGallery(ad) + h.slice(i); } return h; };
+  const origContact = contactBlock;
+  contactBlock = function(id){
+    const it = findItem(id);
+    if (it && it.sample) return `<div class="cta-col"><p class="cta-note">${esc(t('sampleNoContact'))}</p></div>`;
+    if (it && state.user && ownerOf(it) === state.user.uid) return `<div class="cta-col"><p class="cta-note">${esc(t('ownPost'))} <a class="btn-link" href="#account">${t('myPosts')} →</a></p></div>`;
+    return origContact(id);
+  };
+  const origCheck = techChecks; techChecks = function(tc){ const c = origCheck(tc); if (tc.hasPhone && tc.name) c.basic = true; return c; };
+  myProfile = function(){ return state.myProfile; };
+  const origApply = modalApply; modalApply = function(){ return origApply().replace(/<button[^>]*data-act="applysample"[^>]*>[\s\S]*?<\/button>/, ''); };
+
+  /* ---------- messaging ---------- */
+  function unreadOf(th){
+    const uid = state.user && state.user.uid; if (!uid || th.lastFrom === uid) return false;
+    const last = ms(th.lastAt); return last > Math.max(ms((th.readAt || {})[uid]), L_.readMarked[th.id] || 0);
+  }
+  unreadCount = function(){ return state.user ? L_.threads.filter(unreadOf).length : 0; };
+  function otherName(th){ const uid = state.user.uid, o = (th.members || []).find(m => m !== uid); return (th.names || {})[o] || '—'; }
+  viewInbox = function(){
+    if (!state.user) return loginGate();
+    const th = L_.threads.slice().sort((a, b) => ms(b.lastAt) - ms(a.lastAt)), uid = state.user.uid;
+    return `<div class="wrap narrow page"><h1 class="pg-title">${t('inbox')}</h1><p class="hint">${t('inboxNote')}</p>
+      ${!L_.threadsReady ? `<p class="empty-s">${t('loadingTxt')}</p>` : th.length ? `<div class="list">${th.map(x => `<a class="card thread-row${unreadOf(x) ? ' unread' : ''}" href="#inbox-${esc(x.id)}"><div class="mname"><h3>${esc(otherName(x))}</h3><p class="biz">${esc((x.about || {}).title || '')}</p><p class="last">💬 ${x.lastFrom === uid ? t('you') + ': ' : ''}${esc(x.lastText || '')}</p></div>${unreadOf(x) ? '<span class="dot-new" aria-label="new"></span>' : ''}</a>`).join('')}</div>`
+      : `<p class="empty-s">${t('inboxEmpty')}</p>`}</div>`;
+  };
+  function unsubMsgs(){ if (L_.msgSub){ try { L_.msgSub.un(); } catch (e) {} L_.msgSub = null; } }
+  function subMsgs(tid){
+    if (L_.msgSub && L_.msgSub.id === tid) return;
+    unsubMsgs();
+    const un = db.collection('threads').doc(tid).collection('messages').orderBy('at').limit(500).onSnapshot(s => {
+      L_.msgs[tid] = s.docs.map(d => d.data(EST));
+      const r = route(); if (r.view === 'thread' && r.id === tid){ renderKeep(); markRead(tid); const b = document.querySelector('.bubbles'); if (b && b.lastElementChild) b.lastElementChild.scrollIntoView({block:'nearest'}); }
+    }, e => console.warn('msgs', e));
+    L_.msgSub = {id:tid, un};
+  }
+  function markRead(tid){
+    const th = L_.threads.find(x => x.id === tid); if (!th || !unreadOf(th)) return;
+    L_.readMarked[tid] = ms(th.lastAt);
+    db.collection('threads').doc(tid).update({['readAt.' + state.user.uid]:TS()}).catch(e => console.warn('read', e));
+  }
+  window.addEventListener('hashchange', () => { const r = route(); if (!(r.view === 'thread' && L_.msgSub && L_.msgSub.id === r.id)) unsubMsgs(); });
+  const tm = x => { const v = ms(x); if (!v) return ''; const d = new Date(v); return d.toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US', {month:'numeric', day:'numeric', hour:'numeric', minute:'2-digit'}); };
+  viewThread = function(id){
+    if (!state.user) return loginGate();
+    const x = L_.threads.find(z => z.id === id);
+    if (!x) return L_.threadsReady ? notFound() : `<div class="wrap narrow page"><p class="empty-s">${t('loadingTxt')}</p></div>`;
+    subMsgs(id); setTimeout(() => markRead(id), 0);
+    const ab = x.about || {}, back = ab.kind === 'tech' ? `#tech-${ab.id}` : `#ad-${ab.id}`, msgs = L_.msgs[id], uid = state.user.uid;
+    return `<div class="wrap narrow page"><a class="back" href="#inbox">${ICON.back}${t('inbox')}</a>
+      <div class="thread-head"><div><h1 class="pg-title" style="margin:0">${esc(otherName(x))}</h1><a class="biz" href="${back}">${esc(ab.title || '')}</a></div></div>
+      ${x.app ? `<div class="card app-card"><b>${t('appCard')}</b> · ${esc(x.app.name)}<div class="mchips">${(x.app.items || []).map(i => `<span class="mc ${i.ok ? 'ok' : 'no'}"><b aria-hidden="true">${i.ok ? '✓' : '✕'}</b>${esc(t('sk_' + i.k))}</span>`).join('')}</div>${x.app.techId ? `<p style="margin:8px 0 0"><a class="btn-link" href="#tech-${esc(x.app.techId)}">${t('viewMyProfile')} →</a></p>` : ''}</div>` : ''}
+      <p class="privacy-note">${t('inboxNote')}</p>
+      <div class="bubbles">${msgs ? msgs.map(m => `<div class="bub ${m.from === uid ? 'me' : 'them'}">${esc(m.text)}<small class="tm">${esc(tm(m.at))}</small></div>`).join('') : `<p class="empty-s">${t('loadingTxt')}</p>`}</div>
+      <div class="reply"><label class="sr" for="th-text">${t('msgPh')}</label><textarea id="th-text" rows="2" maxlength="1000" placeholder="${esc(t('msgPh'))}"></textarea><button class="btn btn-primary" type="button" data-act="thsend" data-v="${esc(x.id)}">${t('msgSend')}</button></div>
+    </div>`;
+  };
+  modalMsg = function(){
+    const tg = contactTarget(state.msgTo); if (!tg) return '';
+    const quick = t('q_' + tg.kind); const qs = Array.isArray(quick) ? quick : [];
+    return `<div class="modal-head"><h2 id="m-title">${esc(t('msgTo', tg.name))}</h2><button class="x" type="button" data-act="mclose" aria-label="${t('close')}">×</button></div>
+      <p class="biz" style="margin:0">${esc(tg.title)}</p>
+      ${qs.length ? `<div class="fq"><span class="flabel">${t('msgQuick')}</span><div class="quick">${qs.map((q, i) => `<button type="button" class="pill sm" data-act="msgquick" data-v="${i}">${esc(q)}</button>`).join('')}</div></div>` : ''}
+      <div class="fq"><label class="flabel" for="msg-text">${t('message')}</label><textarea id="msg-text" rows="4" maxlength="1000" placeholder="${esc(t('msgPh'))}"></textarea><p class="err" id="msg-err" hidden>${t('errRequired')}</p></div>
+      <p class="privacy-note">${t('msgPrivacyLive')}</p>
+      <div class="modal-foot"><span></span><button class="btn btn-primary" type="button" data-act="msgsend">${t('msgSend')}</button></div>`;
+  };
+  async function sendTo(itemId, text, extra){
+    const it = findItem(itemId), me = state.user, owner = ownerOf(it);
+    if (!it || !owner) throw {code:'not-found'};
+    const tg = contactTarget(itemId), tid = `${itemId}__${me.uid}`, ref = db.collection('threads').doc(tid);
+    await ref.set(Object.assign({members:[me.uid, owner], names:{[me.uid]:me.name, [owner]:it.ownerName || tg.name || '—'},
+      about:{id:itemId, kind:tg.kind, title:tg.title || ''}, lastText:text.slice(0, 200), lastAt:TS(), lastFrom:me.uid, readAt:{[me.uid]:TS()}}, extra || {}), {merge:true});
+    await ref.collection('messages').add({from:me.uid, text, at:TS()});
+    return tid;
+  }
+  function guardContact(id){
+    const it = findItem(id);
+    if (it && it.sample){ toast(t('sampleNoMsg')); return false; }
+    if (it && state.user && ownerOf(it) === state.user.uid){ toast(t('ownPost')); return false; }
+    return true;
+  }
+  Object.assign(ACT, {
+    msgopen(el){ const id = el.dataset.v; if (!guardContact(id)) return;
+      if (!state.user){ setAfter({hash:location.hash, msgTo:id}); location.hash = '#login'; return; }
+      state.msgTo = id; openModal('msg'); setTimeout(() => { const ta = document.getElementById('msg-text'); if (ta) ta.focus(); }, 30); },
+    applyopen(el){ const id = el.dataset.v; if (!guardContact(id)) return;
+      if (!state.user){ setAfter({hash:location.hash, applyTo:id}); location.hash = '#login'; return; }
+      state.applyTo = id; openModal('apply'); },
+    applysample(){ closeModal(); location.hash = '#post-profile'; },
+    async msgsend(el){
+      const ta = document.getElementById('msg-text'), text = ta.value.trim();
+      if (!text){ document.getElementById('msg-err').hidden = false; ta.focus(); return; }
+      el.disabled = true; el.textContent = t('sending');
+      try { const tid = await sendTo(state.msgTo, text); state.modal = null; toast(t('msgSent')); location.hash = '#inbox-' + tid; render(); }
+      catch (e) { console.warn(e); el.disabled = false; el.textContent = t('msgSend'); toast(errText(e)); }
+    },
+    async applysend(el){
+      const ad = ADS.find(a => a.id === state.applyTo), me = myProfile(); if (!ad || !me) return;
+      const tier = ad.hiring.tier || 1, c = techChecks(me), note = ((document.getElementById('ap-note') || {}).value || '').trim();
+      el.disabled = true; el.textContent = t('sending');
+      try {
+        const tid = await sendTo(ad.id, t('applySentMsg', titleOf(ad)) + (note ? '\n' + note : ''), {app:{name:me.name, techId:me.id, items:CK.slice(0, tier).map(k => ({k, ok:!!c[k]}))}});
+        state.modal = null; toast(t('applySent')); location.hash = '#inbox-' + tid; render();
+      } catch (e) { console.warn(e); el.disabled = false; el.textContent = t('applySend'); toast(errText(e)); }
+    },
+    async thsend(el){
+      const ta = document.getElementById('th-text'), text = ta.value.trim(); if (!text) return;
+      const tid = el.dataset.v, ref = db.collection('threads').doc(tid), uid = state.user.uid;
+      el.disabled = true;
+      try {
+        await ref.update({lastText:text.slice(0, 200), lastAt:TS(), lastFrom:uid, ['readAt.' + uid]:TS()});
+        await ref.collection('messages').add({from:uid, text, at:TS()});
+        const n = document.getElementById('th-text'); if (n) n.value = '';
+      } catch (e) { console.warn(e); toast(errText(e)); }
+      el.disabled = false;
+    },
+    msgclear(){}, thchan(){}
+  });
+
+  /* ---------- publishing ---------- */
+  function shrink(blob){
+    return new Promise(res => {
+      if (!/^image\/(jpeg|png|webp|heic|heif)/.test(blob.type) && blob.type !== '') return res(blob);
+      const img = new Image(), u = URL.createObjectURL(blob);
+      img.onload = () => { try {
+          const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)); if (k >= 1 && blob.size < 900e3){ URL.revokeObjectURL(u); return res(blob); }
+          const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u);
+          c.toBlob(b => res(b && b.size < blob.size ? b : blob), 'image/jpeg', 0.82);
+        } catch (e) { res(blob); } };
+      img.onerror = () => { URL.revokeObjectURL(u); res(blob); };
+      img.src = u;
+    });
+  }
+  async function uploadPhotos(fs){
+    const list = fs.data.photos || [], uid = state.user.uid;
+    for (let i = 0; i < list.length; i++){
+      const p = list[i]; if (p.remote) continue;
+      toast(t('uploading', i + 1, list.length));
+      let blob = await (await fetch(p.url)).blob();
+      if (!p.video) blob = await shrink(blob);
+      if (blob.size > 50 * 1024 * 1024) throw {code:'too-big'};
+      const ct = blob.type || (p.video ? 'video/mp4' : 'image/jpeg'), ext = (ct.split('/')[1] || 'jpg').replace(/[^a-z0-9]/gi, '').slice(0, 5);
+      const ref = stg.ref(`uploads/${uid}/${Date.now()}_${i}.${ext}`);
+      await ref.put(blob, {contentType:ct});
+      p.url = await ref.getDownloadURL(); p.remote = true;
+    }
+  }
+  const FORM_HASH = {hiring:'#post-hiring', profile:'#post-profile', sale:'#post-sale', service:'#post-service'};
+  ACT.fpublish = async function(el){
+    const type = el.dataset.ft, fs = getForm(type);
+    if (!state.user){ setAfter({hash:FORM_HASH[type]}); toast(t('loginToPost')); location.hash = '#login'; return; }
+    if (fs.busy) return; fs.busy = true; el.disabled = true; el.textContent = t('publishing');
+    try {
+      await uploadPhotos(fs);
+      const obj = previewObject(type, fs), me = state.user;
+      const formPhone = digits10(fs.data.phone);
+      if (formPhone.length === 10 && !me.phone){ await db.collection('users').doc(me.uid).set({phone:formPhone}, {merge:true}); me.phone = formPhone; }
+      obj.hasPhone = !!(formPhone.length === 10 || me.phone);
+      delete obj.phone; delete obj.id; delete obj.contactBy; delete obj.receiveBy;
+      const d = fs.data;
+      if (type === 'sale'){ Object.assign(obj.sale, {sqft:num(d.sqft), staff:Number(d.staff) || 0, revenue:num(d.revenue), reason:d.reason ? {vi:d.reason, en:d.reason} : null}); obj.picUrls = (d.photos || []).map(p => p.url); }
+      if (type === 'profile'){ if (d.about) obj.about = {vi:d.about, en:d.about}; obj.languages = d.languages || []; obj.speedMinutes = d.speedMinutes || ''; }
+      if (type === 'profile'){ delete obj.licNo; obj.refs = (obj.refs || []).map(r => ({salon:r.salon || '', city:r.city || '', period:r.period || ''})); }
+      const clean = JSON.parse(JSON.stringify(obj));
+      if (type === 'profile'){
+        await db.collection('techs').doc(me.uid).set({ownerUid:me.uid, ownerName:me.name, createdAt:TS(), updatedAt:TS(), ad:clean});
+        fs.liveId = me.uid;
+      } else {
+        const ref = await db.collection('ads').add({ownerUid:me.uid, ownerName:me.name, kind:type, createdAt:TS(), ad:clean});
+        fs.liveId = ref.id;
+      }
+      fs.done = true; fs.busy = false; render(); window.scrollTo(0, 0); toast(t('published'));
+    } catch (e) {
+      console.warn(e); fs.busy = false; render();
+      toast(e && e.code === 'too-big' ? t('fileTooBig') : t('publishErr') + ' ' + errText(e));
+    }
+  };
+  const origForm = viewForm;
+  viewForm = function(type){
+    let h = origForm(type); const fs = state.forms[type];
+    if (fs && fs.done && fs.liveId){
+      const link = type === 'profile' ? `<a class="btn btn-ghost" href="#tech-${fs.liveId}">${t('viewMyProfile')}</a>` : `<a class="btn btn-ghost" href="#ad-${fs.liveId}">${t('viewMyAd')}</a>`;
+      h = h.replace(/<button class="btn btn-ghost" type="button" data-act="freset"[^>]*>[^<]*<\/button>/, link);
+    }
+    return h;
+  };
+}
 
 render();
 })();
