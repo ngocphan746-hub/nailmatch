@@ -539,6 +539,7 @@ details.more summary{cursor:pointer;font-weight:700;color:var(--primary);padding
 .seg.three{grid-template-columns:repeat(3,1fr)}
 .acc{justify-items:center;text-align:center}
 .avatar.big{width:72px;height:72px;font-size:30px}
+.add-phone{display:grid;gap:8px;width:100%;max-width:340px;text-align:left}
 .acc-btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 .site-footer a{color:var(--primary);font-weight:700}
 @media (max-width: 600px){ .signin-btn span{display:none} .signin-btn{padding:0;width:40px;justify-content:center} .hdr-right{gap:8px} }
@@ -922,7 +923,7 @@ en: {
 }};
 Object.assign(T.vi, {
   nav_home:'Trang chủ', nav_jobs:'Việc làm', nav_techs:'Thợ', nav_post:'Đăng', nav_match:'Ghép',
-  h_title:'Tìm thợ nail. Tìm việc nail.', h_sub:'Miễn phí 100% · Không phí · Không gói tháng', h_salon:'Tôi cần thợ', h_tech:'Tôi tìm việc',
+  h_title:'Nơi tiệm nail và thợ nail Texas gặp nhau.', h_sub:'Miễn phí 100% · Không phí · Không gói tháng', h_salon:'Tôi cần thợ', h_tech:'Tôi tìm việc',
   lane_salon:'Tiệm', lane_tech:'Thợ', s1:'Đăng tin', s2:'Xem % hợp', s3:'Gọi thợ', t1:'Tạo hồ sơ', t2:'Được ghép', t3:'Tiệm gọi',
   newJobs:'Việc mới', seeAll:'Xem tất cả', jobsTitle:'Việc làm', techsTitle:'Thợ tìm việc', allSvc2:'Tất cả',
   need:'Cần', plusH:'Điểm cộng', matchTechs:'Thợ hợp nhất', matchSalons:'Tiệm hợp nhất', textS:'Nhắn',
@@ -934,7 +935,7 @@ Object.assign(T.vi, {
 });
 Object.assign(T.en, {
   nav_home:'Home', nav_jobs:'Jobs', nav_techs:'Techs', nav_post:'Post', nav_match:'Match',
-  h_title:'Find nail techs. Find nail jobs.', h_sub:'100% free · No fees · No subscription', h_salon:'I need techs', h_tech:'I need a job',
+  h_title:'Where Texas salons and nail techs connect.', h_sub:'100% free · No fees · No subscription', h_salon:'I need techs', h_tech:'I need a job',
   lane_salon:'Salon', lane_tech:'Tech', s1:'Post a job', s2:'See match %', s3:'Call techs', t1:'Make profile', t2:'Get matched', t3:'Salons call',
   newJobs:'New jobs', seeAll:'See all', jobsTitle:'Jobs', techsTitle:'Techs looking for work', allSvc2:'All',
   need:'Needs', plusH:'A plus', matchTechs:'Best-matching techs', matchSalons:'Best-matching salons', textS:'Text',
@@ -998,7 +999,7 @@ Object.assign(T.vi, {
   rb_web:'Chat trên web', rb_sms:'SMS (số được ẩn)', rb_both:'Web + SMS',
   rbField:'Nhận tin nhắn qua', rbHint:'SMS gửi từ số của NailMatch, người khác không thấy số thật của bạn.',
   theyGet:v=>`Bên kia nhận tin qua: ${v}`, replyVia:'Bạn muốn nhận trả lời qua',
-  viaWeb:'qua web', viaSms:'qua SMS', smsHead:'📱 SMS từ NailMatch · (726) 237-5859', smsDemo:'Bản demo: mô phỏng tin SMS trên điện thoại của bạn. Trả lời SMS này cũng hiện lại trên web.',
+  viaWeb:'qua web', viaSms:'qua SMS', smsHead:'📱 SMS từ NailMatch · (210) 868-7686', smsDemo:'Bản demo: mô phỏng tin SMS trên điện thoại của bạn. Trả lời SMS này cũng hiện lại trên web.',
   switchWeb:'Chuyển sang chat web', switchSms:'Chuyển sang nhận SMS', clearMsgs:'Xóa tin nhắn demo',
   savedLocal:'Tin nhắn được lưu trên trình duyệt này (bản demo). Bản thật sẽ lưu theo tài khoản, đổi máy vẫn thấy.', smsLogin:'SMS sẽ gửi tới số bạn dùng để đăng nhập.'
 });
@@ -1006,7 +1007,7 @@ Object.assign(T.en, {
   rb_web:'Web chat', rb_sms:'SMS (number hidden)', rb_both:'Web + SMS',
   rbField:'Receive messages by', rbHint:'Texts come from a NailMatch number, so nobody sees your real number.',
   theyGet:v=>`They receive messages by: ${v}`, replyVia:'Get replies by',
-  viaWeb:'via web', viaSms:'via SMS', smsHead:'📱 SMS from NailMatch · (726) 237-5859', smsDemo:'Demo: this simulates the texts on your phone. Replying by text also shows up on the web.',
+  viaWeb:'via web', viaSms:'via SMS', smsHead:'📱 SMS from NailMatch · (210) 868-7686', smsDemo:'Demo: this simulates the texts on your phone. Replying by text also shows up on the web.',
   switchWeb:'Switch to web chat', switchSms:'Switch to SMS', clearMsgs:'Clear demo messages',
   savedLocal:'Messages are saved in this browser (demo). The real app saves them to your account, on any device.', smsLogin:'Texts go to the number you sign in with.'
 });
@@ -1087,6 +1088,18 @@ Object.assign(T.en, {
   refsHint:'Add jobs from the last 2 years. Reference contact info stays private and is only used for verification.',
   addRef:'Add a previous job', refSalon:'Salon name', refCity:'City', refPeriod:'When', refContact:'Owner name & phone (private)', removeRef:'Remove this job',
   applicantsTitle:'When techs apply, you’ll see them like this (sample applicants):', meetsAll:'Meets requirements', missingX:s=>`Missing: ${s}`, sampleVideo:'Sample video'
+});
+Object.assign(T.vi, {
+  authLead:'Dùng số điện thoại hoặc email, không cần mật khẩu. Thông tin của bạn luôn được giữ kín.', authNew:'Chưa có tài khoản? Nhập số điện thoại hoặc email là tự tạo tài khoản mới.',
+  byPhone:'Số điện thoại', byEmail:'Email', emailLbl:'Email', errEmail:'Nhập email hợp lệ, vd: ten@gmail.com', changeEmail:'Đổi email',
+  phoneOpt:'Số điện thoại (không bắt buộc – để nhận SMS)', smsNeedPhone:'Tài khoản của bạn chưa có số điện thoại. Chọn “Chat trên web”, hoặc thêm số ở trang Tài khoản.',
+  addPhone:'Thêm số điện thoại', savePhone:'Lưu', emailNote:'Có tin nhắn mới, NailMatch sẽ gửi email báo bạn.'
+});
+Object.assign(T.en, {
+  authLead:'Use your phone number or email, no password. Your info always stays private.', authNew:'No account yet? Enter your phone or email and we create one for you.',
+  byPhone:'Phone number', byEmail:'Email', emailLbl:'Email', errEmail:'Enter a valid email, e.g. name@gmail.com', changeEmail:'Change email',
+  phoneOpt:'Phone number (optional – for text alerts)', smsNeedPhone:'Your account has no phone number. Choose “Web chat”, or add a number on your Account page.',
+  addPhone:'Add phone number', savePhone:'Save', emailNote:'We email you when you get a new message.'
 });
 const CK = ['basic','license','refs','work'];
 const SAMPLE_VIDEO = IM('img/v-0.mp4'), SAMPLE_POSTER = IM('img/v-0.jpg');
@@ -1657,22 +1670,30 @@ function factChips(list){ return `<div class="facts">${list.filter(Boolean).map(
 function loadUser(){ try { return JSON.parse(localStorage.getItem('nailmatch_user_v1') || 'null'); } catch (e) { return null; } }
 function saveUser(){ try { if (state.user) localStorage.setItem('nailmatch_user_v1', JSON.stringify(state.user)); else localStorage.removeItem('nailmatch_user_v1'); } catch (e) {} }
 function accounts(){ try { return JSON.parse(localStorage.getItem('nailmatch_accounts_v1') || '{}'); } catch (e) { return {}; } }
-function saveAccount(u){ try { const a = accounts(); a[u.phone] = u; localStorage.setItem('nailmatch_accounts_v1', JSON.stringify(a)); } catch (e) {} }
+function saveAccount(u){ try { const a = accounts(); a[acctKey(u)] = u; localStorage.setItem('nailmatch_accounts_v1', JSON.stringify(a)); } catch (e) {} }
 const maskPhone = p => { const d = String(p).replace(/\D/g, ''); return `(•••) •••-${d.slice(-4)}`; };
+const maskEmail = e => { const [u, d] = String(e).split('@'); return `${u.slice(0, 2)}•••@${d || ''}`; };
+const acctKey = u => u.phone || u.email;
+const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
 function viewLogin(){
   const a = state.auth;
   if (state.user && a.step !== 'profile') return viewAccount();
   let body;
-  if (a.step === 'code') body = `<h1 class="pg-title">${t('codeLbl')}</h1><p class="lead-s">${t('codeSentTo', fmtPhone(a.phone))}</p>
+  const viaEmail = a.method === 'email';
+  if (a.step === 'code') body = `<h1 class="pg-title">${t('codeLbl')}</h1><p class="lead-s">${t('codeSentTo', viaEmail ? a.email : fmtPhone(a.phone))}</p>
       <div class="fq${a.err ? ' has-err' : ''}"><label class="flabel" for="au-code">${t('codeLbl')}</label><input id="au-code" class="code-in" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">${a.err ? `<p class="err">${t('errCode')}</p>` : ''}<p class="hint">${t('codeDemo')}</p></div>
       <button class="btn btn-primary btn-block" type="button" data-act="auverify">${t('verify')}</button>
-      <p style="text-align:center;margin-top:12px"><button class="btn-link" type="button" data-act="auback">${t('changeNum')}</button></p>`;
+      <p style="text-align:center;margin-top:12px"><button class="btn-link" type="button" data-act="auback">${viaEmail ? t('changeEmail') : t('changeNum')}</button></p>`;
   else if (a.step === 'profile') body = `<h1 class="pg-title">${t('profTitle')}</h1><p class="lead-s">${t('profLead')}</p>
       <div class="fq${a.err ? ' has-err' : ''}"><label class="flabel" for="au-name">${t('nameLbl')}</label><input id="au-name" type="text" maxlength="40" value="${esc(a.name || '')}">${a.err ? `<p class="err">${t('errRequired')}</p>` : ''}</div>
+      ${viaEmail ? `<div class="fq"><label class="flabel" for="au-ph2">${t('phoneOpt')}</label><div class="tel-row"><span class="cc">🇺🇸 +1</span><input id="au-ph2" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(210) 555-0123" value="${esc(a.phone2 || '')}"></div></div>` : ''}
       <div class="fq"><span class="flabel">${t('roleLbl')}</span><div class="seg three" role="radiogroup">${['salon','tech','other'].map(r => `<button type="button" role="radio" aria-checked="${a.role === r}" class="${a.role === r ? 'on' : ''}" data-act="aurole" data-v="${r}">${t('role_' + r)}</button>`).join('')}</div></div>
       <button class="btn btn-primary btn-block" type="button" data-act="audone">${t('done')}</button>`;
   else body = `<h1 class="pg-title">${t('authTitle')}</h1><p class="lead-s">${t('authLead')}</p>
-      <div class="fq${a.err ? ' has-err' : ''}"><label class="flabel" for="au-phone">${t('phoneLbl')}</label><div class="tel-row"><span class="cc">🇺🇸 +1</span><input id="au-phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(210) 555-0123" value="${esc(a.phone || '')}"></div>${a.err ? `<p class="err">${t('errPhone')}</p>` : ''}</div>
+      <div class="seg" role="radiogroup">${['phone','email'].map(m => `<button type="button" role="radio" aria-checked="${(a.method || 'phone') === m}" class="${(a.method || 'phone') === m ? 'on' : ''}" data-act="aumethod" data-v="${m}">${m === 'phone' ? '📱 ' + t('byPhone') : '✉️ ' + t('byEmail')}</button>`).join('')}</div>
+      ${viaEmail
+        ? `<div class="fq${a.err ? ' has-err' : ''}"><label class="flabel" for="au-email">${t('emailLbl')}</label><input id="au-email" type="email" inputmode="email" autocomplete="email" placeholder="ten@gmail.com" value="${esc(a.email || '')}">${a.err ? `<p class="err">${t('errEmail')}</p>` : ''}</div>`
+        : `<div class="fq${a.err ? ' has-err' : ''}"><label class="flabel" for="au-phone">${t('phoneLbl')}</label><div class="tel-row"><span class="cc">🇺🇸 +1</span><input id="au-phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(210) 555-0123" value="${esc(a.phone || '')}"></div>${a.err ? `<p class="err">${t('errPhone')}</p>` : ''}</div>`}
       <button class="btn btn-primary btn-block" type="button" data-act="ausend">${t('sendCode')}</button>
       <p class="hint" style="text-align:center;margin-top:12px">${t('authNew')}</p>`;
   return `<div class="wrap auth-wrap page"><div class="card auth-card">${body}</div></div>`;
@@ -1682,7 +1703,8 @@ function viewAccount(){
   if (!u) return viewLogin();
   return `<div class="wrap narrow page"><div class="card auth-card acc">
     <span class="avatar ini big">${esc((u.name || '?').slice(0, 1).toUpperCase())}</span>
-    <h1 class="pg-title" style="margin:8px 0 2px">${esc(u.name)}</h1><p class="biz">${t('role_' + (u.role || 'other'))} · ${maskPhone(u.phone)}</p>
+    <h1 class="pg-title" style="margin:8px 0 2px">${esc(u.name)}</h1><p class="biz">${t('role_' + (u.role || 'other'))}${u.email ? ' · ' + esc(maskEmail(u.email)) : ''}${u.phone ? ' · ' + maskPhone(u.phone) : ''}</p>
+    ${!u.phone ? `<div class="add-phone"><label class="flabel" for="acc-ph">${t('addPhone')}</label><div class="tel-row"><span class="cc">🇺🇸 +1</span><input id="acc-ph" type="tel" inputmode="tel" placeholder="(210) 555-0123"></div><button class="btn btn-ghost" type="button" data-act="accphone">${t('savePhone')}</button></div>` : ''}
     <div class="acc-btns"><a class="btn btn-primary" href="#inbox">${ICON.mail}${t('myMsgs')}</a><a class="btn btn-ghost" href="#post">${t('postNew')}</a></div>
     <button class="btn-link" type="button" data-act="signout" style="margin-top:14px">${t('signOut')}</button></div></div>`;
 }
@@ -1766,7 +1788,7 @@ function modalMsg(){
     <div class="fq"><span class="flabel">${t('msgQuick')}</span><div class="quick">${quick.map((q, i) => `<button type="button" class="pill sm" data-act="msgquick" data-v="${i}">${esc(q)}</button>`).join('')}</div></div>
     <div class="fq"><label class="flabel" for="msg-text">${t('message')}</label><textarea id="msg-text" rows="4" maxlength="500" placeholder="${esc(t('msgPh'))}"></textarea><p class="err" id="msg-err" hidden>${t('errRequired')}</p></div>
     <div class="fq"><span class="flabel">${t('replyVia')}</span><div class="seg" role="radiogroup">${['web','sms'].map(c => `<button type="button" role="radio" aria-checked="${state.msgChan === c}" class="${state.msgChan === c ? 'on' : ''}" data-act="msgchan" data-v="${c}">${c === 'web' ? '💬 ' + t('rb_web') : '📱 ' + t('rb_sms')}</button>`).join('')}</div>
-      ${state.msgChan === 'sms' ? `<p class="hint" style="margin:6px 0 0">${t('smsTo', fmtPhone(state.user.phone))}</p>` : ''}</div>
+      ${state.msgChan === 'sms' ? `<p class="hint" style="margin:6px 0 0">${state.user.phone ? t('smsTo', fmtPhone(state.user.phone)) : t('smsNeedPhone')}</p>` : ''}</div>
     <p class="privacy-note">${t('msgPrivacy')} ${esc(t('theyGet', rbText(tg.rb)))}.</p><p class="hint" style="margin:0">${t('msgDemo')}</p>
     <div class="modal-foot"><span></span><button class="btn btn-primary" type="button" data-act="msgsend">${t('msgSend')}</button></div>`;
 }
@@ -2183,7 +2205,7 @@ const DEFAULTS = {
   profile:{refs:[], licNo:'', contactBy:'both', receiveBy:'both', travel:'10', services:{}, jobType:[], days:[], languages:[], photos:[], reviews:[]}
 };
 function getForm(type){
-  if (!state.forms[type]) state.forms[type] = {step:0, data:Object.assign({city:'San Antonio'}, JSON.parse(JSON.stringify(DEFAULTS[type])), state.user ? {phone:state.user.phone} : {}), errors:{}, done:false, titleEdited:false, assist:{text:'', out:null}, aboutDrafted:false};
+  if (!state.forms[type]) state.forms[type] = {step:0, data:Object.assign({city:'San Antonio'}, JSON.parse(JSON.stringify(DEFAULTS[type])), state.user && state.user.phone ? {phone:state.user.phone} : {}), errors:{}, done:false, titleEdited:false, assist:{text:'', out:null}, aboutDrafted:false};
   return state.forms[type];
 }
 function fid(type, k){ return `f-${type}-${k}`; }
@@ -2649,7 +2671,7 @@ function render(){
   const mb = mobileBar(r);
   document.documentElement.lang = lang;
   document.getElementById('app').innerHTML = header(r) + `<main id="main">${main}</main>
-    <footer class="site-footer"><div class="wrap"><span>${t('footS')}</span><span>${t('support')} <a href="sms:+17262375859">(726) 237-5859</a></span><span>${t('photoCredit')}</span></div></footer>
+    <footer class="site-footer"><div class="wrap"><span>${t('footS')}</span><span>${t('support')} <a href="tel:+12108687686">(210) 868-7686</a> (Ms. Jane)</span><span>${t('photoCredit')}</span></div></footer>
     ${mb ? `<div class="mbar">${mb}</div>` : (r.view === 'form' || r.view === 'thread' ? '' : tabBar(r))}`;
   document.body.classList.toggle('has-mbar', !!mb || (r.view !== 'form' && r.view !== 'thread'));
   renderModal();
@@ -2701,27 +2723,40 @@ const ACT = {
     const tg = contactTarget(state.msgTo);
     let th = state.threads.find(x => x.to === tg.id);
     if (!th){ th = {id:'m' + Date.now().toString(36), to:tg.id, kind:tg.kind, name:tg.name, title:tg.title, rb:tg.rb || 'both', msgs:[], updated:Date.now()}; state.threads.push(th); }
-    th.channel = state.msgChan;
+    th.channel = state.msgChan === 'sms' && !state.user.phone ? 'web' : state.msgChan;
     addMessage(th, text);
     state.modal = null; toast(t('msgSent')); location.hash = '#inbox-' + th.id;
   },
   msgchan(el){ const ta = document.getElementById('msg-text'), keep = ta ? ta.value : ''; state.msgChan = el.dataset.v; renderModal(); const nt = document.getElementById('msg-text'); if (nt){ nt.value = keep; } },
   thchan(el){ const th = state.threads.find(x => x.id === el.dataset.v); th.channel = th.channel === 'sms' ? 'web' : 'sms'; saveThreads(); render(); },
   msgclear(){ state.threads = []; saveThreads(); render(); },
-  ausend(){ const v = document.getElementById('au-phone').value, d = v.replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
-    state.auth.phone = v; if (d.length !== 10){ state.auth.err = true; render(); return; }
-    state.auth = {step:'code', phone:d, err:false, role:'tech'}; render(); setTimeout(() => { const c = document.getElementById('au-code'); if (c) c.focus(); }, 30); },
+  aumethod(el){ state.auth = {step:'phone', method:el.dataset.v, phone:'', email:'', err:false, role:state.auth.role || 'tech'}; render(); },
+  ausend(){
+    const a = state.auth;
+    if (a.method === 'email'){
+      const v = document.getElementById('au-email').value.trim().toLowerCase(); a.email = v;
+      if (!isEmail(v)){ a.err = true; render(); return; }
+      state.auth = {step:'code', method:'email', email:v, phone:'', err:false, role:'tech'};
+    } else {
+      const v = document.getElementById('au-phone').value, d = v.replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+      a.phone = v; if (d.length !== 10){ a.err = true; render(); return; }
+      state.auth = {step:'code', method:'phone', phone:d, email:'', err:false, role:'tech'};
+    }
+    render(); setTimeout(() => { const c = document.getElementById('au-code'); if (c) c.focus(); }, 30); },
   auback(){ state.auth.step = 'phone'; state.auth.err = false; render(); },
   auverify(){ const c = document.getElementById('au-code').value.replace(/\D/g, '');
     if (c.length !== 6){ state.auth.err = true; render(); return; }
-    const known = accounts()[state.auth.phone];
-    if (known){ state.user = known; saveUser(); state.auth = {step:'phone', phone:'', err:false, role:'tech'}; toast(t('welcome', known.name)); afterAuth(); }
-    else { state.auth.step = 'profile'; state.auth.err = false; render(); } },
-  aurole(el){ const n = document.getElementById('au-name'); state.auth.name = n ? n.value : ''; state.auth.role = el.dataset.v; render(); },
+    const a = state.auth, known = accounts()[a.method === 'email' ? a.email : a.phone];
+    if (known){ state.user = known; saveUser(); state.auth = {step:'phone', method:a.method, phone:'', email:'', err:false, role:'tech'}; toast(t('welcome', known.name)); afterAuth(); }
+    else { a.step = 'profile'; a.err = false; render(); } },
+  aurole(el){ const n = document.getElementById('au-name'), p2 = document.getElementById('au-ph2'); state.auth.name = n ? n.value : ''; if (p2) state.auth.phone2 = p2.value; state.auth.role = el.dataset.v; render(); },
   audone(){ const n = document.getElementById('au-name').value.trim();
     if (!n){ state.auth.err = true; state.auth.name = ''; render(); return; }
-    state.user = {phone:state.auth.phone, name:n, role:state.auth.role}; saveUser(); saveAccount(state.user);
-    state.auth = {step:'phone', phone:'', err:false, role:'tech'}; toast(t('welcome', n)); afterAuth(); },
+    const a = state.auth, p2el = document.getElementById('au-ph2'), p2 = p2el ? p2el.value.replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '') : '';
+    state.user = a.method === 'email' ? {email:a.email, phone:p2.length === 10 ? p2 : '', name:n, role:a.role} : {phone:a.phone, name:n, role:a.role};
+    saveUser(); saveAccount(state.user);
+    state.auth = {step:'phone', method:a.method, phone:'', email:'', err:false, role:'tech'}; toast(t('welcome', n)); afterAuth(); },
+  accphone(){ const d = document.getElementById('acc-ph').value.replace(/\D/g, '').replace(/^1(?=\d{10}$)/, ''); if (d.length !== 10){ toast(t('errPhone')); return; } state.user.phone = d; saveUser(); saveAccount(state.user); render(); },
   signout(){ state.user = null; saveUser(); location.hash = '#home'; render(); },
   applyopen(el){ if (!state.user){ state.after = {hash:location.hash, applyTo:el.dataset.v}; location.hash = '#login'; return; } state.applyTo = el.dataset.v; openModal('apply'); },
   applysample(){ state.applyAs = 'sample'; renderModal(); },
