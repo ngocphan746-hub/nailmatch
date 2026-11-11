@@ -2675,7 +2675,7 @@ function render(){
   const mb = mobileBar(r);
   document.documentElement.lang = lang;
   document.getElementById('app').innerHTML = header(r) + `<main id="main">${main}</main>
-    <footer class="site-footer"><div class="wrap"><span>${t('footS')}</span><span>${t('support')} <a href="tel:+12108687686">(210) 868-7686</a> (Ms. Jane)</span><span>${t('photoCredit')}</span></div></footer>
+    <footer class="site-footer"><div class="wrap"><span>${t('footS')}</span><span class="foot-legal">${LEGAL_LINKS()}</span><span>${t('support')} <a href="tel:+12108687686">(210) 868-7686</a> (Ms. Jane)</span><span>${t('photoCredit')}</span></div></footer>
     ${mb ? `<div class="mbar">${mb}</div>` : (r.view === 'form' || r.view === 'thread' ? '' : tabBar(r))}`;
   document.body.classList.toggle('has-mbar', !!mb || (r.view !== 'form' && r.view !== 'thread'));
   renderModal();
@@ -2920,6 +2920,94 @@ document.addEventListener('submit', e => {
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && state.modal) closeModal(); });
 window.addEventListener('hashchange', () => { state.menu = false; state.modal = null; render(); window.scrollTo(0, 0); });
 
+/* ================= TERMS + PRIVACY (both modes) ================= */
+const LEGAL_DATE = {vi:'Hiệu lực từ ngày 11/11/2026', en:'Effective November 11, 2026'};
+const LEGAL = {
+  privacy:{
+    title:{vi:'Chính sách quyền riêng tư', en:'Privacy Policy'},
+    intro:{vi:'NailMatch (“chúng tôi”) là trang miễn phí giúp tiệm nail và thợ nail ở Texas tìm nhau. Trang này giải thích chúng tôi thu thập thông tin gì, dùng để làm gì và bạn có quyền gì.',
+      en:'NailMatch (“we”) is a free site that helps nail salons and nail techs in Texas find each other. This page explains what information we collect, how we use it, and the choices you have.'},
+    secs:[
+      {h:{vi:'1. Thông tin chúng tôi thu thập', en:'1. Information we collect'}, li:[
+        {vi:'<b>Thông tin tài khoản:</b> tên (hoặc tên tiệm), vai trò (chủ tiệm / thợ / khác), số điện thoại và/hoặc email bạn dùng để đăng nhập.', en:'<b>Account info:</b> your name (or salon name), role (salon owner / tech / other), and the phone number and/or email you sign in with.'},
+        {vi:'<b>Nội dung bạn đăng:</b> tin tuyển thợ, tin sang tiệm, tin dịch vụ, hồ sơ thợ, ảnh và video bạn tải lên.', en:'<b>What you post:</b> hiring ads, salon-for-sale ads, service ads, tech profiles, and the photos and videos you upload.'},
+        {vi:'<b>Tin nhắn:</b> nội dung tin nhắn và hồ sơ ứng tuyển bạn gửi cho người khác qua NailMatch.', en:'<b>Messages:</b> the messages and job applications you send to others through NailMatch.'},
+        {vi:'<b>Thông tin kỹ thuật:</b> dữ liệu đăng nhập cần thiết để giữ bạn đăng nhập trên trình duyệt (lưu trong bộ nhớ trình duyệt).', en:'<b>Technical info:</b> the sign-in data needed to keep you signed in on your browser (stored in your browser’s storage).'}]},
+      {h:{vi:'2. Chúng tôi dùng thông tin để làm gì', en:'2. How we use it'}, li:[
+        {vi:'Tạo và bảo vệ tài khoản của bạn, gửi mã đăng nhập qua SMS hoặc link qua email.', en:'To create and protect your account and send sign-in codes by text or sign-in links by email.'},
+        {vi:'Hiển thị tin và hồ sơ bạn đăng để người khác tìm thấy.', en:'To show your ads and profile so others can find them.'},
+        {vi:'Chuyển tin nhắn giữa bạn và người khác mà không lộ số điện thoại.', en:'To deliver messages between you and others without revealing phone numbers.'},
+        {vi:'Giữ an toàn cho trang, chống spam và lạm dụng.', en:'To keep the site safe and prevent spam and abuse.'}]},
+      {h:{vi:'3. Ai thấy thông tin của bạn', en:'3. Who can see your information'}, li:[
+        {vi:'<b>Công khai:</b> tin đăng, hồ sơ thợ (tên, khu vực, dịch vụ, kinh nghiệm, ảnh/video tác phẩm) và tên tiệm bạn ghi.', en:'<b>Public:</b> your ads, tech profile (name, area, services, experience, work photos/videos), and any salon name you enter.'},
+        {vi:'<b>Luôn được giữ kín:</b> số điện thoại, email, số bằng TDLR và thông tin liên lạc của người giới thiệu. Người khác không thấy các thông tin này.', en:'<b>Always private:</b> your phone number, email, TDLR license number, and reference contact details. Other users never see them.'},
+        {vi:'<b>Tin nhắn:</b> chỉ bạn và người nhận đọc được.', en:'<b>Messages:</b> only you and the other person can read them.'}]},
+      {h:{vi:'4. Bên cung cấp dịch vụ', en:'4. Service providers'}, li:[
+        {vi:'Chúng tôi dùng Google Firebase (máy chủ ở Mỹ) để đăng nhập, lưu dữ liệu, lưu ảnh/video và gửi mã SMS. Đăng nhập bằng Google do Google xử lý.', en:'We use Google Firebase (servers in the U.S.) for sign-in, data storage, photo/video storage, and sending SMS codes. Google sign-in is handled by Google.'},
+        {vi:'Trang web được lưu trữ trên GitHub Pages.', en:'The website is hosted on GitHub Pages.'},
+        {vi:'Chúng tôi <b>không bán</b> và không cho thuê thông tin cá nhân của bạn.', en:'We <b>do not sell</b> or rent your personal information.'}]},
+      {h:{vi:'5. Tin nhắn SMS', en:'5. Text messages (SMS)'}, li:[
+        {vi:'Khi đăng nhập bằng số điện thoại, bạn đồng ý nhận một tin SMS chứa mã xác minh. Có thể phát sinh phí tin nhắn/dữ liệu theo nhà mạng của bạn.', en:'When you sign in with a phone number, you agree to receive a text with a verification code. Message and data rates may apply.'},
+        {vi:'Chúng tôi không gửi tin quảng cáo qua SMS.', en:'We do not send marketing texts.'}]},
+      {h:{vi:'6. Lưu trữ và xóa', en:'6. Keeping and deleting data'}, li:[
+        {vi:'Bạn có thể xóa tin đăng và hồ sơ của mình bất cứ lúc nào trong mục Tài khoản → Tin của tôi.', en:'You can delete your ads and profile any time under Account → My posts.'},
+        {vi:'Muốn xóa toàn bộ tài khoản và dữ liệu, hãy nhắn hoặc gọi số hỗ trợ bên dưới. Chúng tôi sẽ xử lý trong vòng 30 ngày.', en:'To delete your whole account and data, text or call the support number below. We will handle it within 30 days.'}]},
+      {h:{vi:'7. Bảo mật', en:'7. Security'}, li:[
+        {vi:'Dữ liệu được mã hóa khi truyền đi và chỉ người có quyền mới truy cập được. Tuy vậy, không hệ thống nào an toàn tuyệt đối.', en:'Data is encrypted in transit and access is limited by security rules. Still, no system is 100% secure.'}]},
+      {h:{vi:'8. Độ tuổi', en:'8. Age'}, li:[
+        {vi:'NailMatch dành cho người từ 18 tuổi trở lên.', en:'NailMatch is for people 18 and older.'}]},
+      {h:{vi:'9. Thay đổi chính sách', en:'9. Changes'}, li:[
+        {vi:'Khi thay đổi chính sách, chúng tôi sẽ cập nhật ngày hiệu lực ở đầu trang này.', en:'If we change this policy, we will update the effective date at the top of this page.'}]}
+    ]
+  },
+  terms:{
+    title:{vi:'Điều khoản sử dụng', en:'Terms of Use'},
+    intro:{vi:'Khi dùng NailMatch, bạn đồng ý với các điều khoản dưới đây. Nếu không đồng ý, vui lòng không sử dụng trang.',
+      en:'By using NailMatch, you agree to these terms. If you do not agree, please do not use the site.'},
+    secs:[
+      {h:{vi:'1. Dịch vụ', en:'1. The service'}, li:[
+        {vi:'NailMatch là nơi đăng tin miễn phí, kết nối tiệm nail, thợ nail và các dịch vụ liên quan ở Texas. Hiện đang là bản thử nghiệm và có thể thay đổi.', en:'NailMatch is a free listing site connecting nail salons, nail techs, and related services in Texas. It is currently in beta and may change.'},
+        {vi:'NailMatch <b>không phải</b> là chủ thuê, công ty giới thiệu việc làm hay bên môi giới. Chúng tôi không tham gia vào việc thuê, trả lương, mua bán tiệm hay thỏa thuận giữa các bên.', en:'NailMatch is <b>not</b> an employer, staffing agency, or broker. We are not part of any hiring, pay, salon sale, or agreement between users.'}]},
+      {h:{vi:'2. Tài khoản', en:'2. Your account'}, li:[
+        {vi:'Bạn phải từ 18 tuổi trở lên và cung cấp thông tin đúng sự thật.', en:'You must be 18 or older and give accurate information.'},
+        {vi:'Bạn chịu trách nhiệm về mọi hoạt động trên tài khoản của mình.', en:'You are responsible for activity on your account.'}]},
+      {h:{vi:'3. Nội dung bạn đăng', en:'3. What you post'}, li:[
+        {vi:'Tin đăng phải đúng sự thật, đúng luật và đúng với công việc/tiệm thật.', en:'Ads must be truthful, lawful, and about a real job, salon, or service.'},
+        {vi:'Tin tuyển dụng phải tuân thủ luật lao động và chống phân biệt đối xử (không phân biệt chủng tộc, giới tính, tôn giáo, quốc tịch, tuổi, khuyết tật…).', en:'Job ads must follow employment and anti-discrimination laws (no discrimination based on race, sex, religion, national origin, age, disability, etc.).'},
+        {vi:'Thợ chỉ được nhận làm dịch vụ khi có giấy phép phù hợp theo quy định của TDLR (Texas). Bạn tự chịu trách nhiệm về giấy phép của mình.', en:'Techs must hold the license Texas TDLR requires for the services they perform. You are responsible for your own licensing.'},
+        {vi:'Bạn chỉ được đăng ảnh/video do bạn chụp hoặc có quyền sử dụng. Bạn cho phép NailMatch hiển thị nội dung đó trên trang.', en:'Only post photos/videos you took or have the right to use. You allow NailMatch to display that content on the site.'}]},
+      {h:{vi:'4. Không được phép', en:'4. Not allowed'}, li:[
+        {vi:'Tin lừa đảo, tin giả, spam, quảng cáo không liên quan.', en:'Scams, fake ads, spam, or unrelated advertising.'},
+        {vi:'Quấy rối, đe dọa, nội dung khiêu dâm hoặc phân biệt đối xử.', en:'Harassment, threats, sexual or discriminatory content.'},
+        {vi:'Thu thập thông tin người khác, dùng tin nhắn để quảng cáo hàng loạt.', en:'Collecting other users’ information or using messages for mass marketing.'},
+        {vi:'Chúng tôi có quyền gỡ tin hoặc khóa tài khoản vi phạm mà không cần báo trước.', en:'We may remove content or suspend accounts that break these rules without notice.'}]},
+      {h:{vi:'5. Tự kiểm tra trước khi giao dịch', en:'5. Check before you deal'}, li:[
+        {vi:'Chúng tôi không xác minh mọi thông tin người dùng đăng. Hãy tự kiểm tra tiệm, thợ, giấy phép và các điều kiện trước khi nhận việc, thuê người hoặc chuyển tiền.', en:'We do not verify everything users post. Check the salon, tech, license, and terms yourself before taking a job, hiring, or sending money.'},
+        {vi:'Không bao giờ chuyển tiền đặt cọc cho người lạ chỉ qua tin nhắn.', en:'Never send a deposit to someone you only know through messages.'}]},
+      {h:{vi:'6. Giới hạn trách nhiệm', en:'6. Limits of liability'}, li:[
+        {vi:'NailMatch được cung cấp “nguyên trạng”, miễn phí và không có bảo đảm nào. Trong phạm vi luật cho phép, chúng tôi không chịu trách nhiệm cho thiệt hại phát sinh từ việc dùng trang hoặc từ giao dịch giữa người dùng.', en:'NailMatch is provided “as is,” free of charge, without warranties. To the extent the law allows, we are not liable for losses from using the site or from dealings between users.'}]},
+      {h:{vi:'7. Luật áp dụng', en:'7. Governing law'}, li:[
+        {vi:'Các điều khoản này được điều chỉnh bởi luật của Tiểu bang Texas, Hoa Kỳ.', en:'These terms are governed by the laws of the State of Texas, USA.'}]},
+      {h:{vi:'8. Thay đổi', en:'8. Changes'}, li:[
+        {vi:'Chúng tôi có thể cập nhật điều khoản. Tiếp tục dùng trang sau khi cập nhật nghĩa là bạn đồng ý với bản mới.', en:'We may update these terms. Using the site after an update means you accept the new version.'}]}
+    ]
+  }
+};
+function viewLegal(kind){
+  const d = LEGAL[kind], other = kind === 'terms' ? 'privacy' : 'terms';
+  return `<div class="wrap narrow page legal"><a class="back" href="#home">${ICON.back}${t('back')}</a>
+    <h1 class="pg-title">${L(d.title)}</h1><p class="hint">${L(LEGAL_DATE)}</p><p>${L(d.intro)}</p>
+    ${d.secs.map(s => `<section class="jd-sec"><h2>${L(s.h)}</h2><ul class="jd-list">${s.li.map(x => `<li>${L(x)}</li>`).join('')}</ul></section>`).join('')}
+    <section class="jd-sec"><h2>${lang === 'vi' ? 'Liên hệ' : 'Contact'}</h2><p style="margin:0">NailMatch · ${t('support')} <a href="tel:+12108687686">(210) 868-7686</a> (Ms. Jane)</p></section>
+    <p style="margin-top:16px"><a class="btn-link" href="#${other}">${L(LEGAL[other].title)} →</a></p></div>`;
+}
+const origNotFound = notFound;
+notFound = function(){ const v = route().view; return v === 'terms' || v === 'privacy' ? viewLegal(v) : origNotFound(); };
+const LEGAL_LINKS = () => `<a href="#terms">${L(LEGAL.terms.title)}</a> · <a href="#privacy">${L(LEGAL.privacy.title)}</a>`;
+Object.assign(T.vi, {footS:'NailMatch · Miễn phí', agreeNote:'Khi tiếp tục, bạn đồng ý với <a href="#terms">Điều khoản sử dụng</a> và <a href="#privacy">Chính sách quyền riêng tư</a>. Có thể phát sinh phí tin nhắn theo nhà mạng.'});
+Object.assign(T.en, {footS:'NailMatch · Free', agreeNote:'By continuing, you agree to our <a href="#terms">Terms of Use</a> and <a href="#privacy">Privacy Policy</a>. Message and data rates may apply.'});
+(() => { const st = document.createElement('style'); st.textContent = '.legal p{line-height:1.6}.legal .jd-list li{margin-bottom:6px;line-height:1.55}.agree-note{font-size:12.5px;color:var(--muted);text-align:center;margin:14px 0 0;line-height:1.5}.agree-note a{color:var(--primary);font-weight:700}.foot-legal a{color:var(--primary);font-weight:700}'; document.head.appendChild(st); })();
+
 /* ================= LIVE MODE (Firebase) =================
    Runs only when the Firebase SDK loaded. Otherwise the page stays a pure demo. */
 const FB_CFG = {
@@ -2990,7 +3078,8 @@ function initLive(){
     const k = {'auth/invalid-phone-number':'e_phone','auth/missing-phone-number':'e_phone','auth/too-many-requests':'e_many','auth/quota-exceeded':'e_many','auth/invalid-verification-code':'e_code',
       'auth/code-expired':'e_expired','auth/unauthorized-domain':'e_domain','auth/operation-not-allowed':'e_off','auth/network-request-failed':'e_net','permission-denied':'e_perm',
       'auth/invalid-action-code':'e_link','auth/expired-action-code':'e_link','auth/invalid-email':'errEmail'}[c];
-    return k ? t(k) : t('e_gen') + (c ? ` (${c})` : '');
+    const raw = (e && e.message ? String(e.message) : '').replace(/^Firebase:\s*/, '').slice(0, 220);
+    return (k ? t(k) : t('e_gen')) + (c || raw ? `\n[${c}${raw ? ' – ' + raw : ''}]` : '');
   }
 
   /* ---------- style ---------- */
@@ -2998,7 +3087,7 @@ function initLive(){
   st.textContent = `.ct-sample{background:#FFF1D6;color:#8A5A00;border:1px solid #F1D49A}.sample-note{background:#FFF8E8;border:1px solid #F1D49A;color:#7A5200;border-radius:12px;padding:10px 14px;margin:0 0 12px;font-size:14px}
   .gbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;border:1px solid var(--line,#ddd);background:#fff;color:#222;border-radius:12px;padding:13px 16px;font:inherit;font-weight:600;cursor:pointer}
   .gbtn svg{width:20px;height:20px}.or-sep{display:flex;align-items:center;gap:10px;color:#888;font-size:13px;margin:16px 0}.or-sep:before,.or-sep:after{content:"";flex:1;height:1px;background:#e5e5e5}
-  .auth-msg{color:#B3261E;font-size:14px;margin:8px 0 0}.bub small.tm{display:block;opacity:.6;font-size:11px;margin-top:2px}.mypost{position:relative}.mypost .del{margin-top:6px}
+  .auth-msg{color:#B3261E;font-size:14px;margin:8px 0 0;white-space:pre-line;word-break:break-word}.bub small.tm{display:block;opacity:.6;font-size:11px;margin-top:2px}.mypost{position:relative}.mypost .del{margin-top:6px}
   button[disabled]{opacity:.6;pointer-events:none}.cta-note{margin:0;font-size:14px;color:#6B5A60;text-align:center;width:100%;padding:6px 0}`;
   document.head.appendChild(st);
 
@@ -3036,23 +3125,26 @@ function initLive(){
     } catch (e) { return null; }
   }
   function replaceLive(arr, list){ for (let i = arr.length - 1; i >= 0; i--) if (arr[i].live) arr.splice(i, 1); arr.unshift(...list); }
-  db.collection('ads').orderBy('createdAt', 'desc').limit(300).onSnapshot(snap => {
+  /* listeners re-subscribe after an error (e.g. rules changed while the page was open) */
+  function keepListening(name, make){ let tries = 0; const go = () => make(() => { tries = 0; }, e => { console.warn(name, e); setTimeout(go, Math.min(30000, 3000 * ++tries)); }); go(); }
+  keepListening('ads', (ok, bad) => db.collection('ads').orderBy('createdAt', 'desc').limit(300).onSnapshot(snap => { ok();
     replaceLive(ADS, snap.docs.map(fromDoc).filter(a => a && ['hiring','salon_sale','service'].includes(a.type) && (a.type !== 'hiring' || (a.hiring && a.hiring.services))));
     softRender();
-  }, e => console.warn('ads', e));
-  db.collection('techs').orderBy('updatedAt', 'desc').limit(300).onSnapshot(snap => {
+  }, bad));
+  keepListening('techs', (ok, bad) => db.collection('techs').orderBy('updatedAt', 'desc').limit(300).onSnapshot(snap => { ok();
     replaceLive(TECHS, snap.docs.map(fromDoc).filter(x => x && x.name && Array.isArray(x.services)));
     if (state.user) state.myProfile = TECHS.find(x => x.live && x.id === state.user.uid) || null;
     softRender();
-  }, e => console.warn('techs', e));
+  }, bad));
 
   /* ---------- auth ---------- */
   function startUserListeners(){
     stopUserListeners();
     const uid = state.user.uid;
-    L_.unsubs.push(db.collection('threads').where('members', 'array-contains', uid).onSnapshot(snap => {
+    const sub = () => { const un = db.collection('threads').where('members', 'array-contains', uid).onSnapshot(snap => {
       L_.threads = snap.docs.map(d => Object.assign({id:d.id}, d.data(EST))); L_.threadsReady = true; softRender();
-    }, e => { console.warn('threads', e); L_.threadsReady = true; softRender(); }));
+    }, e => { console.warn('threads', e); L_.threadsReady = true; softRender(); setTimeout(() => { if (state.user && state.user.uid === uid && L_.unsubs.includes(un)){ L_.unsubs.splice(L_.unsubs.indexOf(un), 1); sub(); } }, 5000); }); L_.unsubs.push(un); };
+    sub();
     state.myProfile = TECHS.find(x => x.live && x.id === uid) || null;
   }
   function stopUserListeners(){ L_.unsubs.forEach(u => { try { u(); } catch (e) {} }); L_.unsubs = []; L_.threads = []; L_.threadsReady = false; unsubMsgs(); }
@@ -3119,7 +3211,7 @@ function initLive(){
       <div class="fq"><label class="flabel" for="au-name">${t('nameLbl')}</label><input id="au-name" type="text" maxlength="40" value="${esc(a.name || '')}"></div>
       ${!p.phone ? `<div class="fq"><label class="flabel" for="au-ph2">${t('phoneOpt')}</label><div class="tel-row"><span class="cc">🇺🇸 +1</span><input id="au-ph2" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(210) 555-0123" value="${esc(a.phone2 || '')}"></div></div>` : ''}
       <div class="fq"><span class="flabel">${t('roleLbl')}</span><div class="seg three" role="radiogroup">${['salon','tech','other'].map(r => `<button type="button" role="radio" aria-checked="${a.role === r}" class="${a.role === r ? 'on' : ''}" data-act="aurole" data-v="${r}">${t('role_' + r)}</button>`).join('')}</div></div>
-      ${msg}<button class="btn btn-primary btn-block" type="button" data-act="audone"${dis}>${a.busy ? t('sending') : t('done')}</button>
+      ${msg}<button class="btn btn-primary btn-block" type="button" data-act="audone"${dis}>${a.busy ? t('sending') : t('done')}</button><p class="agree-note">${t('agreeNote')}</p>
       <p style="text-align:center;margin-top:12px"><button class="btn-link" type="button" data-act="signout">${t('signOut')}</button></p>`;
     } else {
       const viaEmail = a.method === 'email';
@@ -3131,7 +3223,7 @@ function initLive(){
         ? `<div class="fq"><label class="flabel" for="au-email">${t('emailLbl')}</label><input id="au-email" type="email" inputmode="email" autocomplete="email" placeholder="ten@gmail.com" value="${esc(a.email || '')}"></div>`
         : `<div class="fq"><label class="flabel" for="au-phone">${t('phoneLbl')}</label><div class="tel-row"><span class="cc">🇺🇸 +1</span><input id="au-phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(210) 555-0123" value="${esc(a.phone || '')}"></div></div>`}
       ${msg}<button class="btn btn-primary btn-block" type="button" data-act="ausend"${dis}>${a.busy ? t('sending') : viaEmail ? t('sendLink') : t('sendCode')}</button>
-      <p class="hint" style="text-align:center;margin-top:12px">${t('authNew')}</p>`;
+      <p class="hint" style="text-align:center;margin-top:12px">${t('authNew')}</p><p class="agree-note">${t('agreeNote')}</p>`;
     }
     return `<div class="wrap auth-wrap page"><div class="card auth-card">${body}</div></div>`;
   };
