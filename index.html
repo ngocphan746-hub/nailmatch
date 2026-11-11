@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NailMatch – Tìm thợ nail, tìm việc nail miễn phí</title>
-<meta name="description" content="Tiệm nail đăng tuyển thợ, thợ nail đăng hồ sơ tìm việc. 100% miễn phí, ẩn số điện thoại. San Antonio, Texas.">
+<title>thonail – Nơi tiệm nail và thợ nail kết nối</title>
+<meta name="description" content="Tiệm nail đăng tuyển thợ, thợ nail đăng hồ sơ tìm việc. 100% miễn phí, ẩn số điện thoại.">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="NailMatch">
-<meta property="og:title" content="NailMatch – Tìm thợ nail, tìm việc nail miễn phí">
-<meta property="og:description" content="Tiệm nail đăng tuyển thợ, thợ nail đăng hồ sơ tìm việc. 100% miễn phí, ẩn số điện thoại. San Antonio, Texas.">
-<meta property="og:url" content="https://ngocphan746-hub.github.io/nailmatch/">
-<meta property="og:image" content="https://ngocphan746-hub.github.io/nailmatch/og.jpg">
+<meta property="og:site_name" content="thonail">
+<meta property="og:title" content="thonail – Nơi tiệm nail và thợ nail kết nối">
+<meta property="og:description" content="Tiệm nail đăng tuyển thợ, thợ nail đăng hồ sơ tìm việc. 100% miễn phí, ẩn số điện thoại.">
+<meta property="og:url" content="https://thonail.org/">
+<meta property="og:image" content="https://thonail.org/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:locale" content="vi_VN">
@@ -678,6 +678,7 @@ details.more summary{cursor:pointer;font-weight:700;color:var(--primary);padding
 @media (min-width: 961px) and (max-width: 1140px){ .main-nav{gap:16px;font-size:15px} .hdr{gap:16px} }
 @media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important}}
 </style>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22%239B1D4F%22/%3E%3Cg%20transform%3D%22translate%2814%2013%29%20scale%281.5%29%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M7%2022V9.5a5%205%200%200%201%2010%200V22%22/%3E%3Cpath%20d%3D%22M9.6%2010a2.4%202.4%200%200%201%204.8%200v3.6H9.6z%22%20fill%3D%22%23fff%22/%3E%3C/g%3E%3C/svg%3E">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -769,7 +770,7 @@ vi: {
   apply:'Xem kết quả', clear:'Xóa lọc', any:'Bất kỳ',
   alertsTitle:'Nhận thông báo tin mới', alertsLead:'Chúng tôi sẽ báo khi có tin mới phù hợp.', alertsContact:'Số điện thoại hoặc email',
   category:'Loại tin', saveAlert:'Lưu thông báo', alertSaved:'Đã lưu thông báo. Đây là bản demo nên chưa gửi tin thật.',
-  close:'Đóng', terms:'Điều khoản', privacy:'Quyền riêng tư', footNote:'© 2026 NailMatch · Miễn phí cho chủ tiệm và thợ nail ở Texas · Bản demo',
+  close:'Đóng', terms:'Điều khoản', privacy:'Quyền riêng tư', footNote:'© 2026 thonail · Miễn phí cho chủ tiệm và thợ nail ở Texas · Bản demo',
   techsN:(n)=>`${n} thợ`, minFull:(m)=>`Full set bột ≤ ${m} phút`, sqft:'ft²', perMonth:'/tháng', licenseReqTx:'Bắt buộc có bằng Texas',
   areaAllTx:'Toàn Texas', salonsNear:'Tiệm gần',
   navMatching:'Ghép thợ & tiệm', matchTitle:'Ghép thợ & tiệm',
@@ -795,7 +796,7 @@ vi: {
   newMatchesAd:'Thợ phù hợp với tin vừa đăng', newMatchesTech:'Tiệm phù hợp với hồ sơ vừa đăng', amountLabel:'Mức lương',
   noFullMatch:'Chưa có bên nào đạt đủ điều kiện bắt buộc. Dưới đây là những lựa chọn gần nhất và lý do còn thiếu.',
   lpBadge:'100% MIỄN PHÍ', lpTitle:'Nơi tiệm nail và thợ nail tìm thấy nhau – hoàn toàn miễn phí',
-  lpLead:'NailMatch giúp chủ tiệm ở Texas tuyển đúng thợ, và giúp thợ tìm tiệm hợp tay nghề, lịch làm và mức lương. Đăng tin, tạo hồ sơ và ghép thợ – tiệm đều miễn phí.',
+  lpLead:'thonail giúp chủ tiệm ở Texas tuyển đúng thợ, và giúp thợ tìm tiệm hợp tay nghề, lịch làm và mức lương. Đăng tin, tạo hồ sơ và ghép thợ – tiệm đều miễn phí.',
   lpSalonBtn:'Tôi là chủ tiệm – đăng tin tuyển', lpTechBtn:'Tôi là thợ – tạo hồ sơ', lpBrowse:'Hoặc xem tin đăng',
   free1:'Đăng tin miễn phí', free1d:'Tin tuyển thợ, sang tiệm, dịch vụ', free2:'Tạo hồ sơ miễn phí', free2d:'Kèm portfolio và feedback khách', free3:'Không gói tháng, không phí ẩn', free3d:'Không cần thẻ thanh toán',
   howTitle:'Cách hoạt động', howLead:'Mỗi bên chỉ 3 bước.', forSalons:'Dành cho chủ tiệm', forTechs:'Dành cho thợ nail',
@@ -882,7 +883,7 @@ en: {
   apply:'Show results', clear:'Clear filters', any:'Any',
   alertsTitle:'Get alerts for new ads', alertsLead:'We will let you know when matching ads are posted.', alertsContact:'Phone or email',
   category:'Category', saveAlert:'Save alert', alertSaved:'Alert saved. This is a demo, so no messages will be sent.',
-  close:'Close', terms:'Terms', privacy:'Privacy', footNote:'© 2026 NailMatch · Free for nail salon owners and techs in Texas · Demo',
+  close:'Close', terms:'Terms', privacy:'Privacy', footNote:'© 2026 thonail · Free for nail salon owners and techs in Texas · Demo',
   techsN:(n)=>`${n} ${n===1?'tech':'techs'}`, minFull:(m)=>`Acrylic full set ≤ ${m} min`, sqft:'sq ft', perMonth:'/month', licenseReqTx:'Texas license required',
   areaAllTx:'All of Texas', salonsNear:'Salons near',
   navMatching:'Matching', matchTitle:'Tech–salon matching',
@@ -908,7 +909,7 @@ en: {
   newMatchesAd:'Techs who match your new ad', newMatchesTech:'Salons that match your new profile', amountLabel:'Pay amount',
   noFullMatch:'No one meets all the must-haves yet. These are the closest options, with what is missing.',
   lpBadge:'100% FREE', lpTitle:'Where nail salons and nail techs find each other – completely free',
-  lpLead:'NailMatch helps salon owners in Texas hire the right techs, and helps techs find salons that fit their skills, schedule and pay. Posting jobs, creating profiles and matching are all free.',
+  lpLead:'thonail helps salon owners in Texas hire the right techs, and helps techs find salons that fit their skills, schedule and pay. Posting jobs, creating profiles and matching are all free.',
   lpSalonBtn:'I’m a salon owner – post a job', lpTechBtn:'I’m a nail tech – create my profile', lpBrowse:'Or browse ads',
   free1:'Free to post ads', free1d:'Hiring, salons for sale, services', free2:'Free tech profiles', free2d:'With portfolio and customer feedback', free3:'No subscription, no hidden fees', free3d:'No credit card needed',
   howTitle:'How it works', howLead:'Three steps for each side.', forSalons:'For salon owners', forTechs:'For nail techs',
@@ -927,7 +928,7 @@ en: {
 }};
 Object.assign(T.vi, {
   nav_home:'Trang chủ', nav_jobs:'Việc làm', nav_techs:'Thợ', nav_post:'Đăng', nav_match:'Ghép',
-  h_title:'Nơi tiệm nail và thợ nail gặp nhau.', h_sub:'Miễn phí 100% · Không phí · Không gói tháng', h_salon:'Tôi cần thợ', h_tech:'Tôi tìm việc',
+  h_title:'Nơi tiệm nail và thợ nail kết nối.', h_sub:'Miễn phí 100% · Không phí · Không gói tháng', h_salon:'Tôi cần thợ', h_tech:'Tôi tìm việc',
   lane_salon:'Tiệm', lane_tech:'Thợ', s1:'Đăng tin', s2:'Xem % hợp', s3:'Gọi thợ', t1:'Tạo hồ sơ', t2:'Được ghép', t3:'Tiệm gọi',
   newJobs:'Việc mới', seeAll:'Xem tất cả', jobsTitle:'Việc làm', techsTitle:'Thợ tìm việc', allSvc2:'Tất cả',
   need:'Cần', plusH:'Điểm cộng', matchTechs:'Thợ hợp nhất', matchSalons:'Tiệm hợp nhất', textS:'Nhắn',
@@ -935,7 +936,7 @@ Object.assign(T.vi, {
   moreDetails:'Thêm chi tiết (không bắt buộc)', matchHint:'✓ khớp · ✕ thiếu · ? chưa rõ', yourJob:'Tin tuyển của bạn', yourProfile:'Hồ sơ của bạn',
   iamSalonS:'Tôi là tiệm', iamTechS:'Tôi là thợ', meets:(a,b)=>`Đủ ${a}/${b} yêu cầu`, missMust:'Thiếu yêu cầu bắt buộc', exampleS:'Câu mẫu',
   photosS:'Ảnh', workS:'Tác phẩm', aboutS:'Giới thiệu', noJobs:'Chưa có việc phù hợp. Thử tăng khoảng cách.', milesS:'dặm',
-  footS:'NailMatch · Miễn phí · Bản demo'
+  footS:'thonail · Miễn phí · Bản demo'
 });
 Object.assign(T.en, {
   nav_home:'Home', nav_jobs:'Jobs', nav_techs:'Techs', nav_post:'Post', nav_match:'Match',
@@ -947,7 +948,7 @@ Object.assign(T.en, {
   moreDetails:'More details (optional)', matchHint:'✓ match · ✕ missing · ? unknown', yourJob:'Your hiring ad', yourProfile:'Your profile',
   iamSalonS:'I’m a salon', iamTechS:'I’m a tech', meets:(a,b)=>`Meets ${a} of ${b}`, missMust:'Missing a must-have', exampleS:'Examples',
   photosS:'Photos', workS:'Work', aboutS:'About', noJobs:'No matching jobs yet. Try a larger distance.', milesS:'mi',
-  footS:'NailMatch · Free · Demo'
+  footS:'thonail · Free · Demo'
 });
 Object.assign(T.vi, {
   nav_jobs:'Tin đăng', jobsTitle:'Tin đăng', cat_all:'Tất cả', cat_hiring:'Tuyển thợ', cat_salon_sale:'Sang tiệm', cat_service:'Dịch vụ',
@@ -972,9 +973,9 @@ Object.assign(T.en, {
   r_lic:'Texas license', r_days:'Work days', r_pay:'Pay', r_dist:'Distance'
 });
 Object.assign(T.vi, {
-  msgBtn:'Nhắn tin', msgPrivacy:'🔒 Số điện thoại được ẩn. Nhắn qua NailMatch.', msgTo:n=>`Nhắn ${n}`, msgQuick:'Chọn nhanh', msgPh:'Viết tin nhắn…', msgSend:'Gửi',
+  msgBtn:'Nhắn tin', msgPrivacy:'🔒 Số điện thoại được ẩn. Nhắn qua thonail.', msgTo:n=>`Nhắn ${n}`, msgQuick:'Chọn nhanh', msgPh:'Viết tin nhắn…', msgSend:'Gửi',
   msgDemo:'Bản demo: tin nhắn và SMS là mô phỏng.', msgSent:'Đã gửi! Chúng tôi báo cho người nhận bằng tin nhắn, không lộ số của bạn.',
-  inbox:'Tin nhắn', inboxEmpty:'Chưa có tin nhắn. Bấm “Nhắn tin” ở tin đăng hoặc hồ sơ thợ.', inboxNote:'🔒 Cả hai bên đều không thấy số điện thoại của nhau. Có tin mới, NailMatch sẽ gửi SMS báo bạn.',
+  inbox:'Tin nhắn', inboxEmpty:'Chưa có tin nhắn. Bấm “Nhắn tin” ở tin đăng hoặc hồ sơ thợ.', inboxNote:'🔒 Cả hai bên đều không thấy số điện thoại của nhau. Có tin mới, thonail sẽ gửi SMS báo bạn.',
   you:'Bạn', phonePrivate:'Số này được giữ kín, không hiện trên web. Có người nhắn, chúng tôi sẽ SMS báo bạn.',
   q_ad:['Chào anh/chị, tiệm còn tuyển không ạ?','Em quan tâm, khi nào em qua làm thử được ạ?'],
   q_salon_sale:['Tiệm còn sang không ạ?','Tuần này em qua xem tiệm được không ạ?'],
@@ -986,7 +987,7 @@ Object.assign(T.vi, {
   r_tech:'Dạ em vẫn đang tìm việc. Tiệm cần thợ những ngày nào ạ?'
 });
 Object.assign(T.en, {
-  msgBtn:'Message', msgPrivacy:'🔒 Phone numbers are hidden. Message through NailMatch.', msgTo:n=>`Message ${n}`, msgQuick:'Quick picks', msgPh:'Write a message…', msgSend:'Send',
+  msgBtn:'Message', msgPrivacy:'🔒 Phone numbers are hidden. Message through thonail.', msgTo:n=>`Message ${n}`, msgQuick:'Quick picks', msgPh:'Write a message…', msgSend:'Send',
   msgDemo:'Demo: messages and texts are simulated.', msgSent:'Sent! We notified them by text — your number stays private.',
   inbox:'Messages', inboxEmpty:'No messages yet. Tap “Message” on any ad or tech profile.', inboxNote:'🔒 Neither side sees the other’s phone number. We text you when a new message arrives.',
   you:'You', phonePrivate:'Kept private — never shown on the site. We text you when someone messages you.',
@@ -1001,17 +1002,17 @@ Object.assign(T.en, {
 });
 Object.assign(T.vi, {
   rb_web:'Chat trên web', rb_sms:'SMS (số được ẩn)', rb_both:'Web + SMS',
-  rbField:'Nhận tin nhắn qua', rbHint:'SMS gửi từ số của NailMatch, người khác không thấy số thật của bạn.',
+  rbField:'Nhận tin nhắn qua', rbHint:'SMS gửi từ số của thonail, người khác không thấy số thật của bạn.',
   theyGet:v=>`Bên kia nhận tin qua: ${v}`, replyVia:'Bạn muốn nhận trả lời qua',
-  viaWeb:'qua web', viaSms:'qua SMS', smsHead:'📱 SMS từ NailMatch · (210) 868-7686', smsDemo:'Bản demo: mô phỏng tin SMS trên điện thoại của bạn. Trả lời SMS này cũng hiện lại trên web.',
+  viaWeb:'qua web', viaSms:'qua SMS', smsHead:'📱 SMS từ thonail · (210) 868-7686', smsDemo:'Bản demo: mô phỏng tin SMS trên điện thoại của bạn. Trả lời SMS này cũng hiện lại trên web.',
   switchWeb:'Chuyển sang chat web', switchSms:'Chuyển sang nhận SMS', clearMsgs:'Xóa tin nhắn demo',
   savedLocal:'Tin nhắn được lưu trên trình duyệt này (bản demo). Bản thật sẽ lưu theo tài khoản, đổi máy vẫn thấy.', smsLogin:'SMS sẽ gửi tới số bạn dùng để đăng nhập.'
 });
 Object.assign(T.en, {
   rb_web:'Web chat', rb_sms:'SMS (number hidden)', rb_both:'Web + SMS',
-  rbField:'Receive messages by', rbHint:'Texts come from a NailMatch number, so nobody sees your real number.',
+  rbField:'Receive messages by', rbHint:'Texts come from a thonail number, so nobody sees your real number.',
   theyGet:v=>`They receive messages by: ${v}`, replyVia:'Get replies by',
-  viaWeb:'via web', viaSms:'via SMS', smsHead:'📱 SMS from NailMatch · (210) 868-7686', smsDemo:'Demo: this simulates the texts on your phone. Replying by text also shows up on the web.',
+  viaWeb:'via web', viaSms:'via SMS', smsHead:'📱 SMS from thonail · (210) 868-7686', smsDemo:'Demo: this simulates the texts on your phone. Replying by text also shows up on the web.',
   switchWeb:'Switch to web chat', switchSms:'Switch to SMS', clearMsgs:'Clear demo messages',
   savedLocal:'Messages are saved in this browser (demo). The real app saves them to your account, on any device.', smsLogin:'Texts go to the number you sign in with.'
 });
@@ -1069,7 +1070,7 @@ Object.assign(T.vi, {
   sk_basic:'Tên & SĐT', sk_license:'Bằng', sk_refs:'Giới thiệu', sk_work:'Ảnh & video',
   secApply:'Hồ sơ cần có khi ứng tuyển', applyBtn:'Ứng tuyển', applyTitle:s=>`Ứng tuyển: ${s}`, applyNeed:n=>`Tiệm yêu cầu hồ sơ có:`,
   applyOk:'Hồ sơ của bạn đủ yêu cầu ✓', applyMissing:'Hồ sơ còn thiếu mục ✕. Bổ sung rồi ứng tuyển lại nhé.', applyFix:'Bổ sung hồ sơ',
-  applyNoProfile:'Bạn chưa có hồ sơ thợ trên NailMatch.', applyMake:'Tạo hồ sơ thợ', applyUseSample:'Thử bằng hồ sơ mẫu (Linh)', applyAs:n=>`Đang dùng hồ sơ: ${n}`,
+  applyNoProfile:'Bạn chưa có hồ sơ thợ trên thonail.', applyMake:'Tạo hồ sơ thợ', applyUseSample:'Thử bằng hồ sơ mẫu (Linh)', applyAs:n=>`Đang dùng hồ sơ: ${n}`,
   applySend:'Gửi hồ sơ', applyNotePh:'Lời nhắn cho tiệm (không bắt buộc)', applySentMsg:s=>`📄 Đã gửi hồ sơ ứng tuyển: ${s}`, applySent:'Đã gửi hồ sơ! Tiệm sẽ nhận được thông báo.',
   appCard:'Hồ sơ đã gửi', verifiedDemo:'đã xác minh (demo)', profileHas:'Hồ sơ đã có',
   licNoLbl:'Số bằng TDLR', licNoHint:'Dùng để xác minh trên trang tra cứu bằng của TDLR. Số này không hiện công khai.',
@@ -1085,7 +1086,7 @@ Object.assign(T.en, {
   sk_basic:'Name & phone', sk_license:'License', sk_refs:'References', sk_work:'Photos & video',
   secApply:'What your application needs', applyBtn:'Apply', applyTitle:s=>`Apply: ${s}`, applyNeed:n=>`This salon requires:`,
   applyOk:'Your profile meets the requirements ✓', applyMissing:'Your profile is missing the ✕ items. Add them, then apply again.', applyFix:'Complete my profile',
-  applyNoProfile:'You don’t have a tech profile on NailMatch yet.', applyMake:'Create a tech profile', applyUseSample:'Try with a sample profile (Linh)', applyAs:n=>`Using profile: ${n}`,
+  applyNoProfile:'You don’t have a tech profile on thonail yet.', applyMake:'Create a tech profile', applyUseSample:'Try with a sample profile (Linh)', applyAs:n=>`Using profile: ${n}`,
   applySend:'Send application', applyNotePh:'Note to the salon (optional)', applySentMsg:s=>`📄 Application sent: ${s}`, applySent:'Application sent! The salon will be notified.',
   appCard:'Application sent', verifiedDemo:'verified (demo)', profileHas:'Profile includes',
   licNoLbl:'TDLR license number', licNoHint:'Used to verify your license on the TDLR license lookup. Never shown publicly.',
@@ -1097,7 +1098,7 @@ Object.assign(T.vi, {
   authLead:'Dùng số điện thoại hoặc email, không cần mật khẩu. Thông tin của bạn luôn được giữ kín.', authNew:'Chưa có tài khoản? Nhập số điện thoại hoặc email là tự tạo tài khoản mới.',
   byPhone:'Số điện thoại', byEmail:'Email', emailLbl:'Email', errEmail:'Nhập email hợp lệ, vd: ten@gmail.com', changeEmail:'Đổi email',
   phoneOpt:'Số điện thoại (không bắt buộc – để nhận SMS)', smsNeedPhone:'Tài khoản của bạn chưa có số điện thoại. Chọn “Chat trên web”, hoặc thêm số ở trang Tài khoản.',
-  addPhone:'Thêm số điện thoại', savePhone:'Lưu', emailNote:'Có tin nhắn mới, NailMatch sẽ gửi email báo bạn.'
+  addPhone:'Thêm số điện thoại', savePhone:'Lưu', emailNote:'Có tin nhắn mới, thonail sẽ gửi email báo bạn.'
 });
 Object.assign(T.en, {
   authLead:'Use your phone number or email, no password. Your info always stays private.', authNew:'No account yet? Enter your phone or email and we create one for you.',
@@ -1556,7 +1557,7 @@ const state = {
 
 /* ---------- helpers ---------- */
 const ICON = {
-  drop:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2.2" aria-hidden="true"><path d="M12 3.5c3 3.6 5.5 6.9 5.5 10a5.5 5.5 0 0 1-11 0c0-3.1 2.5-6.4 5.5-10z"/></svg>',
+  drop:'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 22V9.5a5 5 0 0 1 10 0V22"/><path d="M9.6 10a2.4 2.4 0 0 1 4.8 0v3.6H9.6z" fill="#fff"/></svg>',
   pin:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>',
   search:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
   sliders:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>',
@@ -2633,7 +2634,7 @@ function header(r){
   const isOn = h => r.view === h || (h === 'ads' && r.view === 'ad') || (h === 'job-seekers' && (r.view === 'tech' || r.view === 'portfolio'));
   return `<div class="demo-bar">${t('demoBar')}</div>
   <header class="site-header"><div class="wrap hdr">
-    <a class="brand" href="#home"><span class="logo">${ICON.drop}</span><span>NailMatch</span></a>
+    <a class="brand" href="#home"><span class="logo">${ICON.drop}</span><span>thonail</span></a>
     <nav class="main-nav" aria-label="Main">${nav.map(([h, k]) => `<a href="#${h}"${isOn(h) ? ' class="active" aria-current="page"' : ''}>${t(k)}</a>`).join('')}</nav>
     <div class="hdr-right">
       ${state.user ? `<a class="me-btn${r.view === 'account' ? ' on' : ''}" href="#account" aria-label="${t('account')}">${esc((state.user.name || '?').slice(0, 1).toUpperCase())}</a>` : `<a class="signin-btn${r.view === 'login' ? ' on' : ''}" href="#login">${ICON.user}<span>${t('signIn')}</span></a>`}
@@ -2925,13 +2926,13 @@ const LEGAL_DATE = {vi:'Hiệu lực từ ngày 11/11/2026', en:'Effective Novem
 const LEGAL = {
   privacy:{
     title:{vi:'Chính sách quyền riêng tư', en:'Privacy Policy'},
-    intro:{vi:'NailMatch (“chúng tôi”) là trang miễn phí giúp tiệm nail và thợ nail ở Texas tìm nhau. Trang này giải thích chúng tôi thu thập thông tin gì, dùng để làm gì và bạn có quyền gì.',
-      en:'NailMatch (“we”) is a free site that helps nail salons and nail techs in Texas find each other. This page explains what information we collect, how we use it, and the choices you have.'},
+    intro:{vi:'thonail (“chúng tôi”) là trang miễn phí giúp tiệm nail và thợ nail ở Texas tìm nhau. Trang này giải thích chúng tôi thu thập thông tin gì, dùng để làm gì và bạn có quyền gì.',
+      en:'thonail (“we”) is a free site that helps nail salons and nail techs in Texas find each other. This page explains what information we collect, how we use it, and the choices you have.'},
     secs:[
       {h:{vi:'1. Thông tin chúng tôi thu thập', en:'1. Information we collect'}, li:[
         {vi:'<b>Thông tin tài khoản:</b> tên (hoặc tên tiệm), vai trò (chủ tiệm / thợ / khác), số điện thoại và/hoặc email bạn dùng để đăng nhập.', en:'<b>Account info:</b> your name (or salon name), role (salon owner / tech / other), and the phone number and/or email you sign in with.'},
         {vi:'<b>Nội dung bạn đăng:</b> tin tuyển thợ, tin sang tiệm, tin dịch vụ, hồ sơ thợ, ảnh và video bạn tải lên.', en:'<b>What you post:</b> hiring ads, salon-for-sale ads, service ads, tech profiles, and the photos and videos you upload.'},
-        {vi:'<b>Tin nhắn:</b> nội dung tin nhắn và hồ sơ ứng tuyển bạn gửi cho người khác qua NailMatch.', en:'<b>Messages:</b> the messages and job applications you send to others through NailMatch.'},
+        {vi:'<b>Tin nhắn:</b> nội dung tin nhắn và hồ sơ ứng tuyển bạn gửi cho người khác qua thonail.', en:'<b>Messages:</b> the messages and job applications you send to others through thonail.'},
         {vi:'<b>Thông tin kỹ thuật:</b> dữ liệu đăng nhập cần thiết để giữ bạn đăng nhập trên trình duyệt (lưu trong bộ nhớ trình duyệt).', en:'<b>Technical info:</b> the sign-in data needed to keep you signed in on your browser (stored in your browser’s storage).'}]},
       {h:{vi:'2. Chúng tôi dùng thông tin để làm gì', en:'2. How we use it'}, li:[
         {vi:'Tạo và bảo vệ tài khoản của bạn, gửi mã đăng nhập qua SMS hoặc link qua email.', en:'To create and protect your account and send sign-in codes by text or sign-in links by email.'},
@@ -2955,19 +2956,19 @@ const LEGAL = {
       {h:{vi:'7. Bảo mật', en:'7. Security'}, li:[
         {vi:'Dữ liệu được mã hóa khi truyền đi và chỉ người có quyền mới truy cập được. Tuy vậy, không hệ thống nào an toàn tuyệt đối.', en:'Data is encrypted in transit and access is limited by security rules. Still, no system is 100% secure.'}]},
       {h:{vi:'8. Độ tuổi', en:'8. Age'}, li:[
-        {vi:'NailMatch dành cho người từ 18 tuổi trở lên.', en:'NailMatch is for people 18 and older.'}]},
+        {vi:'thonail dành cho người từ 18 tuổi trở lên.', en:'thonail is for people 18 and older.'}]},
       {h:{vi:'9. Thay đổi chính sách', en:'9. Changes'}, li:[
         {vi:'Khi thay đổi chính sách, chúng tôi sẽ cập nhật ngày hiệu lực ở đầu trang này.', en:'If we change this policy, we will update the effective date at the top of this page.'}]}
     ]
   },
   terms:{
     title:{vi:'Điều khoản sử dụng', en:'Terms of Use'},
-    intro:{vi:'Khi dùng NailMatch, bạn đồng ý với các điều khoản dưới đây. Nếu không đồng ý, vui lòng không sử dụng trang.',
-      en:'By using NailMatch, you agree to these terms. If you do not agree, please do not use the site.'},
+    intro:{vi:'Khi dùng thonail, bạn đồng ý với các điều khoản dưới đây. Nếu không đồng ý, vui lòng không sử dụng trang.',
+      en:'By using thonail, you agree to these terms. If you do not agree, please do not use the site.'},
     secs:[
       {h:{vi:'1. Dịch vụ', en:'1. The service'}, li:[
-        {vi:'NailMatch là nơi đăng tin miễn phí, kết nối tiệm nail, thợ nail và các dịch vụ liên quan ở Texas. Hiện đang là bản thử nghiệm và có thể thay đổi.', en:'NailMatch is a free listing site connecting nail salons, nail techs, and related services in Texas. It is currently in beta and may change.'},
-        {vi:'NailMatch <b>không phải</b> là chủ thuê, công ty giới thiệu việc làm hay bên môi giới. Chúng tôi không tham gia vào việc thuê, trả lương, mua bán tiệm hay thỏa thuận giữa các bên.', en:'NailMatch is <b>not</b> an employer, staffing agency, or broker. We are not part of any hiring, pay, salon sale, or agreement between users.'}]},
+        {vi:'thonail là nơi đăng tin miễn phí, kết nối tiệm nail, thợ nail và các dịch vụ liên quan ở Texas. Hiện đang là bản thử nghiệm và có thể thay đổi.', en:'thonail is a free listing site connecting nail salons, nail techs, and related services in Texas. It is currently in beta and may change.'},
+        {vi:'thonail <b>không phải</b> là chủ thuê, công ty giới thiệu việc làm hay bên môi giới. Chúng tôi không tham gia vào việc thuê, trả lương, mua bán tiệm hay thỏa thuận giữa các bên.', en:'thonail is <b>not</b> an employer, staffing agency, or broker. We are not part of any hiring, pay, salon sale, or agreement between users.'}]},
       {h:{vi:'2. Tài khoản', en:'2. Your account'}, li:[
         {vi:'Bạn phải từ 18 tuổi trở lên và cung cấp thông tin đúng sự thật.', en:'You must be 18 or older and give accurate information.'},
         {vi:'Bạn chịu trách nhiệm về mọi hoạt động trên tài khoản của mình.', en:'You are responsible for activity on your account.'}]},
@@ -2975,7 +2976,7 @@ const LEGAL = {
         {vi:'Tin đăng phải đúng sự thật, đúng luật và đúng với công việc/tiệm thật.', en:'Ads must be truthful, lawful, and about a real job, salon, or service.'},
         {vi:'Tin tuyển dụng phải tuân thủ luật lao động và chống phân biệt đối xử (không phân biệt chủng tộc, giới tính, tôn giáo, quốc tịch, tuổi, khuyết tật…).', en:'Job ads must follow employment and anti-discrimination laws (no discrimination based on race, sex, religion, national origin, age, disability, etc.).'},
         {vi:'Thợ chỉ được nhận làm dịch vụ khi có giấy phép phù hợp theo quy định của TDLR (Texas). Bạn tự chịu trách nhiệm về giấy phép của mình.', en:'Techs must hold the license Texas TDLR requires for the services they perform. You are responsible for your own licensing.'},
-        {vi:'Bạn chỉ được đăng ảnh/video do bạn chụp hoặc có quyền sử dụng. Bạn cho phép NailMatch hiển thị nội dung đó trên trang.', en:'Only post photos/videos you took or have the right to use. You allow NailMatch to display that content on the site.'}]},
+        {vi:'Bạn chỉ được đăng ảnh/video do bạn chụp hoặc có quyền sử dụng. Bạn cho phép thonail hiển thị nội dung đó trên trang.', en:'Only post photos/videos you took or have the right to use. You allow thonail to display that content on the site.'}]},
       {h:{vi:'4. Không được phép', en:'4. Not allowed'}, li:[
         {vi:'Tin lừa đảo, tin giả, spam, quảng cáo không liên quan.', en:'Scams, fake ads, spam, or unrelated advertising.'},
         {vi:'Quấy rối, đe dọa, nội dung khiêu dâm hoặc phân biệt đối xử.', en:'Harassment, threats, sexual or discriminatory content.'},
@@ -2985,7 +2986,7 @@ const LEGAL = {
         {vi:'Chúng tôi không xác minh mọi thông tin người dùng đăng. Hãy tự kiểm tra tiệm, thợ, giấy phép và các điều kiện trước khi nhận việc, thuê người hoặc chuyển tiền.', en:'We do not verify everything users post. Check the salon, tech, license, and terms yourself before taking a job, hiring, or sending money.'},
         {vi:'Không bao giờ chuyển tiền đặt cọc cho người lạ chỉ qua tin nhắn.', en:'Never send a deposit to someone you only know through messages.'}]},
       {h:{vi:'6. Giới hạn trách nhiệm', en:'6. Limits of liability'}, li:[
-        {vi:'NailMatch được cung cấp “nguyên trạng”, miễn phí và không có bảo đảm nào. Trong phạm vi luật cho phép, chúng tôi không chịu trách nhiệm cho thiệt hại phát sinh từ việc dùng trang hoặc từ giao dịch giữa người dùng.', en:'NailMatch is provided “as is,” free of charge, without warranties. To the extent the law allows, we are not liable for losses from using the site or from dealings between users.'}]},
+        {vi:'thonail được cung cấp “nguyên trạng”, miễn phí và không có bảo đảm nào. Trong phạm vi luật cho phép, chúng tôi không chịu trách nhiệm cho thiệt hại phát sinh từ việc dùng trang hoặc từ giao dịch giữa người dùng.', en:'thonail is provided “as is,” free of charge, without warranties. To the extent the law allows, we are not liable for losses from using the site or from dealings between users.'}]},
       {h:{vi:'7. Luật áp dụng', en:'7. Governing law'}, li:[
         {vi:'Các điều khoản này được điều chỉnh bởi luật của Tiểu bang Texas, Hoa Kỳ.', en:'These terms are governed by the laws of the State of Texas, USA.'}]},
       {h:{vi:'8. Thay đổi', en:'8. Changes'}, li:[
@@ -2998,14 +2999,14 @@ function viewLegal(kind){
   return `<div class="wrap narrow page legal"><a class="back" href="#home">${ICON.back}${t('back')}</a>
     <h1 class="pg-title">${L(d.title)}</h1><p class="hint">${L(LEGAL_DATE)}</p><p>${L(d.intro)}</p>
     ${d.secs.map(s => `<section class="jd-sec"><h2>${L(s.h)}</h2><ul class="jd-list">${s.li.map(x => `<li>${L(x)}</li>`).join('')}</ul></section>`).join('')}
-    <section class="jd-sec"><h2>${lang === 'vi' ? 'Liên hệ' : 'Contact'}</h2><p style="margin:0">NailMatch · ${t('support')} <a href="tel:+12108687686">(210) 868-7686</a> (Ms. Jane)</p></section>
+    <section class="jd-sec"><h2>${lang === 'vi' ? 'Liên hệ' : 'Contact'}</h2><p style="margin:0">thonail · ${t('support')} <a href="tel:+12108687686">(210) 868-7686</a> (Ms. Jane)</p></section>
     <p style="margin-top:16px"><a class="btn-link" href="#${other}">${L(LEGAL[other].title)} →</a></p></div>`;
 }
 const origNotFound = notFound;
 notFound = function(){ const v = route().view; return v === 'terms' || v === 'privacy' ? viewLegal(v) : origNotFound(); };
 const LEGAL_LINKS = () => `<a href="#terms">${L(LEGAL.terms.title)}</a> · <a href="#privacy">${L(LEGAL.privacy.title)}</a>`;
-Object.assign(T.vi, {footS:'NailMatch · Miễn phí', agreeNote:'Khi tiếp tục, bạn đồng ý với <a href="#terms">Điều khoản sử dụng</a> và <a href="#privacy">Chính sách quyền riêng tư</a>. Có thể phát sinh phí tin nhắn theo nhà mạng.'});
-Object.assign(T.en, {footS:'NailMatch · Free', agreeNote:'By continuing, you agree to our <a href="#terms">Terms of Use</a> and <a href="#privacy">Privacy Policy</a>. Message and data rates may apply.'});
+Object.assign(T.vi, {footS:'thonail · Miễn phí', agreeNote:'Khi tiếp tục, bạn đồng ý với <a href="#terms">Điều khoản sử dụng</a> và <a href="#privacy">Chính sách quyền riêng tư</a>. Có thể phát sinh phí tin nhắn theo nhà mạng.'});
+Object.assign(T.en, {footS:'thonail · Free', agreeNote:'By continuing, you agree to our <a href="#terms">Terms of Use</a> and <a href="#privacy">Privacy Policy</a>. Message and data rates may apply.'});
 (() => { const st = document.createElement('style'); st.textContent = '.legal p{line-height:1.6}.legal .jd-list li{margin-bottom:6px;line-height:1.55}.agree-note{font-size:12.5px;color:var(--muted);text-align:center;margin:14px 0 0;line-height:1.5}.agree-note a{color:var(--primary);font-weight:700}.foot-legal a{color:var(--primary);font-weight:700}'; document.head.appendChild(st); })();
 
 /* ================= LIVE MODE (Firebase) =================
@@ -3036,7 +3037,7 @@ function initLive(){
 
   /* ---------- texts ---------- */
   Object.assign(T.vi, {
-    footS:'NailMatch · Miễn phí', demoBar:'Bản thử nghiệm · Tin có nhãn “Tin mẫu” chỉ là ví dụ', sampleTag:'Tin mẫu',
+    footS:'thonail · Miễn phí', demoBar:'Bản thử nghiệm · Tin có nhãn “Tin mẫu” chỉ là ví dụ', sampleTag:'Tin mẫu',
     sampleNote:'Đây là tin mẫu để bạn xem thử, không phải tiệm/thợ thật.', sampleNoMsg:'Đây là tin mẫu nên không nhắn tin được.', sampleNoContact:'Tin mẫu – không liên hệ được.',
     ownPost:'Đây là tin của bạn.', withGoogle:'Tiếp tục với Google', orWord:'hoặc', sendLink:'Gửi link đăng nhập',
     authLead:'Không cần mật khẩu. Số điện thoại và email của bạn luôn được giữ kín.', authNew:'Chưa có tài khoản? Đăng nhập lần đầu là tự tạo tài khoản.',
@@ -3044,15 +3045,15 @@ function initLive(){
     emailConfirmTitle:'Xác nhận email', emailConfirmLead:'Nhập lại email bạn đã dùng để nhận link đăng nhập.', confirmBtn:'Xác nhận',
     codeHintLive:'Mã SMS có hiệu lực trong vài phút.', sending:'Đang gửi…', loadingTxt:'Đang tải…',
     publishing:'Đang đăng…', uploading:(i, n) => `Đang tải ảnh/video ${i}/${n}…`, published:'Đã đăng! Mọi người đã thấy tin của bạn.', publishErr:'Đăng không được, thử lại nhé.',
-    loginToPost:'Đăng nhập để đăng tin – thông tin bạn vừa nhập vẫn được giữ.', doneText:'Tin đã được đăng lên NailMatch. Khi có người nhắn, bạn sẽ thấy trong mục Tin nhắn.',
+    loginToPost:'Đăng nhập để đăng tin – thông tin bạn vừa nhập vẫn được giữ.', doneText:'Tin đã được đăng lên thonail. Khi có người nhắn, bạn sẽ thấy trong mục Tin nhắn.',
     doneTitle:'Đã đăng tin!', doneProfileTitle:'Đã đăng hồ sơ!', viewMyAd:'Xem tin', viewMyProfile:'Xem hồ sơ',
     myPosts:'Tin của tôi', noPosts:'Bạn chưa đăng tin nào.', delPost:'Xóa tin', confirmDel:'Xóa tin này? Không khôi phục được.', deleted:'Đã xóa.',
     inboxNote:'🔒 Tin nhắn lưu theo tài khoản – đổi máy vẫn thấy. Hai bên không thấy số điện thoại của nhau.',
-    msgPrivacyLive:'🔒 Người nhận chỉ thấy tên bạn, không thấy số điện thoại.', msgSent:'Đã gửi! Người nhận sẽ thấy khi mở NailMatch.', applySent:'Đã gửi hồ sơ! Tiệm sẽ thấy khi mở NailMatch.',
-    verifiedDemo:'đã nhập số bằng', applicantsTitle:'Thợ đang tìm việc trên NailMatch:', fileTooBig:'File quá lớn (tối đa 50 MB).',
+    msgPrivacyLive:'🔒 Người nhận chỉ thấy tên bạn, không thấy số điện thoại.', msgSent:'Đã gửi! Người nhận sẽ thấy khi mở thonail.', applySent:'Đã gửi hồ sơ! Tiệm sẽ thấy khi mở thonail.',
+    verifiedDemo:'đã nhập số bằng', applicantsTitle:'Thợ đang tìm việc trên thonail:', fileTooBig:'File quá lớn (tối đa 50 MB).',
     e_phone:'Số điện thoại không hợp lệ.', e_many:'Thử quá nhiều lần. Đợi vài phút rồi thử lại.', e_code:'Mã không đúng.', e_expired:'Mã đã hết hạn, gửi lại mã mới.',
     e_domain:'Trang này chưa được phép đăng nhập (Authorized domains).', e_off:'Cách đăng nhập này chưa được bật trong Firebase.', e_net:'Mất mạng, kiểm tra kết nối rồi thử lại.',
-    inboxRemind:'Nhớ vào NailMatch kiểm tra tin nhắn mới – hiện web chưa báo qua SMS/email.', msgRemind:'Người nhận sẽ thấy tin khi họ mở NailMatch.',
+    inboxRemind:'Nhớ vào thonail kiểm tra tin nhắn mới – hiện web chưa báo qua SMS/email.', msgRemind:'Người nhận sẽ thấy tin khi họ mở thonail.',
     reportBtn:'⚠️ Báo cáo tin này', reportTitle:'Báo cáo tin', reportLead:'Cho chúng tôi biết vấn đề. Người đăng sẽ không biết ai báo cáo.', reportNote:'Ghi thêm (không bắt buộc)',
     rp_scam:'Lừa đảo / đòi chuyển tiền', rp_fake:'Tin giả / không có thật', rp_wrong:'Thông tin sai', rp_offensive:'Xúc phạm / không phù hợp', rp_spam:'Spam / quảng cáo', rp_other:'Lý do khác',
     reportSend:'Gửi báo cáo', reportPick:'Chọn 1 lý do.', reportThanks:'Cảm ơn bạn! Chúng tôi sẽ xem xét tin này.',
@@ -3061,7 +3062,7 @@ function initLive(){
     e_perm:'Chưa có quyền đọc/ghi dữ liệu (Firebase rules).', e_gen:'Có lỗi, thử lại nhé.', e_link:'Link đăng nhập đã hết hạn hoặc đã dùng. Gửi link mới nhé.'
   });
   Object.assign(T.en, {
-    footS:'NailMatch · Free', demoBar:'Beta · Posts marked “Sample” are examples', sampleTag:'Sample',
+    footS:'thonail · Free', demoBar:'Beta · Posts marked “Sample” are examples', sampleTag:'Sample',
     sampleNote:'This is a sample post to show how it works – not a real salon or tech.', sampleNoMsg:'This is a sample post, so messaging is off.', sampleNoContact:'Sample post – contact is off.',
     ownPost:'This is your post.', withGoogle:'Continue with Google', orWord:'or', sendLink:'Send sign-in link',
     authLead:'No password needed. Your phone and email always stay private.', authNew:'New here? Signing in the first time creates your account.',
@@ -3069,15 +3070,15 @@ function initLive(){
     emailConfirmTitle:'Confirm your email', emailConfirmLead:'Enter the email you used to get the sign-in link.', confirmBtn:'Confirm',
     codeHintLive:'The SMS code expires in a few minutes.', sending:'Sending…', loadingTxt:'Loading…',
     publishing:'Posting…', uploading:(i, n) => `Uploading photo/video ${i}/${n}…`, published:'Posted! Everyone can see it now.', publishErr:'Couldn’t post. Please try again.',
-    loginToPost:'Sign in to post – what you entered is kept.', doneText:'Your post is live on NailMatch. When someone messages you, it shows up in Messages.',
+    loginToPost:'Sign in to post – what you entered is kept.', doneText:'Your post is live on thonail. When someone messages you, it shows up in Messages.',
     doneTitle:'Your ad is live!', doneProfileTitle:'Your profile is live!', viewMyAd:'View post', viewMyProfile:'View profile',
     myPosts:'My posts', noPosts:'You haven’t posted anything yet.', delPost:'Delete', confirmDel:'Delete this post? This can’t be undone.', deleted:'Deleted.',
     inboxNote:'🔒 Messages are saved to your account – on any device. Neither side sees the other’s phone number.',
-    msgPrivacyLive:'🔒 They only see your name, never your phone number.', msgSent:'Sent! They’ll see it when they open NailMatch.', applySent:'Application sent! The salon will see it when they open NailMatch.',
-    verifiedDemo:'license # provided', applicantsTitle:'Techs looking for work on NailMatch:', fileTooBig:'File too large (max 50 MB).',
+    msgPrivacyLive:'🔒 They only see your name, never your phone number.', msgSent:'Sent! They’ll see it when they open thonail.', applySent:'Application sent! The salon will see it when they open thonail.',
+    verifiedDemo:'license # provided', applicantsTitle:'Techs looking for work on thonail:', fileTooBig:'File too large (max 50 MB).',
     e_phone:'That phone number isn’t valid.', e_many:'Too many tries. Wait a few minutes and try again.', e_code:'Wrong code.', e_expired:'Code expired. Send a new one.',
     e_domain:'This site isn’t allowed to sign in yet (Authorized domains).', e_off:'This sign-in method isn’t turned on in Firebase.', e_net:'No connection. Check your internet and try again.',
-    inboxRemind:'Check NailMatch for new messages – we don’t send text/email alerts yet.', msgRemind:'They’ll see it when they open NailMatch.',
+    inboxRemind:'Check thonail for new messages – we don’t send text/email alerts yet.', msgRemind:'They’ll see it when they open thonail.',
     reportBtn:'⚠️ Report this post', reportTitle:'Report post', reportLead:'Tell us what’s wrong. The poster won’t know who reported it.', reportNote:'Details (optional)',
     rp_scam:'Scam / asks for money', rp_fake:'Fake / not real', rp_wrong:'Wrong information', rp_offensive:'Offensive / inappropriate', rp_spam:'Spam / advertising', rp_other:'Other',
     reportSend:'Send report', reportPick:'Pick a reason.', reportThanks:'Thanks! We’ll review this post.',
