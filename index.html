@@ -2931,6 +2931,10 @@ const FB_CFG = {
   appId: "1:384067412987:web:74ec84b41ceb7d4442615e"
 };
 const LIVE = (() => { try { return !!(window.firebase && window.firebase.initializeApp && window.firebase.firestore && window.firebase.auth && window.firebase.storage); } catch (e) { return false; } })();
+/* keep only 2 sample ads + 2 sample techs (both modes) */
+(() => { const KA = ['h1','h2'], KT = ['t1','t2'];
+  for (let i = ADS.length - 1; i >= 0; i--) if (!KA.includes(ADS[i].id)) ADS.splice(i, 1);
+  for (let i = TECHS.length - 1; i >= 0; i--) if (!KT.includes(TECHS[i].id)) TECHS.splice(i, 1); })();
 if (LIVE) initLive();
 
 function initLive(){
@@ -2999,9 +3003,6 @@ function initLive(){
   document.head.appendChild(st);
 
   /* ---------- trim + mark samples ---------- */
-  const KEEP_ADS = ['h1','h2','h3','h4','p1','v1'], KEEP_T = ['t1','t2','t3'];
-  for (let i = ADS.length - 1; i >= 0; i--) if (!KEEP_ADS.includes(ADS[i].id)) ADS.splice(i, 1);
-  for (let i = TECHS.length - 1; i >= 0; i--) if (!KEEP_T.includes(TECHS[i].id)) TECHS.splice(i, 1);
   ADS.forEach(a => { a.sample = true; }); TECHS.forEach(x => { x.sample = true; });
   /* messaging is web-only for now: hide the SMS/receive-by choices in forms */
   Object.values(FORMS).forEach(F => F.steps.forEach(s => { s.fields = s.fields.filter(f => f.k !== 'receiveBy' && f.k !== 'contactBy'); }));
