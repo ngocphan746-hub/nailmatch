@@ -3048,10 +3048,16 @@ function initLive(){
     doneTitle:'Đã đăng tin!', doneProfileTitle:'Đã đăng hồ sơ!', viewMyAd:'Xem tin', viewMyProfile:'Xem hồ sơ',
     myPosts:'Tin của tôi', noPosts:'Bạn chưa đăng tin nào.', delPost:'Xóa tin', confirmDel:'Xóa tin này? Không khôi phục được.', deleted:'Đã xóa.',
     inboxNote:'🔒 Tin nhắn lưu theo tài khoản – đổi máy vẫn thấy. Hai bên không thấy số điện thoại của nhau.',
-    msgPrivacyLive:'🔒 Người nhận chỉ thấy tên bạn, không thấy số điện thoại.', msgSent:'Đã gửi!', applySent:'Đã gửi hồ sơ ứng tuyển!',
+    msgPrivacyLive:'🔒 Người nhận chỉ thấy tên bạn, không thấy số điện thoại.', msgSent:'Đã gửi! Người nhận sẽ thấy khi mở NailMatch.', applySent:'Đã gửi hồ sơ! Tiệm sẽ thấy khi mở NailMatch.',
     verifiedDemo:'đã nhập số bằng', applicantsTitle:'Thợ đang tìm việc trên NailMatch:', fileTooBig:'File quá lớn (tối đa 50 MB).',
     e_phone:'Số điện thoại không hợp lệ.', e_many:'Thử quá nhiều lần. Đợi vài phút rồi thử lại.', e_code:'Mã không đúng.', e_expired:'Mã đã hết hạn, gửi lại mã mới.',
     e_domain:'Trang này chưa được phép đăng nhập (Authorized domains).', e_off:'Cách đăng nhập này chưa được bật trong Firebase.', e_net:'Mất mạng, kiểm tra kết nối rồi thử lại.',
+    inboxRemind:'Nhớ vào NailMatch kiểm tra tin nhắn mới – hiện web chưa báo qua SMS/email.', msgRemind:'Người nhận sẽ thấy tin khi họ mở NailMatch.',
+    reportBtn:'⚠️ Báo cáo tin này', reportTitle:'Báo cáo tin', reportLead:'Cho chúng tôi biết vấn đề. Người đăng sẽ không biết ai báo cáo.', reportNote:'Ghi thêm (không bắt buộc)',
+    rp_scam:'Lừa đảo / đòi chuyển tiền', rp_fake:'Tin giả / không có thật', rp_wrong:'Thông tin sai', rp_offensive:'Xúc phạm / không phù hợp', rp_spam:'Spam / quảng cáo', rp_other:'Lý do khác',
+    reportSend:'Gửi báo cáo', reportPick:'Chọn 1 lý do.', reportThanks:'Cảm ơn bạn! Chúng tôi sẽ xem xét tin này.',
+    editPost:'✏️ Sửa tin', editProfile:'✏️ Sửa hồ sơ', editing:'Bạn đang sửa tin đã đăng. Bấm lưu ở bước cuối để cập nhật.', editingProfile:'Bạn đang sửa hồ sơ đã đăng. Bấm lưu ở bước cuối để cập nhật.',
+    saveChanges:'Lưu thay đổi', updated:'Đã cập nhật!', updatedTitle:'Đã cập nhật!', noEdit:'Tin này đăng từ bản cũ nên không sửa được. Hãy xóa và đăng lại.',
     e_perm:'Chưa có quyền đọc/ghi dữ liệu (Firebase rules).', e_gen:'Có lỗi, thử lại nhé.', e_link:'Link đăng nhập đã hết hạn hoặc đã dùng. Gửi link mới nhé.'
   });
   Object.assign(T.en, {
@@ -3067,10 +3073,16 @@ function initLive(){
     doneTitle:'Your ad is live!', doneProfileTitle:'Your profile is live!', viewMyAd:'View post', viewMyProfile:'View profile',
     myPosts:'My posts', noPosts:'You haven’t posted anything yet.', delPost:'Delete', confirmDel:'Delete this post? This can’t be undone.', deleted:'Deleted.',
     inboxNote:'🔒 Messages are saved to your account – on any device. Neither side sees the other’s phone number.',
-    msgPrivacyLive:'🔒 They only see your name, never your phone number.', msgSent:'Sent!', applySent:'Application sent!',
+    msgPrivacyLive:'🔒 They only see your name, never your phone number.', msgSent:'Sent! They’ll see it when they open NailMatch.', applySent:'Application sent! The salon will see it when they open NailMatch.',
     verifiedDemo:'license # provided', applicantsTitle:'Techs looking for work on NailMatch:', fileTooBig:'File too large (max 50 MB).',
     e_phone:'That phone number isn’t valid.', e_many:'Too many tries. Wait a few minutes and try again.', e_code:'Wrong code.', e_expired:'Code expired. Send a new one.',
     e_domain:'This site isn’t allowed to sign in yet (Authorized domains).', e_off:'This sign-in method isn’t turned on in Firebase.', e_net:'No connection. Check your internet and try again.',
+    inboxRemind:'Check NailMatch for new messages – we don’t send text/email alerts yet.', msgRemind:'They’ll see it when they open NailMatch.',
+    reportBtn:'⚠️ Report this post', reportTitle:'Report post', reportLead:'Tell us what’s wrong. The poster won’t know who reported it.', reportNote:'Details (optional)',
+    rp_scam:'Scam / asks for money', rp_fake:'Fake / not real', rp_wrong:'Wrong information', rp_offensive:'Offensive / inappropriate', rp_spam:'Spam / advertising', rp_other:'Other',
+    reportSend:'Send report', reportPick:'Pick a reason.', reportThanks:'Thanks! We’ll review this post.',
+    editPost:'✏️ Edit post', editProfile:'✏️ Edit profile', editing:'You’re editing a live post. Save on the last step to update it.', editingProfile:'You’re editing your live profile. Save on the last step to update it.',
+    saveChanges:'Save changes', updated:'Updated!', updatedTitle:'Updated!', noEdit:'This post was made with an older version and can’t be edited. Delete it and post again.',
     e_perm:'No permission to read/write data (Firebase rules).', e_gen:'Something went wrong. Please try again.', e_link:'This sign-in link expired or was already used. Send a new one.'
   });
   function errText(e){
@@ -3121,7 +3133,7 @@ function initLive(){
   function fromDoc(doc){
     try {
       const d = doc.data(EST), o = d.ad || {};
-      return Object.assign({}, o, {id:doc.id, live:true, ownerUid:d.ownerUid, ownerName:d.ownerName || '', daysAgo:daysSince(d.createdAt)});
+      return Object.assign({}, o, {id:doc.id, live:true, ownerUid:d.ownerUid, ownerName:d.ownerName || '', daysAgo:daysSince(d.createdAt), _form:d.form || null, _kind:d.kind || ''});
     } catch (e) { return null; }
   }
   function replaceLive(arr, list){ for (let i = arr.length - 1; i >= 0; i--) if (arr[i].live) arr.splice(i, 1); arr.unshift(...list); }
@@ -3150,13 +3162,16 @@ function initLive(){
   function stopUserListeners(){ L_.unsubs.forEach(u => { try { u(); } catch (e) {} }); L_.unsubs = []; L_.threads = []; L_.threadsReady = false; unsubMsgs(); }
   function freshAuth(){ return {step:'start', method:state.auth.method || 'phone', phone:'', email:'', msg:'', busy:false, role:'tech'}; }
 
+  let lastUid = null;
   auth.onAuthStateChanged(async u => {
+    const uidNow = u ? u.uid : null;
+    if (uidNow !== lastUid){ state.forms = {}; state.modal = null; lastUid = uidNow; }
     if (!u){ stopUserListeners(); state.user = null; state.pendingUser = null; state.myProfile = null; render(); return; }
     let d = null;
     try { const doc = await db.collection('users').doc(u.uid).get(); d = doc.exists ? doc.data() : null; } catch (e) { console.warn('user doc', e); }
     const base = {uid:u.uid, email:u.email || (d && d.email) || '', phone:(d && d.phone) || (u.phoneNumber ? digits10(u.phoneNumber) : '')};
     if (d && d.name){
-      state.user = Object.assign(base, {name:d.name, role:d.role || 'other'}); state.pendingUser = null;
+      state.user = Object.assign(base, {name:d.name, role:d.role || 'other', licNo:d.licNo || '', refContacts:d.refContacts || []}); state.pendingUser = null;
       startUserListeners();
       if (state.auth.pending || route().view === 'login'){ state.auth = freshAuth(); toast(t('welcome', state.user.name)); afterAuth(); }
       render();
@@ -3295,8 +3310,8 @@ function initLive(){
   viewAccount = function(){
     const h = origAccount(); if (!state.user) return h;
     const uid = state.user.uid, mine = ADS.filter(a => a.live && a.ownerUid === uid), prof = TECHS.find(x => x.live && x.id === uid);
-    const rows = (prof ? [`<div class="mypost">${techCard(prof)}<button class="btn-link del" type="button" data-act="livedel" data-k="techs" data-v="${prof.id}">🗑 ${t('delPost')}</button></div>`] : [])
-      .concat(mine.map(a => `<div class="mypost">${adCard(a)}<button class="btn-link del" type="button" data-act="livedel" data-k="ads" data-v="${a.id}">🗑 ${t('delPost')}</button></div>`));
+    const rows = (prof ? [`<div class="mypost">${techCard(prof)}<div class="del"><button class="btn-link" type="button" data-act="liveedit" data-k="techs" data-v="${prof.id}">${t('editProfile')}</button> · <button class="btn-link" type="button" data-act="livedel" data-k="techs" data-v="${prof.id}">🗑 ${t('delPost')}</button></div></div>`] : [])
+      .concat(mine.map(a => `<div class="mypost">${adCard(a)}<div class="del"><button class="btn-link" type="button" data-act="liveedit" data-k="ads" data-v="${a.id}">${t('editPost')}</button> · <button class="btn-link" type="button" data-act="livedel" data-k="ads" data-v="${a.id}">🗑 ${t('delPost')}</button></div></div>`));
     const sec = `<section style="margin-top:18px"><h2 class="sec">${t('myPosts')}</h2>${rows.length ? `<div class="list">${rows.join('')}</div>` : `<p class="empty-s">${t('noPosts')}</p>`}</section>`;
     const i = h.lastIndexOf('</div>'); return h.slice(0, i) + sec + h.slice(i);
   };
@@ -3322,7 +3337,8 @@ function initLive(){
   contactBlock = function(id){
     const it = findItem(id);
     if (it && it.sample) return `<div class="cta-col"><p class="cta-note">${esc(t('sampleNoContact'))}</p></div>`;
-    if (it && state.user && ownerOf(it) === state.user.uid) return `<div class="cta-col"><p class="cta-note">${esc(t('ownPost'))} <a class="btn-link" href="#account">${t('myPosts')} →</a></p></div>`;
+    if (it && state.user && ownerOf(it) === state.user.uid){ const k = TECHS.includes(it) ? 'techs' : 'ads';
+      return `<div class="cta-col"><button class="btn btn-ghost btn-block" type="button" data-act="liveedit" data-k="${k}" data-v="${esc(it.id)}">${k === 'techs' ? t('editProfile') : t('editPost')}</button><p class="cta-note">${esc(t('ownPost'))} <a class="btn-link" href="#account">${t('myPosts')} →</a></p></div>`; }
     return origContact(id);
   };
   const origCheck = techChecks; techChecks = function(tc){ const c = origCheck(tc); if (tc.hasPhone && tc.name) c.basic = true; return c; };
@@ -3339,7 +3355,7 @@ function initLive(){
   viewInbox = function(){
     if (!state.user) return loginGate();
     const th = L_.threads.slice().sort((a, b) => ms(b.lastAt) - ms(a.lastAt)), uid = state.user.uid;
-    return `<div class="wrap narrow page"><h1 class="pg-title">${t('inbox')}</h1><p class="hint">${t('inboxNote')}</p>
+    return `<div class="wrap narrow page"><h1 class="pg-title">${t('inbox')}</h1><p class="hint">${t('inboxNote')}</p><p class="sample-note">🔔 ${t('inboxRemind')}</p>
       ${!L_.threadsReady ? `<p class="empty-s">${t('loadingTxt')}</p>` : th.length ? `<div class="list">${th.map(x => `<a class="card thread-row${unreadOf(x) ? ' unread' : ''}" href="#inbox-${esc(x.id)}"><div class="mname"><h3>${esc(otherName(x))}</h3><p class="biz">${esc((x.about || {}).title || '')}</p><p class="last">💬 ${x.lastFrom === uid ? t('you') + ': ' : ''}${esc(x.lastText || '')}</p></div>${unreadOf(x) ? '<span class="dot-new" aria-label="new"></span>' : ''}</a>`).join('')}</div>`
       : `<p class="empty-s">${t('inboxEmpty')}</p>`}</div>`;
   };
@@ -3381,7 +3397,7 @@ function initLive(){
       <p class="biz" style="margin:0">${esc(tg.title)}</p>
       ${qs.length ? `<div class="fq"><span class="flabel">${t('msgQuick')}</span><div class="quick">${qs.map((q, i) => `<button type="button" class="pill sm" data-act="msgquick" data-v="${i}">${esc(q)}</button>`).join('')}</div></div>` : ''}
       <div class="fq"><label class="flabel" for="msg-text">${t('message')}</label><textarea id="msg-text" rows="4" maxlength="1000" placeholder="${esc(t('msgPh'))}"></textarea><p class="err" id="msg-err" hidden>${t('errRequired')}</p></div>
-      <p class="privacy-note">${t('msgPrivacyLive')}</p>
+      <p class="privacy-note">${t('msgPrivacyLive')} ${t('msgRemind')}</p>
       <div class="modal-foot"><span></span><button class="btn btn-primary" type="button" data-act="msgsend">${t('msgSend')}</button></div>`;
   };
   async function sendTo(itemId, text, extra){
@@ -3482,15 +3498,22 @@ function initLive(){
       if (type === 'sale'){ Object.assign(obj.sale, {sqft:num(d.sqft), staff:Number(d.staff) || 0, revenue:num(d.revenue), reason:d.reason ? {vi:d.reason, en:d.reason} : null}); obj.picUrls = (d.photos || []).map(p => p.url); }
       if (type === 'profile'){ if (d.about) obj.about = {vi:d.about, en:d.about}; obj.languages = d.languages || []; obj.speedMinutes = d.speedMinutes || ''; }
       if (type === 'profile'){ delete obj.licNo; obj.refs = (obj.refs || []).map(r => ({salon:r.salon || '', city:r.city || '', period:r.period || ''})); }
-      const clean = JSON.parse(JSON.stringify(obj));
+      const clean = JSON.parse(JSON.stringify(obj)), form = formToSave(fs);
       if (type === 'profile'){
-        await db.collection('techs').doc(me.uid).set({ownerUid:me.uid, ownerName:me.name, createdAt:TS(), updatedAt:TS(), ad:clean});
+        await db.collection('users').doc(me.uid).set({licNo:d.licNo || '', refContacts:(d.refs || []).map(r => r.contact || '')}, {merge:true});
+        me.licNo = d.licNo || ''; me.refContacts = (d.refs || []).map(r => r.contact || '');
+        const tref = db.collection('techs').doc(me.uid), exists = !!TECHS.find(x => x.live && x.id === me.uid);
+        if (exists) await tref.update({ownerName:me.name, updatedAt:TS(), ad:clean, form, kind:'profile'});
+        else await tref.set({ownerUid:me.uid, ownerName:me.name, createdAt:TS(), updatedAt:TS(), ad:clean, form, kind:'profile'});
         fs.liveId = me.uid;
+      } else if (fs.editId){
+        await db.collection('ads').doc(fs.editId).update({ad:clean, form, updatedAt:TS()});
+        fs.liveId = fs.editId;
       } else {
-        const ref = await db.collection('ads').add({ownerUid:me.uid, ownerName:me.name, kind:type, createdAt:TS(), ad:clean});
+        const ref = await db.collection('ads').add({ownerUid:me.uid, ownerName:me.name, kind:type, createdAt:TS(), ad:clean, form});
         fs.liveId = ref.id;
       }
-      fs.done = true; fs.busy = false; render(); window.scrollTo(0, 0); toast(t('published'));
+      fs.done = true; fs.busy = false; render(); window.scrollTo(0, 0); toast(fs.editId ? t('updated') : t('published'));
     } catch (e) {
       console.warn(e); fs.busy = false; render();
       toast(e && e.code === 'too-big' ? t('fileTooBig') : t('publishErr') + ' ' + errText(e));
@@ -3498,13 +3521,86 @@ function initLive(){
   };
   const origForm = viewForm;
   viewForm = function(type){
+    if (type === 'profile' && !state.forms.profile && state.user && state.myProfile && state.myProfile._form) loadEdit('techs', state.user.uid, true);
     let h = origForm(type); const fs = state.forms[type];
+    if (fs && fs.editId && !fs.done){
+      h = h.replace(/(<div class="form-wrap[^"]*">\s*<a class="back"[^>]*>[\s\S]*?<\/a>)/, `$1<p class="sample-note">✏️ ${esc(t(type === 'profile' ? 'editingProfile' : 'editing'))}</p>`)
+           .replace(/(data-act="fpublish" data-ft="[^"]+">)[^<]*/, `$1${t('saveChanges')}`);
+    }
+    if (fs && fs.done && fs.editId) h = h.replace(esc(t(type === 'profile' ? 'doneProfileTitle' : 'doneTitle')), t('updatedTitle')).replace(t(type === 'profile' ? 'doneProfileTitle' : 'doneTitle'), t('updatedTitle'));
     if (fs && fs.done && fs.liveId){
       const link = type === 'profile' ? `<a class="btn btn-ghost" href="#tech-${fs.liveId}">${t('viewMyProfile')}</a>` : `<a class="btn btn-ghost" href="#ad-${fs.liveId}">${t('viewMyAd')}</a>`;
       h = h.replace(/<button class="btn btn-ghost" type="button" data-act="freset"[^>]*>[^<]*<\/button>/, link);
     }
     return h;
   };
+
+  /* ---------- editing ---------- */
+  function formToSave(fs){
+    const f = JSON.parse(JSON.stringify(fs.data));
+    delete f.phone; delete f.licNo;
+    if (Array.isArray(f.refs)) f.refs = f.refs.map(r => ({salon:r.salon || '', city:r.city || '', period:r.period || ''}));
+    if (Array.isArray(f.photos)) f.photos = f.photos.map(p => ({url:p.url, video:!!p.video, svc:p.svc || '', cap:p.cap || '', info:p.info || null, qc:p.qc || []}));
+    f._titleEdited = !!fs.titleEdited;
+    return f;
+  }
+  const TYPE_OF = {hiring:'hiring', salon_sale:'sale', service:'service'};
+  function loadEdit(k, id, silent){
+    const it = k === 'techs' ? TECHS.find(x => x.live && x.id === id) : ADS.find(a => a.live && a.id === id);
+    if (!it || !state.user || ownerOf(it) !== state.user.uid) return null;
+    if (!it._form){ if (!silent) toast(t('noEdit')); return null; }
+    const type = k === 'techs' ? 'profile' : (TYPE_OF[it.type] || it._kind);
+    const data = Object.assign({city:'San Antonio'}, JSON.parse(JSON.stringify(DEFAULTS[type] || {})), JSON.parse(JSON.stringify(it._form)));
+    (data.photos || []).forEach(p => { p.remote = true; });
+    data.phone = state.user.phone || '';
+    if (type === 'profile'){ data.licNo = state.user.licNo || ''; (data.refs || []).forEach((r, i) => { r.contact = (state.user.refContacts || [])[i] || ''; }); }
+    const titleEdited = !!data._titleEdited; delete data._titleEdited;
+    state.forms[type] = {step:0, data, errors:{}, done:false, titleEdited, assist:{text:'', out:null}, aboutDrafted:false, editId:k === 'techs' ? null : id};
+    if (k === 'techs') state.forms[type].editId = id;
+    return type;
+  }
+  ACT.liveedit = function(el){
+    const type = loadEdit(el.dataset.k, el.dataset.v); if (!type) return;
+    const h = {hiring:'#post-hiring', sale:'#post-sale', service:'#post-service', profile:'#post-profile'}[type];
+    if (location.hash === h) render(); else location.hash = h;
+  };
+
+  /* ---------- demo-only buttons off ---------- */
+  const origPf = viewPortfolio; viewPortfolio = function(id){ return origPf(id).replace(/<div class="owner-row">[\s\S]*?<\/div>/, ''); };
+
+  /* ---------- reporting ---------- */
+  const RP = ['scam','fake','wrong','offensive','spam','other'];
+  const reportBtn = id => `<p style="text-align:center;margin:22px 0 0"><button class="btn-link" type="button" data-act="reportopen" data-v="${esc(id)}" style="color:#8A6A72;font-weight:600">${t('reportBtn')}</button></p>`;
+  const addReport = f => function(id){ let h = f(id); const it = findItem(id);
+    if (it && it.live && !(state.user && ownerOf(it) === state.user.uid)){ const i = h.lastIndexOf('</div>'); h = h.slice(0, i) + reportBtn(id) + h.slice(i); } return h; };
+  viewAd = addReport(viewAd); viewTech = addReport(viewTech);
+  const origAlerts = modalAlerts;
+  modalAlerts = function(){
+    if (state.modal !== 'report') return origAlerts();
+    const r = state.rp || {}, it = findItem(r.id);
+    return `<div class="modal-head"><h2 id="m-title">${t('reportTitle')}</h2><button class="x" type="button" data-act="mclose" aria-label="${t('close')}">×</button></div>
+      ${it ? `<p class="biz" style="margin:0">${esc(TECHS.includes(it) ? it.name : titleOf(it))}</p>` : ''}<p class="hint">${t('reportLead')}</p>
+      <div class="fq"><div class="quick">${RP.map(k => `<button type="button" class="pill sm${r.reason === k ? ' on' : ''}" aria-pressed="${r.reason === k}" data-act="rpreason" data-v="${k}">${esc(t('rp_' + k))}</button>`).join('')}</div>${r.err ? `<p class="err">${t('reportPick')}</p>` : ''}</div>
+      <div class="fq"><label class="flabel" for="rp-note">${t('reportNote')}</label><textarea id="rp-note" rows="3" maxlength="500">${esc(r.note || '')}</textarea></div>
+      <div class="modal-foot"><span></span><button class="btn btn-primary" type="button" data-act="rpsend">${t('reportSend')}</button></div>`;
+  };
+  Object.assign(ACT, {
+    reportopen(el){ const id = el.dataset.v;
+      if (!state.user){ setAfter({hash:location.hash}); location.hash = '#login'; return; }
+      state.rp = {id, reason:'', note:''}; openModal('report'); },
+    rpreason(el){ const n = document.getElementById('rp-note'); state.rp.note = n ? n.value : ''; state.rp.reason = el.dataset.v; state.rp.err = false; renderModal(); },
+    async rpsend(el){
+      const r = state.rp, n = document.getElementById('rp-note'); r.note = n ? n.value.trim() : '';
+      if (!r.reason){ r.err = true; renderModal(); return; }
+      const it = findItem(r.id); if (!it) return;
+      el.disabled = true;
+      try {
+        await db.collection('reports').doc(`${r.id}__${state.user.uid}`).set({itemId:r.id, kind:TECHS.includes(it) ? 'techs' : 'ads', title:TECHS.includes(it) ? it.name : titleOf(it),
+          ownerUid:ownerOf(it) || '', reason:r.reason, note:r.note, reporterUid:state.user.uid, reporterName:state.user.name, at:TS(), status:'new'});
+        closeModal(); toast(t('reportThanks'));
+      } catch (e) { el.disabled = false; toast(errText(e)); }
+    }
+  });
 }
 
 render();
