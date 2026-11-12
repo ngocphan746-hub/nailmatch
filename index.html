@@ -3678,6 +3678,10 @@ Object.assign(T.en, {
   doneProfT:'Salons can see your profile. Now tap “I want this job” on any post.', seeTechs:'See techs near you', seeJobs:'See jobs near you', goHome2:'Home',
   publish2:'Post job', publishProf2:'Post profile', min3:'Add at least 3 work photos.'
 });
+Object.assign(T.vi, {readyMore:'Thêm lựa chọn', readyDates:'Chọn ngày khác (nhiều ngày / cả tuần)', readyDFrom:'Từ ngày', readyDTo:'Đến ngày', readyDatesHint:'Điền ngày thì web dùng ngày này thay cho Hôm nay / Ngày mai. Tối đa 14 ngày.',
+  readyArea:'Khu vực đi làm được', readyZip:'Mã ZIP (không bắt buộc)', readyTravel:'Đi xa tối đa', readyNote:'Ghi chú', readyNotePh:'VD: Làm part-time 3 ngày, chỉ buổi chiều', readyBadDates:'Ngày chưa đúng. Chọn trong 14 ngày tới, “Đến ngày” không trước “Từ ngày”.', travelUp:n => `đi tối đa ${n} dặm`});
+Object.assign(T.en, {readyMore:'More options', readyDates:'Pick other dates (several days / a week)', readyDFrom:'From', readyDTo:'To', readyDatesHint:'If you fill in dates, they replace Today / Tomorrow. Up to 14 days.',
+  readyArea:'Where you can work', readyZip:'ZIP code (optional)', readyTravel:'Will travel up to', readyNote:'Note', readyNotePh:'e.g. Part-time for 3 days, afternoons only', readyBadDates:'Check the dates: within the next 14 days, and “To” not before “From”.', travelUp:n => `up to ${n} mi`});
 ['vi', 'en'].forEach(l => { T[l].readyDay_today = l === 'vi' ? 'hôm nay' : 'today'; T[l].readyDay_tomorrow = l === 'vi' ? 'ngày mai' : 'tomorrow'; });
 
 /* ---------- options ---------- */
@@ -3764,7 +3768,11 @@ const N1_PREVIEW = !!window.__DB, N1_CLEAN = LIVE;
 const n1Sample = () => N1_PREVIEW ? '' : LIVE ? `<span class="n1ex">${lang === 'vi' ? 'Ví dụ' : 'Example'}</span>` : `<span class="ctag ct-sample">${esc(t('sampleTag'))}</span>`;
 function n1Ready(tc){ const r = tc && tc.ready; return r && r.on && Date.now() < (r.until || 0) ? r : null; }
 function n1Ago(ms0){ const m = Math.max(1, Math.round((Date.now() - (ms0 || Date.now())) / 60000)); return m < 60 ? t('minsS', m) : t('hoursS', Math.round(m / 60)); }
-function n1ReadyLine(r){ return `⚡ ${esc(t('readyLine', t('readyDay_' + (r.day || 'today')), `${fmtTime(r.from || '10:00')}–${fmtTime(r.to || '19:00')}`))} · ${esc(t('turnedOn', n1Ago(r.atC || r.atMs)))}`; }
+function n1Dm(iso){ const [y, m, d] = String(iso || '').split('-').map(Number); return d ? (lang === 'vi' ? `${d}/${m}` : `${m}/${d}`) : ''; }
+function n1ReadyDay(r){ return r.day === 'range' && r.dFrom ? (r.dTo && r.dTo !== r.dFrom ? `${n1Dm(r.dFrom)}–${n1Dm(r.dTo)}` : n1Dm(r.dFrom)) : t('readyDay_' + (r.day === 'tomorrow' ? 'tomorrow' : 'today')); }
+function n1ReadyLine(r){ return `⚡ ${esc(t('readyLine', n1ReadyDay(r), `${fmtTime(r.from || '10:00')}–${fmtTime(r.to || '19:00')}`))} · ${esc(t('turnedOn', n1Ago(r.atC || r.atMs)))}`; }
+function n1RLoc(tc){ const r = n1Ready(tc); return r && r.city ? Object.assign({}, tc, {city:r.city, zip:r.zip || ''}) : tc; }
+function n1Today(k){ const d = new Date(Date.now() + (k || 0) * 86400000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 function n1CityBar(){ const cur = state.center ? state.center.name : 'San Antonio';
   return `<div class="n1city"><label for="q-city">${t('cityLbl')}</label><select id="q-city" data-q="city">${Object.keys(CITIES).map(c => `<option${cur === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></div>`; }
 function n1Me(){ return state.user ? state.user.uid : null; }
@@ -3804,8 +3812,8 @@ function n1TechCard(tc, o){
     <div class="n1top"><b>${esc(tc.name)}</b>${tc.sample ? n1Sample() : ''}</div>
     <div class="n1pay">${esc([tc.years ? opt('years', tc.years) : '', pay].filter(Boolean).join(' · '))}</div>
     <div class="n1sub">${n1SvcLine(tc.services || [])}</div>
-    ${r ? `<div class="n1ready-l">${n1ReadyLine(r)}</div>` : ''}
-    <div class="n1loc">${n1Place(tc)}</div></div></a>
+    ${r ? `<div class="n1ready-l">${n1ReadyLine(r)}</div>${r.note ? `<div class="n1sub">“${esc(r.note)}”</div>` : ''}` : ''}
+    <div class="n1loc">${n1Place(n1RLoc(tc))}${r && r.travel ? ` · ${esc(t('travelUp', r.travel))}` : ''}</div></div></a>
     <div class="n1act">${n1Action(tc, o)}</div></div>`;
 }
 
@@ -3829,13 +3837,23 @@ function viewSalonHub(){
 function n1ReadyBox(){
   const mp = state.myProfile;
   if (!mp) return '';
-  const r = n1Ready(mp), dr = state.n1r || (state.n1r = {day:'today', from:'10:00', to:'19:00'});
-  const off = r ? '' : `<div class="n1rset"><span class="flabel">${t('readyWhen')}</span><div class="chipset">${['today','tomorrow'].map(d => `<button type="button" class="choice${dr.day === d ? ' on' : ''}" aria-pressed="${dr.day === d}" data-act="n1rday" data-v="${d}">${t(d === 'today' ? 'readyToday' : 'readyTomorrow')}</button>`).join('')}</div>
-      <span class="flabel">${t('readyHours')}</span><div class="two" style="max-width:320px"><input id="n1r-from" type="time" value="${esc(dr.from)}" aria-label="from"><input id="n1r-to" type="time" value="${esc(dr.to)}" aria-label="to"></div></div>`;
-  const until = r ? new Date(r.until).toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US', {weekday:'short', hour:'numeric', minute:'2-digit'}) : '';
+  const r = n1Ready(mp), dr = state.n1r || (state.n1r = {day:'today', from:'10:00', to:'19:00', dFrom:'', dTo:'', note:'', city:mp.city || cityOf(mp.zip) || 'San Antonio', zip:mp.zip || '', travel:String(mp.travel || ''), more:false});
+  const rng = !!dr.dFrom;
+  const off = r ? '' : `<div class="n1rset"><span class="flabel">${t('readyWhen')}</span><div class="chipset">${['today','tomorrow'].map(d => `<button type="button" class="choice${!rng && dr.day === d ? ' on' : ''}" aria-pressed="${!rng && dr.day === d}" data-act="n1rday" data-v="${d}">${t(d === 'today' ? 'readyToday' : 'readyTomorrow')}</button>`).join('')}</div>
+      <span class="flabel">${t('readyHours')}</span><div class="two" style="max-width:320px"><input id="n1r-from" type="time" value="${esc(dr.from)}" aria-label="from"><input id="n1r-to" type="time" value="${esc(dr.to)}" aria-label="to"></div>
+      <details class="more" id="n1r-more"${dr.more || rng ? ' open' : ''}><summary>${t('readyMore')}</summary><div class="more-body n1rset">
+        <span class="flabel">${t('readyDates')}</span>
+        <div class="two" style="max-width:360px"><label class="n1dl">${t('readyDFrom')}<input id="n1r-dfrom" type="date" min="${n1Today(0)}" max="${n1Today(13)}" value="${esc(dr.dFrom)}"></label><label class="n1dl">${t('readyDTo')}<input id="n1r-dto" type="date" min="${n1Today(0)}" max="${n1Today(13)}" value="${esc(dr.dTo)}"></label></div>
+        <p class="hint" style="margin:0">${t('readyDatesHint')}</p>
+        <label class="flabel" for="n1r-note">${t('readyNote')}</label><input id="n1r-note" type="text" maxlength="120" placeholder="${esc(t('readyNotePh'))}" value="${esc(dr.note)}">
+        <label class="flabel" for="n1r-city">${t('readyArea')}</label>
+        <div class="two" style="max-width:420px"><select id="n1r-city">${Object.keys(CITIES).map(c => `<option${dr.city === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select><input id="n1r-zip" type="text" inputmode="numeric" maxlength="5" placeholder="${esc(t('readyZip'))}" value="${esc(dr.zip)}"></div>
+        <span class="flabel">${t('readyTravel')}</span><div class="chipset">${OPTS.travel.map(o => `<button type="button" class="choice${dr.travel === o.v ? ' on' : ''}" aria-pressed="${dr.travel === o.v}" data-act="n1rtravel" data-v="${o.v}">${esc(L(o))}</button>`).join('')}</div>
+      </div></details></div>`;
+  const until = r ? new Date(r.until).toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US', {weekday:'short', day:'numeric', month:'numeric', hour:'numeric', minute:'2-digit'}) : '';
   return `<div class="card n1rbox${r ? ' on' : ''}"><div class="n1rhead"><b>${t('readyBox')}</b>
       <button type="button" class="n1sw${r ? ' on' : ''}" role="switch" aria-checked="${!!r}" data-act="n1ready"><span>${r ? t('readyOn') : t('readyOff')}</span></button></div>
-    ${r ? `<p class="n1rnow">${n1ReadyLine(r)}</p><p class="hint" style="margin:0">${esc(t('readyIsOn', until))}</p>` : off}
+    ${r ? `<p class="n1rnow">${n1ReadyLine(r)}</p>${r.note ? `<p style="margin:0">“${esc(r.note)}”</p>` : ''}${r.city ? `<p class="n1loc" style="margin:0">${ICON.pin}${esc(r.city)}${r.zip ? ' ' + esc(r.zip) : ''}${r.travel ? ` · ${esc(t('travelUp', r.travel))}` : ''}</p>` : ''}<p class="hint" style="margin:0">${esc(t('readyIsOn', until))}</p>` : off}
     <p class="hint" style="margin:0">🔔 ${t('readyHint')}</p></div>`;
 }
 function viewTechHub(){
@@ -3848,7 +3866,7 @@ function viewTechHub(){
     <div class="list">${list.length ? list.map(n1JobCard).join('') : `<p class="empty-s">${t('noJobs2')}</p>`}</div></div>`;
 }
 function viewReady(){
-  const list = n1Techs().filter(n1Ready).sort(n1ByDist);
+  const list = n1Techs().filter(n1Ready).sort((a, b) => n1ByDist(n1RLoc(a), n1RLoc(b)));
   return `<div class="wrap narrow page"><h1 class="pg-title">${t('readyTitle')}</h1><p class="lead-s" style="margin-top:0">${t('readyLead')}</p>
     ${n1CityBar()}
     <div class="list">${list.length ? list.map(tc => n1TechCard(tc, {urgent:true})).join('')
@@ -3892,7 +3910,7 @@ viewTech = function(id){
   return `<div class="wrap narrow page"><a class="back" href="${state.n1back || '#salon'}">${ICON.back}${t('back')}</a>
     ${tc.sample && !N1_CLEAN ? `<p class="sample-note">ℹ️ ${esc(t('sampleNote'))}</p>` : ''}
     <div class="card dhead"><div class="tc-head big">${avatarOf(tc)}<div><h1>${esc(tc.name)} ${tc.sample ? n1Sample() : ''}</h1><span class="loc">${n1Place(tc)}</span></div></div>
-      ${r ? `<p class="n1ready-l big">${n1ReadyLine(r)}</p>` : ''}
+      ${r ? `<p class="n1ready-l big">${n1ReadyLine(r)}</p>${r.note ? `<p style="margin:4px 0 0">“${esc(r.note)}”</p>` : ''}${r.city ? `<p class="n1loc" style="margin:4px 0 0">${n1Place(n1RLoc(tc))}${r.travel ? ` · ${esc(t('travelUp', r.travel))}` : ''}</p>` : ''}` : ''}
       ${factChips([tc.years ? opt('years', tc.years) : '', techPay(tc.payWanted), (tc.jobType || []).map(j => opt('jobType', j)).join(' / '), tc.license === 'have' ? t('licTx2') : '', tc.days && tc.days.length ? daysText(tc.days) : ''])}
       <div class="desk-only cta-col">${n1Action(tc, {urgent:!!r})}</div></div>
     <section class="jd-sec"><h2>${t('secSkills')}</h2><div class="sps big">${(tc.services || []).map(x => svcPill(x.id)).join('')}</div></section>
@@ -3992,8 +4010,13 @@ ACT.n1pub = function(el){
 ACT.n1apply = function(el){ toast(t(ADS.find(a => a.id === el.dataset.v && a.sample) ? 'sampleNoAct' : 'liveOnly')); };
 ACT.n1offer = function(el){ toast(t(TECHS.find(x => x.id === el.dataset.v && x.sample) ? 'sampleNoAct' : 'liveOnly')); };
 ACT.n1ready = function(){ toast(t('liveOnly')); };
-ACT.n1rday = function(el){ n1KeepTimes(); state.n1r.day = el.dataset.v; render(); };
-function n1KeepTimes(){ const f = document.getElementById('n1r-from'), to = document.getElementById('n1r-to'); state.n1r = state.n1r || {day:'today'}; if (f) state.n1r.from = f.value || '10:00'; if (to) state.n1r.to = to.value || '19:00'; }
+ACT.n1rday = function(el){ n1KeepTimes(); state.n1r.day = el.dataset.v; state.n1r.dFrom = ''; state.n1r.dTo = ''; render(); };
+ACT.n1rtravel = function(el){ n1KeepTimes(); state.n1r.travel = state.n1r.travel === el.dataset.v ? '' : el.dataset.v; state.n1r.more = true; render(); };
+function n1KeepTimes(){ const g = id => document.getElementById(id), r = state.n1r = state.n1r || {day:'today'};
+  if (g('n1r-from')) r.from = g('n1r-from').value || '10:00'; if (g('n1r-to')) r.to = g('n1r-to').value || '19:00';
+  if (g('n1r-dfrom')) r.dFrom = g('n1r-dfrom').value || ''; if (g('n1r-dto')) r.dTo = g('n1r-dto').value || '';
+  if (g('n1r-note')) r.note = g('n1r-note').value.trim(); if (g('n1r-city')) r.city = g('n1r-city').value; if (g('n1r-zip')) r.zip = g('n1r-zip').value.replace(/\D/g, '').slice(0, 5);
+  if (g('n1r-more')) r.more = g('n1r-more').open; }
 
 /* sample: one Ready-to-Go tech (Vy) + "wants" on the other samples */
 (() => {
@@ -4033,6 +4056,7 @@ if (N1_CLEAN){ const c = document.createElement('style'); c.textContent = '.ph-l
 .n1me{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:14px 16px}
 .n1rbox{display:grid;gap:10px;padding:16px;margin-top:10px;background:#FFFBF0;border-color:#F1D49A}.n1rbox.on{background:#FFF4D6;border-color:#E8B43A}
 .n1rhead{display:flex;align-items:center;justify-content:space-between;gap:10px}.n1rhead b{font-size:16px}.n1rset{display:grid;gap:8px}.n1rnow{margin:0;font-weight:700;color:#5A3B00}
+.n1dl{display:grid;gap:4px;font-size:13px;font-weight:700}.n1rbox input[type=date]{border:1px solid var(--field);border-radius:12px;padding:10px 12px;font:inherit;background:#fff;width:100%;box-sizing:border-box;min-height:46px}.n1rbox details.more{margin-top:4px}
 .n1sw{min-width:74px;border-radius:999px;border:2px solid #C9B9A0;background:#fff;color:#6B5A60;font:inherit;font-weight:800;padding:8px 14px;cursor:pointer}
 .n1sw.on{background:#E8A21A;border-color:#E8A21A;color:#2B1B00}
 .n1addr{background:#F1F8F4;border:1px solid #CDE5DA;border-radius:12px;padding:10px 12px;margin:10px 0 0}
@@ -4147,9 +4171,12 @@ function n1Live(c){
     try {
       if (on){ await db.collection('techs').doc(u.uid).update({'ready.on':false}); mp.ready = Object.assign({}, mp.ready, {on:false}); toast(t('readyOffT')); }
       else {
-        n1KeepTimes(); const r = state.n1r, d = new Date();
-        const until = r.day === 'today' ? Date.now() + 24 * 3600e3 : (d.setHours(48, 0, 0, 0), d.getTime());
-        const ready = {on:true, day:r.day, from:r.from, to:r.to, until, at:TS(), atC:Date.now()};
+        n1KeepTimes(); const r = state.n1r, d = new Date(); let until, day = r.day, dFrom = '', dTo = '';
+        if (r.dFrom){ dFrom = r.dFrom; dTo = r.dTo || r.dFrom;
+          if (dFrom < n1Today(0) || dTo < dFrom || dTo > n1Today(13)){ toast(t('readyBadDates')); return; }
+          const [y, m, dd] = dTo.split('-').map(Number); until = new Date(y, m - 1, dd, 23, 59, 59).getTime(); day = 'range'; }
+        else until = day === 'today' ? Date.now() + 24 * 3600e3 : (d.setHours(48, 0, 0, 0), d.getTime());
+        const ready = {on:true, day, dFrom, dTo, from:r.from, to:r.to, note:r.note || '', city:r.city || '', zip:r.zip || '', travel:r.travel || '', until, at:TS(), atC:Date.now()};
         await db.collection('techs').doc(u.uid).update({ready});
         mp.ready = Object.assign({}, ready, {atMs:Date.now()}); toast(t('readyOnT'));
       }
