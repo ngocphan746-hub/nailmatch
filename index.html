@@ -3134,7 +3134,7 @@ function initLive(){
   function fromDoc(doc){
     try {
       const d = doc.data(EST), o = d.ad || {};
-      return Object.assign({}, o, {id:doc.id, live:true, ownerUid:d.ownerUid, ownerName:d.ownerName || '', daysAgo:daysSince(d.createdAt), _form:d.form || null, _kind:d.kind || '', ready:d.ready ? Object.assign({}, d.ready, {atMs:ms(d.ready.at) || Date.now()}) : null});
+      return Object.assign({}, o, {id:doc.id, live:true, ownerUid:d.ownerUid, ownerName:d.ownerName || '', daysAgo:daysSince(d.createdAt), _form:d.form || null, _kind:d.kind || '', avatar:d.avatar || '', ready:d.ready ? Object.assign({}, d.ready, {atMs:ms(d.ready.at) || Date.now()}) : null});
     } catch (e) { return null; }
   }
   function replaceLive(arr, list){ for (let i = arr.length - 1; i >= 0; i--) if (arr[i].live) arr.splice(i, 1); arr.unshift(...list); }
@@ -3172,7 +3172,7 @@ function initLive(){
     try { const doc = await db.collection('users').doc(u.uid).get(); d = doc.exists ? doc.data() : null; } catch (e) { console.warn('user doc', e); }
     const base = {uid:u.uid, email:u.email || (d && d.email) || '', phone:(d && d.phone) || (u.phoneNumber ? digits10(u.phoneNumber) : '')};
     if (d && d.name){
-      state.user = Object.assign(base, {name:d.name, role:d.role || 'other', licNo:d.licNo || '', refContacts:d.refContacts || [], addrs:d.addrs || {}}); state.pendingUser = null;
+      state.user = Object.assign(base, {name:d.name, role:d.role || 'other', licNo:d.licNo || '', refContacts:d.refContacts || [], addrs:d.addrs || {}, pics:d.pics || {}, priv:d.priv || {}, avatar:d.avatar || ''}); state.pendingUser = null;
       startUserListeners();
       if (state.auth.pending || route().view === 'login'){ state.auth = freshAuth(); toast(t('welcome', state.user.name)); afterAuth(); }
       render();
@@ -3540,6 +3540,7 @@ function initLive(){
   function formToSave(fs){
     const f = JSON.parse(JSON.stringify(fs.data));
     delete f.phone; delete f.licNo; delete f.address;
+    if (typeof N1_PRIV !== 'undefined') N1_PRIV.forEach(k => { delete f[k]; });
     if (Array.isArray(f.refs)) f.refs = f.refs.map(r => ({salon:r.salon || '', city:r.city || '', period:r.period || ''}));
     if (Array.isArray(f.photos)) f.photos = f.photos.map(p => ({url:p.url, video:!!p.video, svc:p.svc || '', cap:p.cap || '', info:p.info || null, qc:p.qc || []}));
     f._titleEdited = !!fs.titleEdited;
@@ -3555,6 +3556,7 @@ function initLive(){
     (data.photos || []).forEach(p => { p.remote = true; });
     data.phone = state.user.phone || '';
     if (type === 'hiring') data.address = (state.user.addrs || {})[id] || '';
+    if (typeof n1LoadPriv === 'function') n1LoadPriv(type, id, data);
     if (type === 'profile'){ data.licNo = state.user.licNo || ''; (data.refs || []).forEach((r, i) => { r.contact = (state.user.refContacts || [])[i] || ''; }); }
     const titleEdited = !!data._titleEdited; delete data._titleEdited;
     state.forms[type] = {step:0, data, errors:{}, done:false, titleEdited, assist:{text:'', out:null}, aboutDrafted:false, editId:k === 'techs' ? null : id};
@@ -3604,7 +3606,7 @@ function initLive(){
       } catch (e) { el.disabled = false; toast(errText(e)); }
     }
   });
-  state.n1ctx = {db, TS, ms, L_, errText, renderKeep, softRender, setAfter, unreadOf};
+  state.n1ctx = {db, TS, ms, L_, errText, renderKeep, softRender, setAfter, unreadOf, stg, shrink};
 }
 
 /* ================= Nail101 – minimalist layer =================
@@ -3688,6 +3690,18 @@ Object.assign(T.vi, {fltSkill:'Kỹ năng: tất cả', fltNone:'Không có kế
 Object.assign(T.en, {fltSkill:'Skill: all', fltNone:'No matching results.', fltClear:'Clear filter',
   msgsNote:'🔔 No text/email alerts yet – check Nail101 for new messages.', msgsEmptyT:'No messages yet', msgsEmptyD:'Tap “I want this job” on a post or “Offer job” on a tech profile. Once the other side accepts, you can chat.',
   accEmptyT:'Nothing posted yet', accEmptyD:'Salon owners post a job. Techs create a profile so salons can find them.', accPostJob:'Post a job', accMakeProf:'Create tech profile', findJobs:'Find jobs', findTechs:'Find techs'});
+Object.assign(T.vi, {privSalonHead:'Chỉ thợ đã kết nối với bạn mới thấy 2 mục dưới đây', privTechHead:'Chỉ tiệm đã kết nối với bạn mới thấy các mục dưới đây (không bắt buộc)',
+  spicsHint:'Cần đủ 3 ảnh để kết nối với thợ. Có thể thêm sau.', coverHint:'1 ảnh hiện công khai trên tin tuyển.',
+  needPicsT:'Thêm ít nhất 3 ảnh tiệm', needPicsD:'Thợ sẽ thấy ảnh và địa chỉ tiệm sau khi hai bên kết nối. Thêm ảnh vào tin tuyển rồi quay lại.', needPicsBtn:'Thêm ảnh tiệm',
+  needAdT:'Đăng tin tuyển trước', needAdD:'Bạn cần có một tin tuyển (kèm 3 ảnh tiệm) trước khi mời thợ.',
+  pvSalon:'Thông tin tiệm', pvTech:'Thông tin thợ', pvOnly:'🔒 Chỉ hai bên đã kết nối mới thấy', pvLic:'Số bằng TDLR', pvJobs:'Nơi làm trước đây', pvAvail:'Lịch rảnh', pvNone:'Bên kia chưa bổ sung thông tin.',
+  avaChange:'Đổi ảnh đại diện', avaDone:'Đã đổi ảnh đại diện.', avaUp:'Đang tải ảnh…'});
+Object.assign(T.en, {privSalonHead:'Only techs you connect with can see the 2 items below', privTechHead:'Only salons you connect with can see the items below (optional)',
+  spicsHint:'You need 3 photos to connect with a tech. You can add them later.', coverHint:'1 photo shown publicly on your job post.',
+  needPicsT:'Add at least 3 salon photos', needPicsD:'Techs see your photos and address once you connect. Add photos to your job post, then come back.', needPicsBtn:'Add salon photos',
+  needAdT:'Post a job first', needAdD:'You need a job post (with 3 salon photos) before you can offer a job.',
+  pvSalon:'Salon details', pvTech:'Tech details', pvOnly:'🔒 Only visible to the two of you', pvLic:'TDLR license #', pvJobs:'Previous jobs', pvAvail:'Availability', pvNone:'The other side hasn’t added details yet.',
+  avaChange:'Change photo', avaDone:'Profile photo updated.', avaUp:'Uploading…'});
 ['vi', 'en'].forEach(l => { T[l].readyDay_today = l === 'vi' ? 'hôm nay' : 'today'; T[l].readyDay_tomorrow = l === 'vi' ? 'ngày mai' : 'tomorrow'; });
 
 /* ---------- options ---------- */
@@ -3711,9 +3725,11 @@ FORMS.hiring = {title:{vi:'Đăng tin tuyển thợ',en:'Post a job'}, steps:[{t
   {k:'perks', type:'multi', opt:'perks', label:{vi:'Quyền lợi cho thợ',en:'Perks for techs'}},
   {k:'license', type:'check', textKey:'licReqChk'},
   {k:'reqs', type:'multi', opt:'reqs', label:{vi:'Yêu cầu khác',en:'Other requirements'}},
+  {k:'_h1', type:'n1head', textKey:'privSalonHead'},
+  {k:'address', type:'text', label:{vi:'Địa chỉ tiệm',en:'Salon address'}, ph:{vi:'VD: 1234 Main St',en:'e.g. 1234 Main St'}},
+  {k:'spics', type:'n1pics', max:6, hintKey:'spicsHint', label:{vi:'Ảnh tiệm (ít nhất 3 ảnh)',en:'Salon photos (at least 3)'}},
   {k:'zip', type:'zip', more:1, label:{vi:'Mã ZIP',en:'ZIP code'}},
-  {k:'address', type:'text', more:1, hintKey:'addrHint', label:{vi:'Địa chỉ tiệm',en:'Salon address'}, ph:{vi:'VD: 1234 Main St',en:'e.g. 1234 Main St'}},
-  {k:'photos', type:'photos', max:5, more:1, label:{vi:'Ảnh tiệm',en:'Salon photos'}},
+  {k:'cover', type:'n1pics', max:1, more:1, hintKey:'coverHint', label:{vi:'Ảnh bìa (công khai)',en:'Cover photo (public)'}},
   {k:'techsNeeded', type:'stepper', min:1, max:10, more:1, label:{vi:'Số thợ cần',en:'Techs needed'}},
   {k:'experience', type:'chips', opt:'experience', more:1, label:{vi:'Kinh nghiệm',en:'Experience'}},
   {k:'extras', type:'textarea', max:400, more:1, label:{vi:'Giới thiệu thêm về tiệm',en:'More about the salon'}}])}]};
@@ -3730,7 +3746,15 @@ FORMS.profile = {title:{vi:'Hồ sơ thợ',en:'Tech profile'}, profile:true, st
   {k:'jobType', type:'multi', opt:'jobType', more:1, label:{vi:'Muốn làm',en:'Job type'}},
   {k:'days', type:'multi', opt:'days', more:1, label:{vi:'Ngày rảnh',en:'Days free'}},
   {k:'license', type:'chips', opt:'techLicense', more:1, label:{vi:'Bằng Texas',en:'Texas license'}},
-  {k:'about', type:'textarea', max:300, more:1, label:{vi:'Giới thiệu ngắn',en:'Short intro'}}])}]};
+  {k:'about', type:'textarea', max:300, more:1, label:{vi:'Giới thiệu ngắn',en:'Short intro'}},
+  {k:'_h1', type:'n1head', more:1, textKey:'privTechHead'},
+  {k:'portrait', type:'n1pics', max:1, more:1, label:{vi:'Ảnh chân dung',en:'Portrait photo'}},
+  {k:'licNo', type:'text', more:1, label:{vi:'Số bằng Texas (TDLR)',en:'Texas license # (TDLR)'}, ph:{vi:'VD: 1234567',en:'e.g. 1234567'}},
+  {k:'pjobs', type:'textarea', max:300, more:1, label:{vi:'Nơi làm trước đây',en:'Previous jobs'}, ph:{vi:'VD: Lotus Nails (San Antonio), 2023–2025',en:'e.g. Lotus Nails (San Antonio), 2023–2025'}},
+  {k:'mpics', type:'n1pics', max:6, more:1, label:{vi:'Thêm ảnh tay nghề',en:'More work photos'}},
+  {k:'avail', type:'text', more:1, label:{vi:'Lịch rảnh chi tiết',en:'Detailed availability'}, ph:{vi:'VD: T2–T6 sau 2 giờ chiều, T7 cả ngày',en:'e.g. Mon–Fri after 2pm, all day Sat'}}])}]};
+const N1_PRIV = ['address','spics','portrait','pjobs','mpics','avail','licNo'];
+const N1_PICS = {hiring:['cover','spics'], profile:['portrait','mpics']};
 delete FORMS.sale; delete FORMS.service;
 Object.assign(DEFAULTS.hiring, {services:[], license:false, payShow:'public', tier:'1', photos:[], perks:[], reqs:[]});
 Object.assign(DEFAULTS.profile, {services:[], wants:[], jobType:[], days:[], photos:[], captionsOk:true});
@@ -3744,7 +3768,9 @@ function svcArr(v){ return Array.isArray(v) ? v : v && typeof v === 'object' ? O
 function fixFormData(type, fs){
   const d = fs.data;
   if (type === 'hiring' || type === 'profile') d.services = svcArr(d.services);
-  if (type === 'hiring'){ d.license = d.license === true || d.license === 'required'; d.payShow = 'public'; }
+  (N1_PICS[type] || []).forEach(k => { if (!Array.isArray(d[k])) d[k] = []; });
+  if (type === 'hiring'){ d.license = d.license === true || d.license === 'required'; d.payShow = 'public';
+    if (Array.isArray(d.photos) && d.photos.length){ if (!d.cover.length) d.cover = [d.photos[0]]; d.photos = []; } }
   if (type === 'profile'){ d.captionsOk = true; if (!Array.isArray(d.wants)) d.wants = []; if (!Array.isArray(d.jobType)) d.jobType = []; }
 }
 const n1PVO = previewObject;
@@ -3755,10 +3781,35 @@ previewObject = function(type, fs){
     if (type === 'hiring') d.license = (lic === true || lic === 'required') ? 'required' : 'not_stated';
   }
   let o; try { o = n1PVO(type, fs); } finally { d.services = save; d.license = lic; }
-  if (type === 'hiring'){ o.hiring.tier = 1; o.hiring.payPublic = true; }
+  if (type === 'hiring'){ o.hiring.tier = 1; o.hiring.payPublic = true; o.picUrls = (d.cover || []).map(p => p.url); }
   if (type === 'profile'){ o.wants = (d.wants || []).slice(); o.portfolio = o.portfolio.filter(p => !p.video); o.refs = []; o.reviews = []; o.about = d.about ? {vi:d.about, en:d.about} : null; }
   return o;
 };
+
+/* private fields + photo pickers */
+const n1RF = renderField;
+renderField = function(type, f, fs){
+  if (f.type === 'n1head') return `<p class="n1priv">🔒 ${esc(t(f.textKey))}</p>`;
+  if (f.type !== 'n1pics') return n1RF(type, f, fs);
+  const arr = fs.data[f.k] || (fs.data[f.k] = []);
+  return `<div class="fq" data-q="${f.k}"><span class="flabel">${esc(L(f.label))}</span>${f.hintKey ? `<p class="hint">${t(f.hintKey)}</p>` : ''}
+    ${arr.length ? `<div class="thumbs">${arr.map((p, i) => `<div class="thumb"><img src="${esc(p.url)}" alt=""><button type="button" data-act="n1picdel" data-ft="${type}" data-k="${f.k}" data-v="${i}" aria-label="${t('removePhoto')}">×</button></div>`).join('')}</div>` : ''}
+    ${arr.length < f.max ? `<label class="btn btn-ghost file-btn">${t('addPhotos')}<input type="file" accept="image/*"${f.max > 1 ? ' multiple' : ''} data-n1up="${type}" data-k="${f.k}" data-max="${f.max}"></label>` : ''}</div>`;
+};
+ACT.n1picdel = function(el){ const fs = getForm(el.dataset.ft); (fs.data[el.dataset.k] || []).splice(Number(el.dataset.v), 1); render(); };
+let n1SetAvatar = function(){ toast(t('liveOnly')); };
+document.addEventListener('change', e => { const el = e.target; if (!el || !el.dataset) return;
+  if (el.dataset.n1up){ const fs = getForm(el.dataset.n1up), k = el.dataset.k, arr = fs.data[k] || (fs.data[k] = []);
+    Array.from(el.files || []).filter(x => /^image\//.test(x.type)).slice(0, Number(el.dataset.max) - arr.length).forEach(f => arr.push({url:URL.createObjectURL(f)})); render(); }
+  else if (el.dataset.n1ava !== undefined && el.files && el.files[0]) n1SetAvatar(el.files[0]);
+});
+function n1LoadPriv(type, id, data){
+  const u = state.user || {}, R = url => ({url, remote:true});
+  if (type === 'hiring') data.spics = (((u.pics || {})[id]) || []).map(R);
+  if (type === 'profile'){ const p = u.priv || {}; data.portrait = p.portrait ? [R(p.portrait)] : []; data.pjobs = p.pjobs || ''; data.mpics = (p.mpics || []).map(R); data.avail = p.avail || ''; }
+}
+const n1Ava = avatarOf;
+avatarOf = function(tc){ return tc && tc.avatar ? `<img class="avatar" src="${esc(tc.avatar)}" alt="">` : n1Ava(tc); };
 
 /* ---------- small helpers ---------- */
 if (!state.center) state.center = {lat:CITIES['San Antonio'][0], lng:CITIES['San Antonio'][1], name:'San Antonio'};
@@ -3809,11 +3860,12 @@ function n1Action(it, o){
 function n1JobCard(ad){
   const h = ad.hiring, must = h.services.filter(x => x.need === 'must'), pay = payText(h);
   const mp = state.myProfile, hit = mp && mp.wants ? (h.perks || []).filter(p => mp.wants.includes(p)).length + (mp.wants.includes('guarantee') && /guarantee|commission_week/.test(h.payType || '') ? 1 : 0) : 0;
-  return `<div class="card n1c"><a class="n1main" href="#ad-${esc(ad.id)}">
+  const logo = ad.avatar || (ad.picUrls && ad.picUrls[0]) || (ad.pics ? SALON_PICS[ad.pics[0]] : '');
+  return `<div class="card n1c"><a class="n1main n1row" href="#ad-${esc(ad.id)}">${logo ? `<img class="avatar" src="${esc(logo)}" alt="" loading="lazy">` : ''}<div>
     <div class="n1top"><b>${esc(adBiz(ad))}</b>${ad.sample ? n1Sample() : ''}</div>
     <div class="n1pay">${esc(pay || t('payAsk'))} · ${esc(opt('jobType', h.jobType))}</div>
     <div class="n1sub">${n1SvcLine(must)}</div>
-    <div class="n1loc">${n1Place(ad)}${hit ? ` · <span class="n1hit">${esc(t('wantsMatch', hit))}</span>` : ''}</div></a>
+    <div class="n1loc">${n1Place(ad)}${hit ? ` · <span class="n1hit">${esc(t('wantsMatch', hit))}</span>` : ''}</div></div></a>
     <div class="n1act">${n1Action(ad)}</div></div>`;
 }
 function n1TechCard(tc, o){
@@ -3942,7 +3994,7 @@ header = function(r){
     <div class="hdr-right">
       <a class="inbox-btn${r.view === 'inbox' || r.view === 'thread' ? ' on' : ''}" href="#inbox" aria-label="${t('inbox')}">${ICON.mail}${n ? `<span class="badge">${n}</span>` : ''}</a>
       <div class="lang" role="group" aria-label="Language"><button type="button" data-act="lang" data-v="vi" class="${lang === 'vi' ? 'on' : ''}" aria-pressed="${lang === 'vi'}">VI</button><button type="button" data-act="lang" data-v="en" class="${lang === 'en' ? 'on' : ''}" aria-pressed="${lang === 'en'}">EN</button></div>
-      ${state.user ? `<a class="me-btn${r.view === 'account' ? ' on' : ''}" href="#account" aria-label="${t('account')}">${esc((state.user.name || '?').slice(0, 1).toUpperCase())}</a>` : `<a class="signin-btn${r.view === 'login' ? ' on' : ''}" href="#login">${ICON.user}<span>${t('signIn')}</span></a>`}
+      ${state.user ? `<a class="me-btn${r.view === 'account' ? ' on' : ''}" href="#account" aria-label="${t('account')}">${state.user.avatar ? `<img src="${esc(state.user.avatar)}" alt="">` : esc((state.user.name || '?').slice(0, 1).toUpperCase())}</a>` : `<a class="signin-btn${r.view === 'login' ? ' on' : ''}" href="#login">${ICON.user}<span>${t('signIn')}</span></a>`}
     </div></div></header>`;
 };
 tabBar = function(r){
@@ -4067,6 +4119,11 @@ if (N1_CLEAN){ const c = document.createElement('style'); c.textContent = '.ph-l
 .n1me{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:14px 16px}
 .n1rbox{display:grid;gap:10px;padding:16px;margin-top:10px;background:#FFFBF0;border-color:#F1D49A}.n1rbox.on{background:#FFF4D6;border-color:#E8B43A}
 .n1rhead{display:flex;align-items:center;justify-content:space-between;gap:10px}.n1rhead b{font-size:16px}.n1rset{display:grid;gap:8px}.n1rnow{margin:0;font-weight:700;color:#5A3B00}
+.n1priv{background:#F7F1F3;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px;font-weight:600;margin:6px 0 0}
+.me-btn{overflow:hidden}.me-btn img{width:100%;height:100%;object-fit:cover;display:block;border-radius:999px}
+.n1ava{position:relative;display:inline-grid;justify-items:center;gap:4px;cursor:pointer}.n1ava input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}.n1ava small{color:var(--primary);font-weight:700;font-size:13px}
+.n1pv{display:grid;gap:8px;padding:14px 16px;margin:0 0 10px}.n1pv h2{margin:0;font-size:16px}.n1pv p{margin:0}.n1pv .who{display:flex;gap:12px;align-items:center}
+.n1pg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.n1pg a{display:block;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--page)}.n1pg img{width:100%;height:100%;object-fit:cover;display:block}
 .n1dl{display:grid;gap:4px;font-size:13px;font-weight:700}.n1rbox input[type=date]{border:1px solid var(--field);border-radius:12px;padding:10px 12px;font:inherit;background:#fff;width:100%;box-sizing:border-box;min-height:46px}.n1rbox details.more{margin-top:4px}
 .n1sw{min-width:74px;border-radius:999px;border:2px solid #C9B9A0;background:#fff;color:#6B5A60;font:inherit;font-weight:800;padding:8px 14px;cursor:pointer}
 .n1sw.on{background:#E8A21A;border-color:#E8A21A;color:#2B1B00}
@@ -4096,7 +4153,8 @@ if (state.n1ctx) n1Live(state.n1ctx);
 
 /* ================= live (Firebase) part ================= */
 function n1Live(c){
-  const {db, TS, ms, L_, errText, renderKeep, softRender, setAfter, unreadOf} = c;
+  const {db, TS, ms, L_, errText, renderKeep, softRender, setAfter, unreadOf, stg, shrink} = c;
+  L_.priv = {}; L_.privSent = {};
   const me = () => state.user;
   const ownerOf = it => it ? (it.ownerUid || (it.live ? it.id : null)) : null;
   const nm = (th, uid) => (th.names || {})[uid] || '—';
@@ -4106,6 +4164,41 @@ function n1Live(c){
     if (!state.user) return 0; const u = state.user.uid;
     return L_.threads.filter(x => (x.status === 'pending' && x.from !== u) || (x.status === 'accepted' && unreadOf(x))).length;
   };
+  const picsOf = adId => (((me().pics || {})[adId]) || []);
+  function myPriv(th){ const u = me();
+    if (th.techId === u.uid){ const p = u.priv || {}; return {role:'tech', portrait:p.portrait || '', licNo:u.licNo || '', pjobs:p.pjobs || '', mpics:p.mpics || [], avail:p.avail || ''}; }
+    return {role:'salon', addr:((u.addrs || {})[th.adId]) || '', pics:picsOf(th.adId)}; }
+  async function pushPriv(th){ try { await db.collection('threads').doc(th.id).collection('priv').doc(me().uid).set(myPriv(th)); L_.privSent[th.id + '|' + me().uid] = true; } catch (e) { console.warn('priv', e); } }
+  function loadPriv(th){ const key = th.id + '|' + me().uid, c0 = L_.priv[key]; if (c0 && Date.now() - c0.at < 60000) return c0.d;
+    L_.priv[key] = {at:Date.now(), d:c0 ? c0.d : null};
+    db.collection('threads').doc(th.id).collection('priv').doc(other(th)).get().then(d => { L_.priv[key] = {at:Date.now(), d:d.exists ? d.data() : {}}; const r = route(); if (r.view === 'thread' && r.id === th.id) renderKeep(); }).catch(e => console.warn('priv get', e));
+    return c0 ? c0.d : null; }
+  const grid = arr => arr && arr.length ? `<div class="n1pg">${arr.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="" loading="lazy"></a>`).join('')}</div>` : '';
+  function privCard(th){ const p = loadPriv(th), u = me(), amTech = th.techId === u.uid; if (p === null) return '';
+    let body = '';
+    if (amTech){ const addr = p.addr || th.addr || ''; body = (addr ? `<p>📍 <b>${t('addrLbl')}:</b> ${esc(addr)}</p>` : '') + grid(p.pics); }
+    else body = (p.portrait ? `<div class="who"><img class="avatar" style="width:72px;height:72px" src="${esc(p.portrait)}" alt=""><b>${esc(nm(th, other(th)))}</b></div>` : '')
+      + (p.licNo ? `<p><b>${t('pvLic')}:</b> ${esc(p.licNo)}</p>` : '') + (p.pjobs ? `<p><b>${t('pvJobs')}:</b> ${esc(p.pjobs)}</p>` : '') + (p.avail ? `<p><b>${t('pvAvail')}:</b> ${esc(p.avail)}</p>` : '') + grid(p.mpics);
+    return `<div class="card n1pv"><h2>${t(amTech ? 'pvSalon' : 'pvTech')}</h2>${body || `<p class="hint" style="margin:0">${t('pvNone')}</p>`}<p class="hint" style="margin:0">${t('pvOnly')}</p></div>`; }
+  async function upPics(arr, tag){ for (const p of arr || []){ if (p.remote) continue;
+      let blob = await (await fetch(p.url)).blob(); blob = await shrink(blob);
+      const ref = stg.ref(`uploads/${me().uid}/${tag}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.jpg`);
+      await ref.put(blob, {contentType:blob.type || 'image/jpeg'}); p.url = await ref.getDownloadURL(); p.remote = true; } }
+  n1SetAvatar = function(file){
+    const u = me(); if (!u) return; toast(t('avaUp'));
+    const img = new Image(), src = URL.createObjectURL(file);
+    img.onload = () => { const s0 = Math.min(img.naturalWidth, img.naturalHeight), cv = document.createElement('canvas'); cv.width = cv.height = 256;
+      cv.getContext('2d').drawImage(img, (img.naturalWidth - s0) / 2, (img.naturalHeight - s0) / 2, s0, s0, 0, 0, 256, 256); URL.revokeObjectURL(src);
+      cv.toBlob(async b => { try {
+          const ref = stg.ref(`uploads/${u.uid}/ava_${Date.now()}.jpg`); await ref.put(b, {contentType:'image/jpeg'}); const url = await ref.getDownloadURL();
+          await db.collection('users').doc(u.uid).set({avatar:url}, {merge:true}); u.avatar = url;
+          if (state.myProfile) await db.collection('techs').doc(u.uid).update({avatar:url}).catch(e => console.warn(e));
+          for (const a of ADS.filter(x => x.live && x.ownerUid === u.uid)) await db.collection('ads').doc(a.id).update({avatar:url}).catch(e => console.warn(e));
+          toast(t('avaDone')); render();
+        } catch (e) { console.warn(e); toast(errText(e)); } }, 'image/jpeg', 0.85); };
+    img.onerror = () => toast(t('e_gen')); img.src = src;
+  };
+  ACT.n1fixpics = function(el){ state.modal = null; renderModal(); ACT.liveedit(el); };
   function needLogin(){ setAfter({hash:location.hash}); location.hash = '#login'; }
   ACT.n1apply = function(el){
     const ad = ADS.find(a => a.id === el.dataset.v); if (!ad) return;
@@ -4119,12 +4212,17 @@ function n1Live(c){
     if (tc.sample){ toast(t('sampleNoAct')); return; }
     if (!me()){ needLogin(); return; }
     const mine = n1MyAds();
-    state.n1m = {kind:'offer', id:tc.id, urgent:!!el.dataset.u, adId:mine[0] ? mine[0].id : ''}; openModal('n1');
+    if (!mine.length){ state.n1m = {kind:'needad'}; openModal('n1'); return; }
+    state.n1m = {kind:'offer', id:tc.id, urgent:!!el.dataset.u, adId:mine[0].id}; openModal('n1');
   };
   const prevAlerts = modalAlerts;
   modalAlerts = function(){
     if (state.modal !== 'n1') return prevAlerts();
     const m = state.n1m || {}, x = `<button class="x" type="button" data-act="mclose" aria-label="${t('close')}">×</button>`;
+    if (m.kind === 'needad') return `<div class="modal-head"><h2 id="m-title">${t('needAdT')}</h2>${x}</div><p class="lead-s">${t('needAdD')}</p>
+        <div class="modal-foot"><span></span><a class="btn btn-primary" href="#post-hiring" data-act="mclose">${t('postHiringBtn')}</a></div>`;
+    if (m.kind === 'needpics') return `<div class="modal-head"><h2 id="m-title">${t('needPicsT')}</h2>${x}</div><p class="lead-s">${t('needPicsD')}</p>
+        <div class="modal-foot"><span></span><button class="btn btn-primary" type="button" data-act="n1fixpics" data-k="ads" data-v="${esc(m.adId)}">${t('needPicsBtn')}</button></div>`;
     if (m.kind === 'apply'){
       const ad = ADS.find(a => a.id === m.id); if (!ad) return '';
       if (!state.myProfile) return `<div class="modal-head"><h2 id="m-title">${t('needProfTitle')}</h2>${x}</div><p class="lead-s">${t('needProfLead')}</p>
@@ -4136,7 +4234,7 @@ function n1Live(c){
     const tc = TECHS.find(z => z.id === m.id); if (!tc) return '';
     const mine = n1MyAds();
     return `<div class="modal-head"><h2 id="m-title">${esc(t(m.urgent ? 'offerToUrgent' : 'offerTo', tc.name))}</h2>${x}</div><p class="hint" style="margin:0">${t('offerLead')}</p>
-      ${mine.length ? `<div class="fq"><label class="flabel" for="n1-ad">${t('offerAd')}</label><select id="n1-ad">${mine.map(a => `<option value="${esc(a.id)}"${m.adId === a.id ? ' selected' : ''}>${esc(adBiz(a))} – ${esc(titleOf(a))}</option>`).join('')}<option value=""${!m.adId ? ' selected' : ''}>${t('offerNoAd')}</option></select></div>` : ''}
+      ${mine.length ? `<div class="fq"><label class="flabel" for="n1-ad">${t('offerAd')}</label><select id="n1-ad">${mine.map(a => `<option value="${esc(a.id)}"${m.adId === a.id ? ' selected' : ''}>${esc(adBiz(a))} – ${esc(titleOf(a))}</option>`).join('')}</select></div>` : ''}
       <div class="fq"><label class="flabel" for="n1-note">${t('noteOpt')}</label><textarea id="n1-note" rows="3" maxlength="300" placeholder="${esc(t(m.urgent ? 'notePhUrgent' : 'notePhOffer'))}"></textarea></div>
       <div class="modal-foot"><span></span><button class="btn btn-primary${m.urgent ? ' urgent' : ''}" type="button" data-act="n1send">${t('sendOffer')}</button></div>`;
   };
@@ -4148,6 +4246,7 @@ function n1Live(c){
   ACT.n1send = async function(el){
     const m = state.n1m, u = me(); if (!m || !u) return;
     const note = ((document.getElementById('n1-note') || {}).value || '').trim();
+    if (m.kind === 'offer'){ const s0 = document.getElementById('n1-ad'), a0 = s0 ? s0.value : m.adId; if (picsOf(a0).length < 3){ state.n1m = {kind:'needpics', adId:a0}; renderModal(); return; } }
     el.disabled = true; el.textContent = t('sending');
     try {
       let tid, doc;
@@ -4164,20 +4263,21 @@ function n1Live(c){
         doc = {members:[u.uid, owner], names:{[u.uid]:salon, [owner]:tc.name}, from:u.uid, kind:'offer', status:'pending', urgent:!!m.urgent,
           adId:adId || '', techId:tc.id, about:ad ? {id:ad.id, kind:'ad', title:salon + ' – ' + titleOf(ad)} : {id:tc.id, kind:'tech', title:salon}, note,
           lastText:note || t('btnOffer'), lastAt:TS(), lastFrom:u.uid, readAt:{[u.uid]:TS()}, createdAt:TS()};
-        const addr = await myAddr(adId); if (addr) doc.addr = addr;
       }
       await db.collection('threads').doc(tid).set(doc);
+      await pushPriv({id:tid, techId:doc.techId, adId:doc.adId});
       state.modal = null; renderModal(); toast(t(m.kind === 'apply' ? 'sentApply' : 'sentOffer')); render();
     } catch (e) { console.warn(e); el.disabled = false; el.textContent = t(m.kind === 'apply' ? 'sendBtn' : 'sendOffer'); toast(errText(e)); }
   };
   ACT.n1acc = async function(el){
     const th = L_.threads.find(x => x.id === el.dataset.v), u = me(); if (!th || !u) return;
+    if (th.kind === 'apply' && picsOf(th.adId).length < 3){ state.n1m = {kind:'needpics', adId:th.adId}; openModal('n1'); return; }
     el.disabled = true;
     try {
       const upd = {status:'accepted', acceptedAt:TS(), lastText:t('connectedMsg'), lastAt:TS(), lastFrom:u.uid, ['readAt.' + u.uid]:TS()};
-      if (th.kind === 'apply' && th.adId && !th.addr){ const a = await myAddr(th.adId); if (a) upd.addr = a; }
       await db.collection('threads').doc(th.id).update(upd);
-      Object.assign(th, {status:'accepted', addr:upd.addr || th.addr});
+      Object.assign(th, {status:'accepted'});
+      await pushPriv(th);
       if (th.kind === 'offer' && state.myProfile && n1Ready(state.myProfile)) await db.collection('techs').doc(u.uid).update({'ready.on':false}).catch(e => console.warn(e));
       location.hash = '#inbox-' + th.id;
     } catch (e) { console.warn(e); el.disabled = false; toast(errText(e)); }
@@ -4231,7 +4331,8 @@ function n1Live(c){
     const x = L_.threads.find(z => z.id === id);
     if (x && x.status !== 'accepted'){ setTimeout(() => { location.hash = '#inbox'; }, 0); return ''; }
     let h = prevThread(id);
-    if (x) h = h.replace(/<p class="privacy-note">[\s\S]*?<\/p>/, `<p class="n1conn">${t('connected')}${x.addr ? `<br>📍 <b>${t('addrLbl')}:</b> ${esc(x.addr)}` : ''}</p>`)
+    if (x && !L_.privSent[x.id + '|' + state.user.uid]){ L_.privSent[x.id + '|' + state.user.uid] = true; pushPriv(x); }
+    if (x) h = h.replace(/<p class="privacy-note">[\s\S]*?<\/p>/, `<p class="n1conn">${t('connected')}</p>${privCard(x)}`)
       .replace(/<a class="biz" href="[^"]*">/, `<a class="biz" href="${state.user.uid === x.techId ? (x.adId ? '#ad-' + esc(x.adId) : '#jobs') : '#tech-' + esc(x.techId)}">`);
     return h;
   };
@@ -4239,16 +4340,31 @@ function n1Live(c){
   /* publishing: keep the address private (users/{uid}.addrs) */
   const prevPub = ACT.fpublish;
   ACT.fpublish = async function(el){
-    const type = el.dataset.ft, fs = getForm(type), addr = type === 'hiring' ? String(fs.data.address || '').trim() : null;
+    const type = el.dataset.ft, fs = getForm(type), d = fs.data;
+    if (state.user){ try { el.disabled = true; el.textContent = t('publishing'); for (const k of N1_PICS[type] || []) await upPics(d[k], k); }
+      catch (e) { console.warn(e); el.disabled = false; render(); toast(t('publishErr') + ' ' + errText(e)); return; } }
+    const addr = type === 'hiring' ? String(d.address || '').trim() : null, urls = k => (d[k] || []).map(p => p.url);
     await prevPub(el);
-    if (type === 'hiring' && fs.done && fs.liveId && state.user){
-      try { await db.collection('users').doc(state.user.uid).set({addrs:{[fs.liveId]:addr || ''}}, {merge:true}); state.user.addrs = Object.assign({}, state.user.addrs, {[fs.liveId]:addr || ''}); } catch (e) { console.warn('addr', e); }
-    }
+    const u = state.user; if (!fs.done || !fs.liveId || !u) return;
+    try {
+      if (type === 'hiring'){
+        await db.collection('users').doc(u.uid).set({addrs:{[fs.liveId]:addr || ''}, pics:{[fs.liveId]:urls('spics')}}, {merge:true});
+        u.addrs = Object.assign({}, u.addrs, {[fs.liveId]:addr || ''}); u.pics = Object.assign({}, u.pics, {[fs.liveId]:urls('spics')});
+        if (u.avatar) await db.collection('ads').doc(fs.liveId).update({avatar:u.avatar});
+      } else {
+        const priv = {portrait:urls('portrait')[0] || '', pjobs:String(d.pjobs || '').trim(), mpics:urls('mpics'), avail:String(d.avail || '').trim()};
+        await db.collection('users').doc(u.uid).set({priv}, {merge:true}); u.priv = priv;
+        if (u.avatar) await db.collection('techs').doc(u.uid).update({avatar:u.avatar});
+      }
+      L_.privSent = {};
+    } catch (e) { console.warn('private save', e); }
   };
   /* account: ready box for techs, simpler buttons */
   const prevAcc = viewAccount;
   viewAccount = function(){
     let h = prevAcc(); if (!state.user) return h;
+    const u0 = state.user, ini = esc((u0.name || '?').slice(0, 1).toUpperCase());
+    h = h.replace(/<span class="avatar ini big">[^<]*<\/span>/, `<label class="n1ava">${u0.avatar ? `<img class="avatar big" src="${esc(u0.avatar)}" alt="">` : `<span class="avatar ini big">${ini}</span>`}<small>${t('avaChange')}</small><input type="file" accept="image/*" data-n1ava="1" aria-label="${t('avaChange')}"></label>`);
     h = h.replace(/<a class="btn btn-ghost" href="#post">[^<]*<\/a>/, '')
       .replace(/<p class="empty-s">[^<]*<\/p>(?=<\/section>)/, `<div class="card n1empty"><h2>${t('accEmptyT')}</h2><p>${t('accEmptyD')}</p><div class="row"><a class="btn btn-primary" href="#post-hiring">${t('accPostJob')}</a><a class="btn btn-ghost" href="#post-profile">${t('accMakeProf')}</a></div></div>`);
     if (state.myProfile){ const i = h.indexOf('<section style="margin-top:18px">'); if (i > 0) h = h.slice(0, i) + `<div style="margin-top:14px">${n1ReadyBox()}</div>` + h.slice(i); }
