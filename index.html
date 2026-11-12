@@ -3752,13 +3752,16 @@ previewObject = function(type, fs){
 
 /* ---------- small helpers ---------- */
 if (!state.center) state.center = {lat:CITIES['San Antonio'][0], lng:CITIES['San Antonio'][1], name:'San Antonio'};
-const n1Hiring = () => ADS.filter(a => a.type === 'hiring' && a.hiring && a.hiring.services);
+/* examples step aside once there are 3+ real posts */
+const n1Vis = arr => { const real = arr.filter(x => x.live).length; return N1_PREVIEW || real < 3 ? arr : arr.filter(x => !x.sample); };
+const n1Hiring = () => n1Vis(ADS.filter(a => a.type === 'hiring' && a.hiring && a.hiring.services));
+const n1Techs = () => n1Vis(TECHS.filter(x => x.name && Array.isArray(x.services)));
 const n1Dist = o => { const p = coordsOf(o.zip, o.city || cityOf(o.zip)); return p && state.center ? Math.round(hav(state.center.lat, state.center.lng, p[0], p[1])) : null; };
 const n1ByDist = (a, b) => { const x = n1Dist(a), y = n1Dist(b); return (x === null ? 999 : x) - (y === null ? 999 : y) || (a.daysAgo || 0) - (b.daysAgo || 0); };
 const n1Place = o => { const d = n1Dist(o); return `${ICON.pin}${esc(placeName(o.zip, o.city) || 'TX')}${d !== null ? ` · ${t('milesAway', d)}` : ''}`; };
 const n1SvcLine = list => list.slice(0, 4).map(x => esc(svcShort(x.id))).join(' · ') + (list.length > 4 ? ` · +${list.length - 4}` : '');
 const N1_PREVIEW = !!window.__DB, N1_CLEAN = LIVE;
-const n1Sample = () => N1_CLEAN ? '' : `<span class="ctag ct-sample">${esc(t('sampleTag'))}</span>`;
+const n1Sample = () => N1_PREVIEW ? '' : LIVE ? `<span class="n1ex">${lang === 'vi' ? 'Ví dụ' : 'Example'}</span>` : `<span class="ctag ct-sample">${esc(t('sampleTag'))}</span>`;
 function n1Ready(tc){ const r = tc && tc.ready; return r && r.on && Date.now() < (r.until || 0) ? r : null; }
 function n1Ago(ms0){ const m = Math.max(1, Math.round((Date.now() - (ms0 || Date.now())) / 60000)); return m < 60 ? t('minsS', m) : t('hoursS', Math.round(m / 60)); }
 function n1ReadyLine(r){ return `⚡ ${esc(t('readyLine', t('readyDay_' + (r.day || 'today')), `${fmtTime(r.from || '10:00')}–${fmtTime(r.to || '19:00')}`))} · ${esc(t('turnedOn', n1Ago(r.atC || r.atMs)))}`; }
@@ -3817,7 +3820,7 @@ viewHome = function(){
     </div></div></section>`;
 };
 function viewSalonHub(){
-  const list = TECHS.filter(x => x.name && Array.isArray(x.services)).slice().sort(n1ByDist);
+  const list = n1Techs().slice().sort(n1ByDist);
   return `<div class="wrap narrow page"><h1 class="pg-title">${t('salonHubTitle')}</h1>
     <a class="btn btn-primary btn-block n1big" href="#post-hiring">${t('postHiringBtn')}</a>
     ${n1CityBar()}<h2 class="sec">${t('techsNear', list.length)}</h2>
@@ -3845,7 +3848,7 @@ function viewTechHub(){
     <div class="list">${list.length ? list.map(n1JobCard).join('') : `<p class="empty-s">${t('noJobs2')}</p>`}</div></div>`;
 }
 function viewReady(){
-  const list = TECHS.filter(n1Ready).sort(n1ByDist);
+  const list = n1Techs().filter(n1Ready).sort(n1ByDist);
   return `<div class="wrap narrow page"><h1 class="pg-title">${t('readyTitle')}</h1><p class="lead-s" style="margin-top:0">${t('readyLead')}</p>
     ${n1CityBar()}
     <div class="list">${list.length ? list.map(tc => n1TechCard(tc, {urgent:true})).join('')
@@ -3868,7 +3871,7 @@ viewAd = function(id){
   return `<div class="wrap narrow page"><a class="back" href="#jobs">${ICON.back}${t('back')}</a>
     ${ad.sample && !N1_CLEAN ? `<p class="sample-note">ℹ️ ${esc(t('sampleNote'))}</p>` : ''}
     <div class="card dhead"><span class="jpay big${pay ? '' : ' muted'}">${esc(pay || t('payAsk'))}</span>
-      <h1>${esc(adBiz(ad))}</h1><p class="biz">${esc(titleOf(ad))}</p>
+      <h1>${esc(adBiz(ad))} ${ad.sample ? n1Sample() : ''}</h1><p class="biz">${esc(titleOf(ad))}</p>
       <span class="loc">${n1Place(ad)} · ${postedText(ad.daysAgo)}</span>
       ${factChips([opt('jobType', h.jobType), h.techsNeeded > 1 ? t('techsN', h.techsNeeded) : '', h.license === 'required' ? t('licTx2') : ''])}
       ${addr ? `<p class="n1addr">📍 <b>${t('addrLbl')}:</b> ${esc(addr)}</p>` : ''}
@@ -3888,7 +3891,7 @@ viewTech = function(id){
   const pf = (tc.portfolio ? tc.portfolio : allPortfolio(tc)).filter(x => !x.video).slice(0, 6), r = n1Ready(tc);
   return `<div class="wrap narrow page"><a class="back" href="${state.n1back || '#salon'}">${ICON.back}${t('back')}</a>
     ${tc.sample && !N1_CLEAN ? `<p class="sample-note">ℹ️ ${esc(t('sampleNote'))}</p>` : ''}
-    <div class="card dhead"><div class="tc-head big">${avatarOf(tc)}<div><h1>${esc(tc.name)}</h1><span class="loc">${n1Place(tc)}</span></div></div>
+    <div class="card dhead"><div class="tc-head big">${avatarOf(tc)}<div><h1>${esc(tc.name)} ${tc.sample ? n1Sample() : ''}</h1><span class="loc">${n1Place(tc)}</span></div></div>
       ${r ? `<p class="n1ready-l big">${n1ReadyLine(r)}</p>` : ''}
       ${factChips([tc.years ? opt('years', tc.years) : '', techPay(tc.payWanted), (tc.jobType || []).map(j => opt('jobType', j)).join(' / '), tc.license === 'have' ? t('licTx2') : '', tc.days && tc.days.length ? daysText(tc.days) : ''])}
       <div class="desk-only cta-col">${n1Action(tc, {urgent:!!r})}</div></div>
@@ -3904,7 +3907,7 @@ contactBlock = function(id){ const it = ADS.find(a => a.id === id) || TECHS.find
 /* header / tabs / routing */
 header = function(r){
   const n = unreadCount();
-  return `${LIVE && !N1_PREVIEW ? '' : `<div class="demo-bar">${t('demoBar')}</div>`}
+  return `<div class="demo-bar">${LIVE && !N1_PREVIEW ? 'Beta' : t('demoBar')}</div>
   <header class="site-header"><div class="wrap hdr">
     <a class="brand" href="#home"><span class="logo">${ICON.drop}</span><span>Nail101</span></a>
     <div class="hdr-right">
@@ -4006,7 +4009,7 @@ function n1KeepTimes(){ const f = document.getElementById('n1r-from'), to = docu
 
 /* real site: only real posts. preview: sample data without labels */
 ADS.forEach(a => { if (!a.live) a.sample = true; }); TECHS.forEach(x => { if (!x.live) x.sample = true; });
-if (LIVE && !N1_PREVIEW){ for (let i = ADS.length - 1; i >= 0; i--) if (ADS[i].sample) ADS.splice(i, 1); for (let i = TECHS.length - 1; i >= 0; i--) if (TECHS[i].sample) TECHS.splice(i, 1); }
+if (LIVE && !N1_PREVIEW){ T.vi.sampleNoAct = 'Đây là tin ví dụ nên không gửi được.'; T.en.sampleNoAct = 'This is an example, so you can’t send to it.'; }
 if (N1_PREVIEW){ T.vi.sampleNoAct = 'Bản xem thử: tin này chỉ để xem. Hãy thử với tin bạn tự đăng.'; T.en.sampleNoAct = 'Preview: this one is view-only. Try it with a post you create.'; }
 if (N1_CLEAN){ const c = document.createElement('style'); c.textContent = '.ph-lab,.img-note{display:none !important}'; document.head.appendChild(c);
   T.vi.photoCredit = 'Ảnh minh hoạ: Unsplash, Pexels'; T.en.photoCredit = 'Illustrations: Unsplash, Pexels'; }
@@ -4037,6 +4040,7 @@ if (N1_CLEAN){ const c = document.createElement('style'); c.textContent = '.ph-l
 .n1in{display:grid;gap:8px;padding:14px 16px}.n1in.urgent{border-color:#E8B43A;background:#FFFBF0}.n1in h3{margin:0;font-size:16px}.n1in .note{margin:0;font-style:italic;color:var(--ink)}
 .n1in .row{display:flex;gap:8px;flex-wrap:wrap}.n1in .row .btn{flex:1;min-width:110px}.n1wait{color:var(--muted);font-size:14px;padding:12px 16px}
 .n1conn{background:#F1F8F4;border:1px solid #CDE5DA;border-radius:12px;padding:10px 12px;margin:0 0 10px;font-weight:600}
+.n1ex{font-size:11px;font-weight:600;color:#8A7A80;border:1px solid #DDD3D6;border-radius:999px;padding:1px 8px;vertical-align:middle}
 .n1tabs{grid-template-columns:repeat(3,1fr) !important}.n1ti{position:relative;display:inline-flex}.n1ti .badge{position:absolute;top:-6px;right:-10px}
 .auth-card{grid-template-columns:minmax(0,1fr)}.auth-card>*{min-width:0}.code-in{width:100%;min-width:0;box-sizing:border-box;letter-spacing:.35em;padding-left:.35em}
 .form-wrap .steps,.form-wrap .step-label{display:none}.pb-fields>label,.pb-fields>select,.pb-fields>input{display:none}`; document.head.appendChild(st); })();
