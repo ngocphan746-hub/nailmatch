@@ -3682,6 +3682,12 @@ Object.assign(T.vi, {readyMore:'Thêm lựa chọn', readyDates:'Chọn ngày kh
   readyArea:'Khu vực đi làm được', readyZip:'Mã ZIP (không bắt buộc)', readyTravel:'Đi xa tối đa', readyNote:'Ghi chú', readyNotePh:'VD: Làm part-time 3 ngày, chỉ buổi chiều', readyBadDates:'Ngày chưa đúng. Chọn trong 14 ngày tới, “Đến ngày” không trước “Từ ngày”.', travelUp:n => `đi tối đa ${n} dặm`});
 Object.assign(T.en, {readyMore:'More options', readyDates:'Pick other dates (several days / a week)', readyDFrom:'From', readyDTo:'To', readyDatesHint:'If you fill in dates, they replace Today / Tomorrow. Up to 14 days.',
   readyArea:'Where you can work', readyZip:'ZIP code (optional)', readyTravel:'Will travel up to', readyNote:'Note', readyNotePh:'e.g. Part-time for 3 days, afternoons only', readyBadDates:'Check the dates: within the next 14 days, and “To” not before “From”.', travelUp:n => `up to ${n} mi`});
+Object.assign(T.vi, {fltSkill:'Kỹ năng: tất cả', fltNone:'Không có kết quả phù hợp.', fltClear:'Xoá lọc',
+  msgsNote:'🔔 Web chưa báo qua SMS/email – nhớ mở Nail101 để xem tin mới.', msgsEmptyT:'Chưa có tin nhắn', msgsEmptyD:'Bấm “Tôi muốn làm” ở một tin tuyển hoặc “Mời làm” ở hồ sơ thợ. Bên kia đồng ý là nhắn tin được.',
+  accEmptyT:'Bạn chưa đăng gì', accEmptyD:'Chủ tiệm đăng tin tuyển thợ. Thợ tạo hồ sơ để tiệm tìm thấy.', accPostJob:'Đăng tin tuyển thợ', accMakeProf:'Tạo hồ sơ thợ', findJobs:'Tìm việc', findTechs:'Tìm thợ'});
+Object.assign(T.en, {fltSkill:'Skill: all', fltNone:'No matching results.', fltClear:'Clear filter',
+  msgsNote:'🔔 No text/email alerts yet – check Nail101 for new messages.', msgsEmptyT:'No messages yet', msgsEmptyD:'Tap “I want this job” on a post or “Offer job” on a tech profile. Once the other side accepts, you can chat.',
+  accEmptyT:'Nothing posted yet', accEmptyD:'Salon owners post a job. Techs create a profile so salons can find them.', accPostJob:'Post a job', accMakeProf:'Create tech profile', findJobs:'Find jobs', findTechs:'Find techs'});
 ['vi', 'en'].forEach(l => { T[l].readyDay_today = l === 'vi' ? 'hôm nay' : 'today'; T[l].readyDay_tomorrow = l === 'vi' ? 'ngày mai' : 'tomorrow'; });
 
 /* ---------- options ---------- */
@@ -3773,8 +3779,13 @@ function n1ReadyDay(r){ return r.day === 'range' && r.dFrom ? (r.dTo && r.dTo !=
 function n1ReadyLine(r){ return `⚡ ${esc(t('readyLine', n1ReadyDay(r), `${fmtTime(r.from || '10:00')}–${fmtTime(r.to || '19:00')}`))} · ${esc(t('turnedOn', n1Ago(r.atC || r.atMs)))}`; }
 function n1RLoc(tc){ const r = n1Ready(tc); return r && r.city ? Object.assign({}, tc, {city:r.city, zip:r.zip || ''}) : tc; }
 function n1Today(k){ const d = new Date(Date.now() + (k || 0) * 86400000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+state.n1f = {svc:''};
 function n1CityBar(){ const cur = state.center ? state.center.name : 'San Antonio';
-  return `<div class="n1city"><label for="q-city">${t('cityLbl')}</label><select id="q-city" data-q="city">${Object.keys(CITIES).map(c => `<option${cur === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></div>`; }
+  return `<div class="n1flt"><select id="q-city" data-q="city" aria-label="${t('cityLbl')}">${Object.keys(CITIES).map(c => `<option${cur === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></div>`; }
+function n1Flt(list){ const v = state.n1f.svc; return v ? list.filter(o => ((o.hiring ? o.hiring.services : o.services) || []).some(x => x.id === v)) : list; }
+function n1None(txt){ return state.n1f.svc ? `<div class="card n1empty"><p>${t('fltNone')}</p><button class="btn btn-ghost" type="button" data-act="n1fclear">${t('fltClear')}</button></div>` : `<p class="empty-s">${txt}</p>`; }
+ACT.n1fclear = function(){ state.n1f.svc = ''; render(); };
+document.addEventListener('change', e => { const el = e.target; if (el && el.dataset && el.dataset.n1f){ state.n1f[el.dataset.n1f] = el.value; render(); } });
 function n1Me(){ return state.user ? state.user.uid : null; }
 function n1Threads(){ return (state.live && state.live.threads) || []; }
 function n1ThreadWith(tid){ return n1Threads().find(x => x.id === tid); }
@@ -3824,15 +3835,15 @@ viewHome = function(){
     <div class="n1btns">
       <a class="bigbtn" href="#salon">${ICON.doc}<span>${t('h_salon')}</span></a>
       <a class="bigbtn alt" href="#jobs">${ICON.user}<span>${t('h_tech')}</span></a>
-      <a class="bigbtn n1urgent" href="#ready"><span class="n1bolt" aria-hidden="true">⚡</span><span>${t('h_ready')}<small>${t('h_readyS')}</small></span></a>
+      <a class="bigbtn n1urgent" href="#ready"><svg class="n1bolt" viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg><span>${t('h_ready')}<small>${t('h_readyS')}</small></span></a>
     </div></div></section>`;
 };
 function viewSalonHub(){
-  const list = n1Techs().slice().sort(n1ByDist);
+  const list = n1Flt(n1Techs()).slice().sort(n1ByDist);
   return `<div class="wrap narrow page"><h1 class="pg-title">${t('salonHubTitle')}</h1>
     <a class="btn btn-primary btn-block n1big" href="#post-hiring">${t('postHiringBtn')}</a>
     ${n1CityBar()}<h2 class="sec">${t('techsNear', list.length)}</h2>
-    <div class="list">${list.length ? list.map(tc => n1TechCard(tc)).join('') : `<p class="empty-s">${t('noTechs')}</p>`}</div></div>`;
+    <div class="list">${list.length ? list.map(tc => n1TechCard(tc)).join('') : n1None(t('noTechs'))}</div></div>`;
 }
 function n1ReadyBox(){
   const mp = state.myProfile;
@@ -3857,20 +3868,20 @@ function n1ReadyBox(){
     <p class="hint" style="margin:0">🔔 ${t('readyHint')}</p></div>`;
 }
 function viewTechHub(){
-  const list = n1Hiring().slice().sort(n1ByDist), mp = state.myProfile;
+  const list = n1Flt(n1Hiring()).slice().sort(n1ByDist), mp = state.myProfile;
   const top = mp ? `<div class="card n1me"><a class="n1row" href="#tech-${esc(mp.id)}">${avatarOf(mp)}<div><b>${t('myProfileCard')}</b><div class="n1sub">${esc(mp.name)} · ${n1SvcLine(mp.services || [])}</div></div></a>
       <button class="btn-link" type="button" data-act="liveedit" data-k="techs" data-v="${esc(mp.id)}">${t('editProfileS')}</button></div>${n1ReadyBox()}`
     : `<a class="btn btn-primary btn-block n1big" href="#post-profile">${t('makeProfile')}</a><p class="hint" style="text-align:center;margin:-4px 0 0">${t('makeProfileD')}</p>`;
   return `<div class="wrap narrow page"><h1 class="pg-title">${t('techHubTitle')}</h1>${top}
     ${n1CityBar()}<h2 class="sec">${t('jobsNear', list.length)}</h2>
-    <div class="list">${list.length ? list.map(n1JobCard).join('') : `<p class="empty-s">${t('noJobs2')}</p>`}</div></div>`;
+    <div class="list">${list.length ? list.map(n1JobCard).join('') : n1None(t('noJobs2'))}</div></div>`;
 }
 function viewReady(){
-  const list = n1Techs().filter(n1Ready).sort((a, b) => n1ByDist(n1RLoc(a), n1RLoc(b)));
+  const list = n1Flt(n1Techs().filter(n1Ready)).sort((a, b) => n1ByDist(n1RLoc(a), n1RLoc(b)));
   return `<div class="wrap narrow page"><h1 class="pg-title">${t('readyTitle')}</h1><p class="lead-s" style="margin-top:0">${t('readyLead')}</p>
     ${n1CityBar()}
     <div class="list">${list.length ? list.map(tc => n1TechCard(tc, {urgent:true})).join('')
-      : `<div class="card" style="text-align:center"><p class="lead-s">${t('readyEmpty')}</p><a class="btn btn-primary" href="#salon">${t('readyAll')}</a></div>`}</div>
+      : state.n1f.svc ? n1None('') : `<div class="card n1empty"><p>${t('readyEmpty')}</p><a class="btn btn-primary" href="#salon">${t('readyAll')}</a></div>`}</div>
     <p class="hint" style="text-align:center;margin-top:16px">${t('readyTechNote')}</p></div>`;
 }
 viewAds = viewTechHub; viewSeekers = viewSalonHub; viewPostChoose = viewHome; viewMatching = viewHome;
@@ -4039,12 +4050,12 @@ if (N1_CLEAN){ const c = document.createElement('style'); c.textContent = '.ph-l
 
 /* style */
 (() => { const st = document.createElement('style'); st.textContent = `
-.n1home{padding:44px 0 56px;border-bottom:0}.n1home h1{margin:0 0 26px;text-align:center}
-.n1btns{display:grid;grid-template-columns:1fr 1fr;gap:12px}.n1btns .bigbtn{justify-content:center;min-height:84px;font-size:18px}
-.n1btns .n1urgent{grid-column:1/-1;background:#FFF4D6;color:#5A3B00;border:2px solid #E8B43A}.n1urgent small{color:#7A5200;opacity:1}.n1bolt{font-size:24px}
-@media (max-width:520px){.n1btns{grid-template-columns:1fr}}
+.n1home{padding:28px 0 32px;border-bottom:0}.n1home h1{font-size:clamp(26px,6.6vw,42px);line-height:1.12;margin:0 0 20px;text-align:center}
+.n1btns{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:560px;margin:0 auto}
+.n1btns .bigbtn{justify-content:center;min-height:64px;font-size:17px;font-weight:700;border-radius:16px;padding:14px 16px;border:1.5px solid var(--primary)}
+.n1btns .n1urgent{grid-column:1/-1;background:#FFF9EC;color:var(--ink);border-color:#E0B252}.n1urgent small{color:#6B5A60;opacity:1;font-weight:500;font-size:13px;margin-top:1px}.n1bolt{color:#C98A0B;flex:none}
+@media (max-width:520px){.n1btns{grid-template-columns:1fr;gap:10px}}
 .n1big{margin:6px 0 4px;min-height:52px;font-size:16px}
-.n1city{display:flex;align-items:center;gap:10px;margin:16px 0 4px}.n1city label{font-weight:700;font-size:14px}.n1city select{max-width:220px}
 .n1c{display:flex;align-items:center;gap:12px;padding:14px 16px}.n1c .n1main{flex:1;min-width:0;text-decoration:none;color:inherit;display:grid;gap:3px}
 .n1row{display:flex !important;gap:12px;align-items:flex-start;text-decoration:none;color:inherit}.n1row .avatar{flex:none}
 .n1top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.n1top b{font-size:17px}.n1pay{color:var(--ok-ink);font-weight:700;font-size:15px}
@@ -4067,7 +4078,19 @@ if (N1_CLEAN){ const c = document.createElement('style'); c.textContent = '.ph-l
 .n1ex{font-size:11px;font-weight:600;color:#8A7A80;border:1px solid #DDD3D6;border-radius:999px;padding:1px 8px;vertical-align:middle}
 .n1tabs{grid-template-columns:repeat(3,1fr) !important}.n1ti{position:relative;display:inline-flex}.n1ti .badge{position:absolute;top:-6px;right:-10px}
 .auth-card{grid-template-columns:minmax(0,1fr)}.auth-card>*{min-width:0}.code-in{width:100%;min-width:0;box-sizing:border-box;letter-spacing:.35em;padding-left:.35em}
-.form-wrap .steps,.form-wrap .step-label{display:none}.pb-fields>label,.pb-fields>select,.pb-fields>input{display:none}`; document.head.appendChild(st); })();
+.form-wrap .steps,.form-wrap .step-label{display:none}
+.page{padding-top:16px;padding-bottom:28px}.pg-title{margin:0 0 10px}.sec{margin:16px 0 8px;font-size:18px}.list{gap:12px}
+.n1flt{margin:12px 0}.n1flt select{min-height:44px;width:100%;max-width:260px}
+.n1c{padding:12px 14px;gap:10px}.n1top b{font-size:16px}.n1act .btn{min-height:42px;padding:0 16px}
+.n1note{font-size:13px;color:var(--muted);margin:0 0 12px}
+.n1empty{text-align:center;display:grid;gap:8px;justify-items:center;padding:22px 18px}.n1empty h2{margin:0;font-size:18px}.n1empty p{margin:0;color:var(--muted);font-size:14px;max-width:360px}
+.n1empty .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:6px}.n1eic{width:44px;height:44px;border-radius:999px;background:var(--page);display:grid;place-items:center;color:var(--primary)}.n1eic svg{width:22px;height:22px}
+.acc{padding:16px;gap:8px}.acc .avatar.big{width:56px;height:56px;font-size:24px}.acc .pg-title{font-size:22px}
+.n1big{min-height:48px}.n1me{padding:12px 14px}.n1rbox{padding:14px}
+html,body{overflow-x:hidden}#app{min-height:100vh;display:flex;flex-direction:column}#main{flex:1}
+#main:has(.n1home){background:#fff;display:grid;align-items:center}
+@media (min-width:961px){.n1home{padding:40px 0 72px}.n1home h1{font-size:44px;margin-bottom:32px}.n1btns{max-width:680px;gap:16px}.n1btns .bigbtn{min-height:76px;font-size:18px}.n1urgent small{font-size:14px}}.site-footer{padding:16px 0;font-size:13px}
+@media (max-width:960px){body.has-mbar{padding-bottom:calc(72px + env(safe-area-inset-bottom))}}.pb-fields>label,.pb-fields>select,.pb-fields>input{display:none}`; document.head.appendChild(st); })();
 
 if (state.n1ctx) n1Live(state.n1ctx);
 
@@ -4199,8 +4222,8 @@ function n1Live(c){
     const accRow = x => `<a class="card thread-row${unreadOf(x) ? ' unread' : ''}" href="#inbox-${esc(x.id)}"><div class="mname"><h3>💬 ${esc(who(x))}</h3><p class="biz">${esc((x.about || {}).title || '')}</p><p class="last">${x.lastFrom === u ? t('you') + ': ' : ''}${esc(x.lastText || '')}</p></div>${unreadOf(x) ? '<span class="dot-new" aria-label="new"></span>' : ''}</a>`;
     const outRow = x => `<div class="card n1wait">⏳ ${esc(t('out_wait', who(x)))}<br><small>${esc((x.about || {}).title || '')}</small></div>`;
     const rows = inc.map(incRow).concat(acc.map(accRow)).concat(out.map(outRow));
-    return `<div class="wrap narrow page"><h1 class="pg-title">${t('inbox')}</h1><p class="hint">${t('msgsLead')}</p><p class="sample-note">${t('remind')}</p>
-      ${!L_.threadsReady ? `<p class="empty-s">${t('loadingTxt')}</p>` : rows.length ? `<div class="list">${rows.join('')}</div>` : `<p class="empty-s">${t('msgsEmpty')}</p>`}</div>`;
+    return `<div class="wrap narrow page"><h1 class="pg-title">${t('inbox')}</h1><p class="n1note">${t('msgsNote')}</p>
+      ${!L_.threadsReady ? `<p class="empty-s">${t('loadingTxt')}</p>` : rows.length ? `<div class="list">${rows.join('')}</div>` : `<div class="card n1empty"><div class="n1eic">${ICON.mail}</div><h2>${t('msgsEmptyT')}</h2><p>${t('msgsEmptyD')}</p><div class="row"><a class="btn btn-primary" href="#jobs">${t('findJobs')}</a><a class="btn btn-ghost" href="#salon">${t('findTechs')}</a></div></div>`}</div>`;
   };
   const prevThread = viewThread;
   viewThread = function(id){
@@ -4226,7 +4249,8 @@ function n1Live(c){
   const prevAcc = viewAccount;
   viewAccount = function(){
     let h = prevAcc(); if (!state.user) return h;
-    h = h.replace(/<a class="btn btn-ghost" href="#post">[^<]*<\/a>/, '');
+    h = h.replace(/<a class="btn btn-ghost" href="#post">[^<]*<\/a>/, '')
+      .replace(/<p class="empty-s">[^<]*<\/p>(?=<\/section>)/, `<div class="card n1empty"><h2>${t('accEmptyT')}</h2><p>${t('accEmptyD')}</p><div class="row"><a class="btn btn-primary" href="#post-hiring">${t('accPostJob')}</a><a class="btn btn-ghost" href="#post-profile">${t('accMakeProf')}</a></div></div>`);
     if (state.myProfile){ const i = h.indexOf('<section style="margin-top:18px">'); if (i > 0) h = h.slice(0, i) + `<div style="margin-top:14px">${n1ReadyBox()}</div>` + h.slice(i); }
     return h;
   };
