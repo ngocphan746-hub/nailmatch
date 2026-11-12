@@ -3719,7 +3719,8 @@ FORMS.hiring = {title:{vi:'Đăng tin tuyển thợ',en:'Post a job'}, steps:[{t
   {k:'businessName', type:'text', req:1, label:{vi:'Tên tiệm',en:'Salon name'}, ph:{vi:'VD: Mây Nail Studio',en:'e.g. Mây Nail Studio'}},
   {k:'city', type:'select', req:1, label:{vi:'Thành phố',en:'City'}, options:CITY_OPTS},
   {k:'services', type:'multi', opt:'svc', req:1, label:{vi:'Cần thợ làm gì?',en:'What do you need?'}},
-  {k:'jobType', type:'chips', opt:'jobType', req:1, label:{vi:'Loại việc',en:'Job type'}}]
+  {k:'jobType', type:'chips', opt:'jobType', req:1, label:{vi:'Loại việc',en:'Job type'}},
+  {k:'experience', type:'chips', opt:'experience', req:1, label:{vi:'Kinh nghiệm cần có',en:'Experience needed'}}]
   .concat(PAYF('salon')).concat([
   {k:'schedule', type:'schedule', req:1, label:{vi:'Giờ làm',en:'Hours'}},
   {k:'perks', type:'multi', opt:'perks', label:{vi:'Quyền lợi cho thợ',en:'Perks for techs'}},
@@ -3731,7 +3732,6 @@ FORMS.hiring = {title:{vi:'Đăng tin tuyển thợ',en:'Post a job'}, steps:[{t
   {k:'zip', type:'zip', more:1, label:{vi:'Mã ZIP',en:'ZIP code'}},
   {k:'cover', type:'n1pics', max:1, more:1, hintKey:'coverHint', label:{vi:'Ảnh bìa (công khai)',en:'Cover photo (public)'}},
   {k:'techsNeeded', type:'stepper', min:1, max:10, more:1, label:{vi:'Số thợ cần',en:'Techs needed'}},
-  {k:'experience', type:'chips', opt:'experience', more:1, label:{vi:'Kinh nghiệm',en:'Experience'}},
   {k:'extras', type:'textarea', max:400, more:1, label:{vi:'Giới thiệu thêm về tiệm',en:'More about the salon'}}])}]};
 FORMS.profile = {title:{vi:'Hồ sơ thợ',en:'Tech profile'}, profile:true, steps:[{title:{vi:'Hồ sơ',en:'Profile'}, fields:[
   {k:'name', type:'text', req:1, label:{vi:'Tên hoặc nickname',en:'Name or nickname'}},
