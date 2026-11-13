@@ -2932,12 +2932,12 @@ const LEGAL = {
       {h:{vi:'1. Thông tin chúng tôi thu thập', en:'1. Information we collect'}, li:[
         {vi:'<b>Thông tin tài khoản:</b> tên (hoặc tên tiệm), vai trò (chủ tiệm / thợ / khác), số điện thoại và/hoặc email bạn dùng để đăng nhập.', en:'<b>Account info:</b> your name (or salon name), role (salon owner / tech / other), and the phone number and/or email you sign in with.'},
         {vi:'<b>Nội dung bạn đăng:</b> tin tuyển thợ, tin sang tiệm, tin dịch vụ, hồ sơ thợ, ảnh và video bạn tải lên.', en:'<b>What you post:</b> hiring ads, salon-for-sale ads, service ads, tech profiles, and the photos and videos you upload.'},
-        {vi:'<b>Tin nhắn:</b> nội dung tin nhắn và hồ sơ ứng tuyển bạn gửi cho người khác qua Nail101.', en:'<b>Messages:</b> the messages and job applications you send to others through Nail101.'},
+        {vi:'<b>Tin nhắn:</b> nội dung tin nhắn và hồ sơ ứng tuyển bạn gửi cho người khác qua Nail101.</li><li><b>Email (nếu bạn cung cấp):</b> chỉ dùng để báo khi có người ứng tuyển, mời làm hoặc nhắn tin cho bạn. Không hiện công khai, không bán cho ai.', en:'<b>Messages:</b> the messages and job applications you send to others through Nail101.</li><li><b>Email (if you give us one):</b> used only to let you know when someone applies, offers you a job, or messages you. Never shown publicly and never sold.'},
         {vi:'<b>Thông tin kỹ thuật:</b> dữ liệu đăng nhập cần thiết để giữ bạn đăng nhập trên trình duyệt (lưu trong bộ nhớ trình duyệt).', en:'<b>Technical info:</b> the sign-in data needed to keep you signed in on your browser (stored in your browser’s storage).'}]},
       {h:{vi:'2. Chúng tôi dùng thông tin để làm gì', en:'2. How we use it'}, li:[
         {vi:'Tạo và bảo vệ tài khoản của bạn, gửi mã đăng nhập qua SMS hoặc link qua email.', en:'To create and protect your account and send sign-in codes by text or sign-in links by email.'},
         {vi:'Hiển thị tin và hồ sơ bạn đăng để người khác tìm thấy.', en:'To show your ads and profile so others can find them.'},
-        {vi:'Chuyển tin nhắn giữa bạn và người khác mà không lộ số điện thoại.', en:'To deliver messages between you and others without revealing phone numbers.'},
+        {vi:'Chuyển tin nhắn giữa bạn và người khác mà không lộ số điện thoại.</li><li>Soạn tin đăng hoặc hồ sơ thay bạn theo đúng thông tin bạn cung cấp qua điện thoại. Tin chỉ lên web sau khi bạn bấm duyệt bằng link chúng tôi gửi.</li><li>Giữ trang sạch: ẩn hoặc xoá tin vi phạm và khoá tài khoản vi phạm. Bạn cũng có thể chặn người dùng khác, khi đó hai bên không thấy tin của nhau nữa.', en:'To deliver messages between you and others without revealing phone numbers.</li><li>To prepare a listing or profile on your behalf from what you tell us by phone. It only goes live after you approve it with the link we send you.</li><li>To keep the site clean: we may hide or remove listings that break the rules and ban accounts. You can also block other users, after which neither side sees the other’s listings.'},
         {vi:'Giữ an toàn cho trang, chống spam và lạm dụng.', en:'To keep the site safe and prevent spam and abuse.'}]},
       {h:{vi:'3. Ai thấy thông tin của bạn', en:'3. Who can see your information'}, li:[
         {vi:'<b>Công khai:</b> tin đăng, hồ sơ thợ (tên, khu vực, dịch vụ, kinh nghiệm, ảnh/video tác phẩm) và tên tiệm bạn ghi.', en:'<b>Public:</b> your ads, tech profile (name, area, services, experience, work photos/videos), and any salon name you enter.'},
@@ -3134,7 +3134,7 @@ function initLive(){
   function fromDoc(doc){
     try {
       const d = doc.data(EST), o = d.ad || {};
-      return Object.assign({}, o, {id:doc.id, live:true, ownerUid:d.ownerUid, ownerName:d.ownerName || '', daysAgo:daysSince(d.createdAt), _form:d.form || null, _kind:d.kind || '', avatar:d.avatar || '', ready:d.ready ? Object.assign({}, d.ready, {atMs:ms(d.ready.at) || Date.now()}) : null});
+      return Object.assign({}, o, {id:doc.id, live:true, ownerUid:d.ownerUid, ownerName:d.ownerName || '', daysAgo:daysSince(d.createdAt), _form:d.form || null, _kind:d.kind || '', avatar:d.avatar || '', filled:!!d.filled, hired:!!d.hired, expMs:d.expMs || 0, views:d.views || 0, mod:d.mod || '', claim:d.claim || null, licOk2:!!d.licOk2, ready:d.ready ? Object.assign({}, d.ready, {atMs:ms(d.ready.at) || Date.now()}) : null});
     } catch (e) { return null; }
   }
   function replaceLive(arr, list){ for (let i = arr.length - 1; i >= 0; i--) if (arr[i].live) arr.splice(i, 1); arr.unshift(...list); }
@@ -3146,7 +3146,7 @@ function initLive(){
   }, bad));
   keepListening('techs', (ok, bad) => db.collection('techs').orderBy('updatedAt', 'desc').limit(300).onSnapshot(snap => { ok();
     replaceLive(TECHS, snap.docs.map(fromDoc).filter(x => x && x.name && Array.isArray(x.services)));
-    if (state.user) state.myProfile = TECHS.find(x => x.live && x.id === state.user.uid) || null;
+    if (state.user) state.myProfile = TECHS.find(x => x.live && (x.id === state.user.uid || x.ownerUid === state.user.uid)) || null;
     softRender();
   }, bad));
 
@@ -3158,7 +3158,7 @@ function initLive(){
       L_.threads = snap.docs.map(d => Object.assign({id:d.id}, d.data(EST))); L_.threadsReady = true; softRender();
     }, e => { console.warn('threads', e); L_.threadsReady = true; softRender(); setTimeout(() => { if (state.user && state.user.uid === uid && L_.unsubs.includes(un)){ L_.unsubs.splice(L_.unsubs.indexOf(un), 1); sub(); } }, 5000); }); L_.unsubs.push(un); };
     sub();
-    state.myProfile = TECHS.find(x => x.live && x.id === uid) || null;
+    state.myProfile = TECHS.find(x => x.live && (x.id === uid || x.ownerUid === uid)) || null;
   }
   function stopUserListeners(){ L_.unsubs.forEach(u => { try { u(); } catch (e) {} }); L_.unsubs = []; L_.threads = []; L_.threadsReady = false; unsubMsgs(); }
   function freshAuth(){ return {step:'start', method:state.auth.method || 'phone', phone:'', email:'', msg:'', busy:false, role:'tech'}; }
@@ -3176,6 +3176,11 @@ function initLive(){
       startUserListeners();
       if (state.auth.pending || route().view === 'login'){ state.auth = freshAuth(); toast(t('welcome', state.user.name)); afterAuth(); }
       render();
+    } else if (typeof admBoot === 'function' && admBoot(base)){
+      try { await db.collection('users').doc(u.uid).set({name:'Nail101', role:'salon', phone:base.phone || '', email:base.email || '', createdAt:TS()}, {merge:true}); } catch (e) { console.warn('adm boot', e); }
+      state.user = Object.assign(base, {name:'Nail101', role:'salon', licNo:'', refContacts:[], addrs:{}, pics:{}, priv:{}, avatar:''});
+      state.pendingUser = null; startUserListeners();
+      state.auth = freshAuth(); afterAuth(); render();
     } else {
       state.user = null; state.pendingUser = Object.assign(base, {name:u.displayName || ''});
       state.auth = Object.assign(freshAuth(), {step:'profile', name:u.displayName || '', role:'tech'});
@@ -3503,10 +3508,11 @@ function initLive(){
       if (type === 'profile'){
         await db.collection('users').doc(me.uid).set({licNo:d.licNo || '', refContacts:(d.refs || []).map(r => r.contact || '')}, {merge:true});
         me.licNo = d.licNo || ''; me.refContacts = (d.refs || []).map(r => r.contact || '');
-        const tref = db.collection('techs').doc(me.uid), exists = !!TECHS.find(x => x.live && x.id === me.uid);
+        const tid0 = (state.myProfile && state.myProfile.live && state.myProfile.id) || me.uid;
+        const tref = db.collection('techs').doc(tid0), exists = !!TECHS.find(x => x.live && x.id === tid0);
         if (exists) await tref.update({ownerName:me.name, updatedAt:TS(), ad:clean, form, kind:'profile'});
         else await tref.set({ownerUid:me.uid, ownerName:me.name, createdAt:TS(), updatedAt:TS(), ad:clean, form, kind:'profile'});
-        fs.liveId = me.uid;
+        fs.liveId = tid0;
       } else if (fs.editId){
         await db.collection('ads').doc(fs.editId).update({ad:clean, form, updatedAt:TS()});
         fs.liveId = fs.editId;
@@ -3522,7 +3528,7 @@ function initLive(){
   };
   const origForm = viewForm;
   viewForm = function(type){
-    if (type === 'profile' && !state.forms.profile && state.user && state.myProfile && state.myProfile._form) loadEdit('techs', state.user.uid, true);
+    if (type === 'profile' && !state.forms.profile && state.user && state.myProfile && state.myProfile._form) loadEdit('techs', state.myProfile.id, true);
     let h = origForm(type); const fs = state.forms[type];
     if (fs && fs.editId && !fs.done){
       h = h.replace(/(<div class="form-wrap[^"]*">\s*<a class="back"[^>]*>[\s\S]*?<\/a>)/, `$1<p class="sample-note">✏️ ${esc(t(type === 'profile' ? 'editingProfile' : 'editing'))}</p>`)
@@ -4368,6 +4374,927 @@ function n1Live(c){
     h = h.replace(/<a class="btn btn-ghost" href="#post">[^<]*<\/a>/, '')
       .replace(/<p class="empty-s">[^<]*<\/p>(?=<\/section>)/, `<div class="card n1empty"><h2>${t('accEmptyT')}</h2><p>${t('accEmptyD')}</p><div class="row"><a class="btn btn-primary" href="#post-hiring">${t('accPostJob')}</a><a class="btn btn-ghost" href="#post-profile">${t('accMakeProf')}</a></div></div>`);
     if (state.myProfile){ const i = h.indexOf('<section style="margin-top:18px">'); if (i > 0) h = h.slice(0, i) + `<div style="margin-top:14px">${n1ReadyBox()}</div>` + h.slice(i); }
+    return h;
+  };
+}
+
+/* ============ Nail101 – user features (filled / expiry / saved / views / block / share / email) ============ */
+Object.assign(T.vi, {
+  filledBtn:'Đã tuyển xong', reopenBtn:'Mở lại tin', filledTag:'Đã tuyển xong', filledNote:'Tin này đã đóng. Thợ không ứng tuyển được nữa.',
+  hiredBtn:'Đã có việc', unhireBtn:'Đang tìm việc', hiredTag:'Đã có việc', hiredNote:'Hồ sơ đang ẩn. Tiệm không mời bạn được.',
+  expTag:'Hết hạn', expNote:'Tin đã quá 30 ngày và không còn hiện trên web.', expNoteT:'Hồ sơ đã quá 30 ngày và không còn hiện trên web.',
+  renewBtn:'Gia hạn 30 ngày', renewed:'Đã gia hạn 30 ngày.', expSoon:n => `Còn ${n} ngày là hết hạn`, stillHiring:'Còn tuyển thợ không?', stillLooking:'Còn tìm việc không?',
+  statApply:n => `${n} người đã ứng tuyển`, statView:n => `${n} lượt xem`,
+  saveBtn:'Lưu tin', savedBtn:'Đã lưu', savedOnly:'⭐ Đã lưu', savedNone:'Bạn chưa lưu tin nào. Bấm ⭐ trên tin để lưu.',
+  shareBtn:'Chia sẻ', shareCopied:'Đã copy link.', shareAd:n => `Tin tuyển thợ: ${n}`, shareTech:n => `Hồ sơ thợ nail: ${n}`,
+  blockBtn:'Chặn người này', blockTitle:n => `Chặn ${n}?`, blockLead:'Hai bên sẽ không thấy tin của nhau và không kết nối được nữa. Cuộc trò chuyện hiện tại sẽ đóng.', blockOk:'Chặn', blockDone:'Đã chặn.',
+  unblockBtn:'Bỏ chặn', unblockDone:'Đã bỏ chặn.', blockedList:'Người bạn đã chặn', blockedNone:'Bạn chưa chặn ai.', blockedHere:'Bạn đã chặn người này.',
+  emailLbl:'Email (không bắt buộc)', emailHint:'Để nhận báo khi có người ứng tuyển hoặc nhắn tin. Không hiện công khai.',
+  emailAskT:'Nhận báo qua email?', emailAskD:'Cho email để Nail101 báo khi có người ứng tuyển hoặc nhắn tin cho bạn. Không hiện công khai.',
+  emailSave:'Lưu email', emailSkip:'Để sau', emailSaved:'Đã lưu email.', emailBad:'Email chưa đúng.',
+  qr:['Chào anh/chị ạ','Khi nào em qua làm thử được ạ?','Cho em xin địa chỉ tiệm ạ','Dạ em cảm ơn ạ'],
+  qrS:['Chào bạn','Bạn qua làm thử lúc nào được?','Mình gửi địa chỉ tiệm nha','Cảm ơn bạn nha'],
+  quickPick:'Chọn nhanh'
+});
+Object.assign(T.en, {
+  filledBtn:'Position filled', reopenBtn:'Reopen post', filledTag:'Filled', filledNote:'This post is closed. Techs can no longer apply.',
+  hiredBtn:'I found a job', unhireBtn:'Looking again', hiredTag:'Not looking', hiredNote:'Your profile is hidden. Salons can’t offer you a job.',
+  expTag:'Expired', expNote:'This post is over 30 days old and no longer shows on the site.', expNoteT:'This profile is over 30 days old and no longer shows on the site.',
+  renewBtn:'Renew 30 days', renewed:'Renewed for 30 days.', expSoon:n => `Expires in ${n} day${n > 1 ? 's' : ''}`, stillHiring:'Still hiring?', stillLooking:'Still looking for work?',
+  statApply:n => `${n} applicant${n > 1 ? 's' : ''}`, statView:n => `${n} view${n > 1 ? 's' : ''}`,
+  saveBtn:'Save', savedBtn:'Saved', savedOnly:'⭐ Saved', savedNone:'Nothing saved yet. Tap ⭐ on a post to save it.',
+  shareBtn:'Share', shareCopied:'Link copied.', shareAd:n => `Nail job: ${n}`, shareTech:n => `Nail tech: ${n}`,
+  blockBtn:'Block this person', blockTitle:n => `Block ${n}?`, blockLead:'You won’t see each other’s posts and can’t connect any more. Your current conversation will close.', blockOk:'Block', blockDone:'Blocked.',
+  unblockBtn:'Unblock', unblockDone:'Unblocked.', blockedList:'People you blocked', blockedNone:'You haven’t blocked anyone.', blockedHere:'You blocked this person.',
+  emailLbl:'Email (optional)', emailHint:'To get an alert when someone applies or messages you. Never shown publicly.',
+  emailAskT:'Get email alerts?', emailAskD:'Add your email and Nail101 will let you know when someone applies or messages you. Never shown publicly.',
+  emailSave:'Save email', emailSkip:'Later', emailSaved:'Email saved.', emailBad:'That email doesn’t look right.',
+  qr:['Hi!','When can I come in for a trial?','Could you send me the salon address?','Thank you!'],
+  qrS:['Hi there','When can you come in for a trial?','Here’s the salon address','Does 10am tomorrow work?','Thanks!'],
+  quickPick:'Quick picks'
+});
+
+/* ---------- state ---------- */
+const DAY2 = 86400000, LIFE2 = 30 * DAY2;
+state.n2 = {saved:[], blocked:[], viewed:{}, savedOnly:false};
+function n2Exp(o){ if (!o || !o.live) return Infinity; if (o.expMs) return o.expMs; return Date.now() - (o.daysAgo || 0) * DAY2 + LIFE2; }
+function n2Expired(o){ return n2Exp(o) < Date.now(); }
+function n2Left(o){ const d = Math.ceil((n2Exp(o) - Date.now()) / DAY2); return d === Infinity ? 999 : d; }
+function n2Closed(o){ return !!(o.filled || o.hired); }
+function n2Off(o){ return n2Closed(o) || n2Expired(o); }
+function n2Mine(o){ const u = n1Me(); return !!(u && n1Owner(o) === u); }
+function n2Blocked(o){ const b = state.n2.blocked; return b.length > 0 && b.indexOf(n1Owner(o)) >= 0; }
+function n2Hide(o){ return n2Off(o) || n2Blocked(o); }
+function n2Saved(id){ return state.n2.saved.indexOf(id) >= 0; }
+const n2Live2 = () => !!state.n2.on;
+
+/* ---------- lists: drop closed / expired / blocked ---------- */
+function n2Jobs(){ let l = n1Flt(n1Hiring()).filter(a => !n2Hide(a)); if (state.n2.savedOnly) l = l.filter(a => n2Saved(a.id)); return l.sort(n1ByDist); }
+function n2TechList(){ return n1Flt(n1Techs()).filter(x => !n2Hide(x)).slice().sort(n1ByDist); }
+
+viewSalonHub = function(){
+  const list = n2TechList();
+  return `<div class="wrap narrow page"><h1 class="pg-title">${t('salonHubTitle')}</h1>
+    <a class="btn btn-primary btn-block n1big" href="#post-hiring">${t('postHiringBtn')}</a>
+    ${n1CityBar()}<h2 class="sec">${t('techsNear', list.length)}</h2>
+    <div class="list">${list.length ? list.map(tc => n1TechCard(tc)).join('') : n1None(t('noTechs'))}</div></div>`;
+};
+viewTechHub = function(){
+  const list = n2Jobs(), mp = state.myProfile, so = state.n2.savedOnly;
+  const top = mp ? `<div class="card n1me"><a class="n1row" href="#tech-${esc(mp.id)}">${avatarOf(mp)}<div><b>${t('myProfileCard')}</b><div class="n1sub">${esc(mp.name)} · ${n1SvcLine(mp.services || [])}</div>${n2Badges(mp)}</div></a>
+      <button class="btn-link" type="button" data-act="liveedit" data-k="techs" data-v="${esc(mp.id)}">${t('editProfileS')}</button></div>${n2Status(mp)}${n1ReadyBox()}`
+    : `<a class="btn btn-primary btn-block n1big" href="#post-profile">${t('makeProfile')}</a><p class="hint" style="text-align:center;margin:-4px 0 0">${t('makeProfileD')}</p>`;
+  const star = state.n2.saved.length || so ? `<button type="button" class="choice n2so${so ? ' on' : ''}" aria-pressed="${so}" data-act="n2only">${t('savedOnly')}</button>` : '';
+  return `<div class="wrap narrow page"><h1 class="pg-title">${t('techHubTitle')}</h1>${top}
+    <div class="n2row">${n1CityBar()}${star}</div><h2 class="sec">${t('jobsNear', list.length)}</h2>
+    <div class="list">${list.length ? list.map(n1JobCard).join('') : so ? `<p class="empty-s">${t('savedNone')}</p>` : n1None(t('noJobs2'))}</div></div>`;
+};
+viewReady = function(){
+  const list = n1Flt(n1Techs().filter(n1Ready)).filter(x => !n2Hide(x)).sort((a, b) => n1ByDist(n1RLoc(a), n1RLoc(b)));
+  return `<div class="wrap narrow page"><h1 class="pg-title">${t('readyTitle')}</h1><p class="lead-s" style="margin-top:0">${t('readyLead')}</p>
+    ${n1CityBar()}
+    <div class="list">${list.length ? list.map(tc => n1TechCard(tc, {urgent:true})).join('')
+      : state.n1f.svc ? n1None('') : `<div class="card n1empty"><p>${t('readyEmpty')}</p><a class="btn btn-primary" href="#salon">${t('readyAll')}</a></div>`}</div>
+    <p class="hint" style="text-align:center;margin-top:16px">${t('readyTechNote')}</p></div>`;
+};
+ACT.n2only = function(){ state.n2.savedOnly = !state.n2.savedOnly; render(); };
+
+/* ---------- badges + owner status box ---------- */
+function n2Badges(o){
+  const b = [];
+  if (o.filled) b.push(`<span class="n2tag off">${t('filledTag')}</span>`);
+  if (o.hired) b.push(`<span class="n2tag off">${t('hiredTag')}</span>`);
+  if (n2Expired(o)) b.push(`<span class="n2tag warn">${t('expTag')}</span>`);
+  return b.length ? `<div class="n2tags">${b.join('')}</div>` : '';
+}
+function n2Stats(o){
+  if (!n2Mine(o) || o.kind === 'profile' || TECHS.includes(o)) return '';
+  const n = ((state.live && state.live.threads) || []).filter(x => x.adId === o.id && x.kind === 'apply').length;
+  const v = o.views || 0;
+  return `<p class="n2stats">${esc(t('statApply', n))} · ${esc(t('statView', v))}</p>`;
+}
+function n2Status(o){
+  if (!o || !n2Mine(o) || !n2Live2()) return '';
+  const tech = TECHS.includes(o), id = esc(o.id), k = tech ? 'techs' : 'ads';
+  const closed = tech ? o.hired : o.filled, exp = n2Expired(o), left = n2Left(o);
+  const lines = [];
+  if (closed) lines.push(`<p class="n2note">${t(tech ? 'hiredNote' : 'filledNote')}</p>`);
+  else if (exp) lines.push(`<p class="n2note warn">${t(tech ? 'expNoteT' : 'expNote')}</p>`);
+  else if (left <= 7) lines.push(`<p class="n2note warn">${esc(t('expSoon', left))} – ${t(tech ? 'stillLooking' : 'stillHiring')}</p>`);
+  const btns = [];
+  if (!closed && (exp || left <= 7)) btns.push(`<button class="btn btn-primary" type="button" data-act="n2renew" data-k="${k}" data-v="${id}">${t('renewBtn')}</button>`);
+  btns.push(`<button class="btn btn-ghost" type="button" data-act="n2close" data-k="${k}" data-v="${id}" data-on="${closed ? '0' : '1'}">${closed ? t(tech ? 'unhireBtn' : 'reopenBtn') : t(tech ? 'hiredBtn' : 'filledBtn')}</button>`);
+  return `<div class="card n2box">${lines.join('')}${n2Stats(o)}<div class="n2btns">${btns.join('')}</div></div>`;
+}
+
+/* ---------- owner actions on cards / details ---------- */
+const n2Act = n1Action;
+n1Action = function(it, o){
+  if (n2Mine(it)) return n2Act(it, o);
+  if (n2Off(it) || n2Blocked(it)) return '';
+  return n2Act(it, o);
+};
+const n2Card = n1JobCard;
+n1JobCard = function(ad){
+  let h = n2Card(ad);
+  if (!N1_PREVIEW && !ad.live) return h;
+  const on = n2Saved(ad.id);
+  return h.replace('<div class="n1act">', `<div class="n1act"><button type="button" class="n2star${on ? ' on' : ''}" data-act="n2save" data-v="${esc(ad.id)}" aria-pressed="${on}" aria-label="${t(on ? 'savedBtn' : 'saveBtn')}" title="${t(on ? 'savedBtn' : 'saveBtn')}">★</button>`);
+};
+function n2Share(o){
+  const tech = TECHS.includes(o);
+  return `<button class="btn btn-ghost n2share" type="button" data-act="n2share" data-v="${esc(o.id)}" data-k="${tech ? 't' : 'a'}"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg> ${t('shareBtn')}</button>`;
+}
+const n2ViewAd = viewAd;
+viewAd = function(id){
+  const ad = ADS.find(a => a.id === id);
+  let h = n2ViewAd(id);
+  if (!ad) return h;
+  n2CountView(ad);
+  const badge = n2Badges(ad);
+  if (badge) h = h.replace('<div class="card dhead">', `<div class="card dhead">${badge}`);
+  else if (n2Blocked(ad)) h = h.replace('<div class="card dhead">', `<div class="card dhead"><p class="n2note">${t('blockedHere')}</p>`);
+  const extra = n2Status(ad) + `<div class="n2sharerow">${n2Share(ad)}</div>`;
+  return h.replace(/<\/div>\s*$/, extra + '</div>');
+};
+const n2ViewTech = viewTech;
+viewTech = function(id){
+  const tc = TECHS.find(x => x.id === id);
+  let h = n2ViewTech(id);
+  if (!tc) return h;
+  const badge = n2Badges(tc);
+  if (badge) h = h.replace('<div class="card dhead">', `<div class="card dhead">${badge}`);
+  const extra = n2Status(tc) + `<div class="n2sharerow">${n2Share(tc)}</div>`;
+  return h.replace(/<\/div>\s*$/, extra + '</div>');
+};
+const n2Contact = contactBlock;
+contactBlock = function(id){
+  const it = ADS.find(a => a.id === id) || TECHS.find(x => x.id === id);
+  if (it && !n2Mine(it) && (n2Off(it) || n2Blocked(it))) return '';
+  return n2Contact(id);
+};
+function n2CountView(){}
+
+/* ---------- share ---------- */
+ACT.n2share = async function(el){
+  const tech = el.dataset.k === 't', it = tech ? TECHS.find(x => x.id === el.dataset.v) : ADS.find(a => a.id === el.dataset.v);
+  if (!it) return;
+  const url = location.origin + location.pathname + '#' + (tech ? 'tech-' : 'ad-') + it.id;
+  const title = tech ? t('shareTech', it.name) : t('shareAd', adBiz(it));
+  try { if (navigator.share){ await navigator.share({title, text:title, url}); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(url); toast(t('shareCopied')); }
+  catch (e) { const ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast(t('shareCopied')); } catch (e2) {} ta.remove(); }
+};
+
+/* ---------- demo-mode fallbacks ---------- */
+ACT.n2save = function(){ toast(t('liveOnly')); };
+ACT.n2close = function(){ toast(t('liveOnly')); };
+ACT.n2renew = function(){ toast(t('liveOnly')); };
+ACT.n2block = function(){ toast(t('liveOnly')); };
+ACT.n2unblock = function(){ toast(t('liveOnly')); };
+ACT.n2email = function(){ toast(t('liveOnly')); };
+
+/* ---------- email field on both forms ---------- */
+(() => {
+  const f = {k:'email', type:'text', label:{vi:'Email (không bắt buộc)', en:'Email (optional)'}, hintKey:'emailHint', ph:{vi:'ten@gmail.com', en:'you@gmail.com'}};
+  FORMS.hiring.steps[0].fields.push(Object.assign({}, f));
+  FORMS.profile.steps[0].fields.push(Object.assign({}, f));
+  N1_PRIV.push('email');
+})();
+
+/* only two roles: salon / tech */
+(() => {
+  const prevLogin = viewLogin;
+  viewLogin = function(){
+    return prevLogin().replace(/<div class="seg three" role="radiogroup">[\s\S]*?<\/div>/,
+      m => m.replace(' three', '').replace(/<button[^>]*data-act="aurole" data-v="other"[^>]*>[^<]*<\/button>/, ''));
+  };
+})();
+
+/* ---------- style (kept minimal) ---------- */
+(() => { const st = document.createElement('style'); st.textContent = `
+body{font-size:16.5px}.btn{min-height:46px}.n1btns .bigbtn{min-height:68px}
+.n2tags{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.n2tag{font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px}
+.n2tag.off{background:#EFEAEC;color:#6B5A60}.n2tag.warn{background:#FFF4D6;color:#5A3B00}
+.n2box{display:grid;gap:10px;padding:14px 16px;margin:12px 0 0;background:#FBF8F9}
+.n2note{margin:0;font-size:14px;color:var(--muted)}.n2note.warn{color:#7A5200;font-weight:600}
+.n2stats{margin:0;font-size:14px;font-weight:600}
+.n2btns{display:flex;gap:8px;flex-wrap:wrap}.n2btns .btn{flex:1;min-width:130px}
+.n2star{border:0;background:none;font-size:22px;line-height:1;color:#D7CCD0;cursor:pointer;padding:4px 6px}
+.n2star.on{color:#E8A21A}.n1act{display:flex;align-items:center;gap:4px}
+.n2row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.n2row .n1flt{flex:1;min-width:160px;margin:12px 0}
+.n2so{white-space:nowrap}
+.n2sharerow{margin-top:14px}.n2share{width:100%}
+.n2q{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.n2q .pill{font-size:13px;padding:6px 12px}
+.n2blk{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.n2mail{display:grid;gap:8px;margin-top:14px;text-align:left}
+@media (max-width:560px){.n2btns .btn{width:100%}}`; document.head.appendChild(st); })();
+
+if (state.n1ctx) n2Live(state.n1ctx);
+
+/* ================= live part ================= */
+function n2Live(c){
+  const {db, TS, ms, L_, errText, renderKeep, softRender} = c;
+  state.n2.on = true;
+  const me = () => state.user;
+  const pairId = (a, b) => [a, b].sort().join('__');
+
+  /* saved + blocked come from the user doc / blocks collection */
+  const prevStop = typeof stopUserListeners === 'function' ? stopUserListeners : null;
+  function loadMine(){
+    const u = me(); if (!u) { state.n2.saved = []; state.n2.blocked = []; return; }
+    state.n2.saved = u.saved || []; state.n2.blocked = [];
+    db.collection('blocks').where('members', 'array-contains', u.uid).onSnapshot(s => {
+      state.n2.blocked = s.docs.map(d => (d.data().members || []).find(m => m !== u.uid)).filter(Boolean);
+      softRender();
+    }, e => console.warn('blocks', e));
+  }
+  let lastU = null;
+  const tick = setInterval(() => { const u = me() && me().uid; if (u !== lastU){ lastU = u; loadMine(); } }, 400);
+  loadMine();
+
+  /* view counter: once per ad per session, owner not counted */
+  n2CountView = function(ad){
+    if (!ad || !ad.live || state.n2.viewed[ad.id] || n2Mine(ad)) return;
+    state.n2.viewed[ad.id] = 1;
+    db.collection('ads').doc(ad.id).update({views:firebase.firestore.FieldValue.increment(1)}).catch(e => console.warn('views', e));
+  };
+
+  /* save a job */
+  ACT.n2save = async function(el){
+    const u = me(); if (!u){ setAfterHash(); return; }
+    const id = el.dataset.v, on = n2Saved(id), F = firebase.firestore.FieldValue;
+    state.n2.saved = on ? state.n2.saved.filter(x => x !== id) : state.n2.saved.concat([id]);
+    u.saved = state.n2.saved; renderKeep();
+    try { await db.collection('users').doc(u.uid).set({saved:on ? F.arrayRemove(id) : F.arrayUnion(id)}, {merge:true}); }
+    catch (e) { console.warn(e); toast(errText(e)); }
+  };
+  function setAfterHash(){ try { c.setAfter({hash:location.hash}); } catch (e) {} location.hash = '#login'; }
+
+  /* filled / hired / renew */
+  ACT.n2close = async function(el){
+    const k = el.dataset.k, id = el.dataset.v, on = el.dataset.on === '1';
+    const it = k === 'ads' ? ADS.find(a => a.id === id) : TECHS.find(x => x.id === id);
+    el.disabled = true;
+    try {
+      const field = k === 'ads' ? 'filled' : 'hired';
+      await db.collection(k).doc(id).update({[field]:on, updatedAt:TS()});
+      if (it) it[field] = on;
+      if (k === 'techs' && on && n1Ready(it)) await db.collection('techs').doc(id).update({'ready.on':false}).catch(() => {});
+      render();
+    } catch (e) { console.warn(e); el.disabled = false; toast(errText(e)); }
+  };
+  ACT.n2renew = async function(el){
+    const k = el.dataset.k, id = el.dataset.v;
+    const it = k === 'ads' ? ADS.find(a => a.id === id) : TECHS.find(x => x.id === id);
+    el.disabled = true;
+    try {
+      const exp = Date.now() + LIFE2;
+      await db.collection(k).doc(id).update({expMs:exp, updatedAt:TS()});
+      if (it) it.expMs = exp;
+      toast(t('renewed')); render();
+    } catch (e) { console.warn(e); el.disabled = false; toast(errText(e)); }
+  };
+
+  /* block / unblock */
+  ACT.n2block = function(el){ state.n2m = {uid:el.dataset.v, name:el.dataset.n || '', tid:el.dataset.t || ''}; openModal('n2b'); };
+  ACT.n2unblock = async function(el){
+    const u = me(); if (!u) return;
+    try { await db.collection('blocks').doc(pairId(u.uid, el.dataset.v)).delete(); toast(t('unblockDone')); render(); }
+    catch (e) { console.warn(e); toast(errText(e)); }
+  };
+  ACT.n2bok = async function(el){
+    const u = me(), m = state.n2m; if (!u || !m) return;
+    el.disabled = true;
+    try {
+      await db.collection('blocks').doc(pairId(u.uid, m.uid)).set({members:[u.uid, m.uid], by:u.uid, at:TS()});
+      if (m.tid) await db.collection('threads').doc(m.tid).update({status:'blocked'}).catch(() => {});
+      state.modal = null; renderModal(); toast(t('blockDone'));
+      if (location.hash.indexOf('inbox-') >= 0) location.hash = '#inbox'; else render();
+    } catch (e) { console.warn(e); el.disabled = false; toast(errText(e)); }
+  };
+  const prevAlerts2 = modalAlerts;
+  modalAlerts = function(){
+    if (state.modal === 'n2b'){
+      const m = state.n2m || {}, x = `<button class="x" type="button" data-act="mclose" aria-label="${t('close')}">×</button>`;
+      return `<div class="modal-head"><h2 id="m-title">${esc(t('blockTitle', m.name || '—'))}</h2>${x}</div><p class="lead-s">${t('blockLead')}</p>
+        <div class="modal-foot"><button class="btn btn-ghost" type="button" data-act="mclose">${t('close')}</button><button class="btn btn-primary" type="button" data-act="n2bok">${t('blockOk')}</button></div>`;
+    }
+    if (state.modal === 'n2e'){
+      const x = `<button class="x" type="button" data-act="mclose" aria-label="${t('close')}">×</button>`;
+      return `<div class="modal-head"><h2 id="m-title">${t('emailAskT')}</h2>${x}</div><p class="lead-s">${t('emailAskD')}</p>
+        <div class="fq"><label class="sr" for="n2-mail">${t('emailLbl')}</label><input id="n2-mail" type="email" inputmode="email" placeholder="you@gmail.com" value="${esc((me() && me().email) || '')}"><p class="err" id="n2-mail-err" hidden>${t('emailBad')}</p></div>
+        <div class="modal-foot"><button class="btn btn-ghost" type="button" data-act="mclose">${t('emailSkip')}</button><button class="btn btn-primary" type="button" data-act="n2email">${t('emailSave')}</button></div>`;
+    }
+    return prevAlerts2();
+  };
+  async function saveEmail(v){
+    const u = me(); if (!u) return;
+    await db.collection('users').doc(u.uid).set({email:v}, {merge:true}); u.email = v;
+  }
+  ACT.n2email = async function(el){
+    const inp = document.getElementById('n2-mail'), v = (inp.value || '').trim();
+    const err = document.getElementById('n2-mail-err');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)){ err.hidden = false; inp.focus(); return; }
+    el.disabled = true;
+    try { await saveEmail(v); state.modal = null; renderModal(); toast(t('emailSaved')); }
+    catch (e) { console.warn(e); el.disabled = false; toast(errText(e)); }
+  };
+
+  /* publishing: expiry stamp + private email */
+  const prevPub2 = ACT.fpublish;
+  ACT.fpublish = async function(el){
+    const type = el.dataset.ft, fs = getForm(type), mail = String(fs.data.email || '').trim();
+    await prevPub2(el);
+    const u = me(); if (!fs.done || !fs.liveId || !u) return;
+    try {
+      await db.collection(type === 'hiring' ? 'ads' : 'techs').doc(fs.liveId).update({expMs:Date.now() + LIFE2});
+      if (mail && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mail)) await saveEmail(mail);
+      else if (!u.email && !(state.adm && state.adm.creating)) setTimeout(() => openModal('n2e'), 700);
+    } catch (e) { console.warn('n2 publish', e); }
+  };
+  const prevLoad = n1LoadPriv;
+  n1LoadPriv = function(type, id, data){ prevLoad(type, id, data); data.email = (me() && me().email) || ''; };
+
+  /* chat: quick replies + block */
+  const prevThread2 = viewThread;
+  viewThread = function(id){
+    let h = prevThread2(id);
+    const x = L_.threads.find(z => z.id === id);
+    if (!x || !h) return h;
+    if (x.status === 'blocked') { setTimeout(() => { location.hash = '#inbox'; }, 0); return ''; }
+    const other = (x.members || []).find(m => m !== me().uid), nm = (x.names || {})[other] || '—';
+    const amTech = x.techId === me().uid, list = t(amTech ? 'qr' : 'qrS');
+    const quick = `<div class="n2q">${list.map((q, i) => `<button type="button" class="pill sm" data-act="n2qr" data-v="${i}" data-r="${amTech ? '1' : '0'}">${esc(q)}</button>`).join('')}</div>`;
+    h = h.replace('<div class="reply">', quick + '<div class="reply">');
+    const blk = `<div class="n2sharerow"><button class="btn btn-ghost" type="button" data-act="n2block" data-v="${esc(other)}" data-n="${esc(nm)}" data-t="${esc(x.id)}">${t('blockBtn')}</button></div>`;
+    return h.replace(/<\/div>\s*$/, blk + '</div>');
+  };
+  ACT.n2qr = function(el){
+    const list = t(el.dataset.r === '1' ? 'qr' : 'qrS'), ta = document.getElementById('th-text');
+    if (!ta) return;
+    ta.value = (ta.value ? ta.value.replace(/\s*$/, ' ') : '') + list[Number(el.dataset.v)];
+    ta.focus();
+  };
+
+  /* inbox: hide blocked threads */
+  const prevInbox = viewInbox;
+  viewInbox = function(){
+    const all = L_.threads;
+    L_.threads = all.filter(x => x.status !== 'blocked' && !state.n2.blocked.includes((x.members || []).find(m => m !== (me() || {}).uid)));
+    try { return prevInbox(); } finally { L_.threads = all; }
+  };
+
+  /* account: blocked list + email row */
+  const prevAcc2 = viewAccount;
+  viewAccount = function(){
+    let h = prevAcc2(); if (!me()) return h;
+    const b = state.n2.blocked;
+    const mail = `<p class="n2note">${esc(t('emailLbl'))}: <b>${esc(me().email || '—')}</b> <button class="btn-link" type="button" data-act="n2mailopen">${me().email ? t('editProfileS') : t('emailSave')}</button></p>`;
+    const list = b.length ? b.map(uid => `<div class="n2blk"><span>${esc(n2NameOf(uid))}</span><button class="btn-link" type="button" data-act="n2unblock" data-v="${esc(uid)}">${t('unblockBtn')}</button></div>`).join('') : `<p class="hint" style="margin:0">${t('blockedNone')}</p>`;
+    const extra = `<section style="margin-top:18px"><h2 class="sec">${t('blockedList')}</h2><div class="card" style="padding:12px 16px">${list}</div></section>`;
+    const i = h.lastIndexOf('</div>');
+    return h.slice(0, i) + mail + extra + h.slice(i);
+  };
+  ACT.n2mailopen = function(){ openModal('n2e'); setTimeout(() => { const n = document.getElementById('n2-mail'); if (n) n.focus(); }, 30); };
+  function n2NameOf(uid){
+    const th = L_.threads.find(x => (x.members || []).includes(uid));
+    if (th) return (th.names || {})[uid] || uid.slice(0, 6);
+    const tc = TECHS.find(x => n1Owner(x) === uid); if (tc) return tc.name;
+    const ad = ADS.find(a => n1Owner(a) === uid); if (ad) return adBiz(ad);
+    return uid.slice(0, 6);
+  }
+}
+
+/* ================= Nail101 – Admin ================= */
+Object.assign(T.vi, {
+  adm:'Quản trị', admOpen:'Trang quản trị',
+  admT_over:'Tổng quan', admT_draft:'Nháp & link', admT_mod:'Chờ duyệt', admT_ad:'Tạo tin tiệm', admT_tech:'Tạo hồ sơ thợ', admT_rdy:'Bật sẵn sàng', admT_rep:'Báo cáo', admT_set:'Cài đặt',
+  admStats:'Số liệu', admNAd:'Tin tuyển', admNTech:'Hồ sơ thợ', admNDraft:'Chờ tiệm duyệt', admNMod:'Chờ mình duyệt', admNRep:'Báo cáo mới', admExport:'Xuất Excel (CSV)',
+  admMakeAd:'+ Tạo tin tuyển thay tiệm', admMakeTech:'+ Tạo hồ sơ thay thợ', admImport:'Nhập từ file CSV',
+  admForPhone:'Số điện thoại của tiệm', admForPhoneT:'Số điện thoại của thợ', admForHint:'Người này sẽ nhận link để bấm duyệt. Khi họ đăng nhập bằng số này, tin tự chuyển về cho họ.',
+  admOnBehalf:'Bạn đang tạo thay cho người khác', admNeedPhone:'Nhập số điện thoại 10 số.',
+  admLinkT:'Đã tạo xong. Gửi link này cho họ:', admCopy:'Copy tin nhắn', admCopyLink:'Chỉ copy link', admCopied:'Đã copy.',
+  admMsg:(n, l) => `Chào ${n}, Nail101 đã soạn sẵn tin cho bạn. Bấm vào link để xem và duyệt: ${l}`,
+  admDraftNone:'Chưa có tin nháp nào.', admSent:'Đã gửi link', admOk:'Đã duyệt', admWait:'Chờ duyệt',
+  admDel:'Xoá', admDelQ:'Xoá hẳn mục này?', admDeleted:'Đã xoá.',
+  admModNone:'Không có gì chờ duyệt.', admApprove:'Duyệt', admReject:'Từ chối', admApproved:'Đã duyệt.', admRejected:'Đã từ chối.',
+  admPin:'Ghim', admUnpin:'Bỏ ghim', admHide:'Ẩn', admShow:'Hiện lại', admNote:'Ghi chú nội bộ', admNoteSave:'Lưu ghi chú', admNoteSaved:'Đã lưu ghi chú.',
+  admLic:'Xác minh bằng', admLicOn:'Đã xác minh ✓', admLicOff:'Bỏ xác minh',
+  admRdyNone:'Chưa có hồ sơ thợ nào.', admRdyFor:n => `Bật “sẵn sàng” cho ${n}`, admRdyOn:'Đang bật', admRdyOff:'Đang tắt',
+  admRepNone:'Chưa có báo cáo nào.', admBan:'Khoá tài khoản', admUnban:'Mở khoá', admBanned:'Đã khoá tài khoản.', admUnbanned:'Đã mở khoá.', admBanTag:'Đã khoá',
+  admAdmins:'Quản lý admin', admInvite:'Mời admin', admInviteP:'Số điện thoại 10 số', admAdd:'Thêm', admRemove:'Gỡ', admMain:'Admin chính', admInvited:'Đã thêm admin.', admRemoved:'Đã gỡ.',
+  admNotice:'Thông báo trang chủ', admNoticeP:'Để trống là không hiện', admNoticeSave:'Lưu thông báo', admNoticeSaved:'Đã lưu.',
+  admTz:'Múi giờ hiển thị', admTzTx:'Texas', admTzVn:'Việt Nam', admLog:'Nhật ký', admLogNone:'Chưa có gì.',
+  admAsUser:'Xem như người dùng', admOnlyMain:'Chỉ admin chính làm được việc này.',
+  claimT:'Nail101 đã soạn sẵn tin cho bạn', claimLead:'Xem lại rồi bấm Duyệt là tin lên web. Chưa duyệt thì chưa ai thấy.',
+  claimTechT:'Nail101 đã soạn sẵn hồ sơ cho bạn', claimOk:'✓ Duyệt và đăng', claimEdit:'✎ Sửa lại', claimNo:'✕ Không đăng',
+  claimDone:'Đã đăng! Tin của bạn đã lên web.', claimDoneT:'Đã đăng! Hồ sơ của bạn đã lên web.',
+  claimNoThanks:'Đã huỷ. Tin sẽ không được đăng.', claimGone:'Link này không còn dùng được.',
+  claimAddPics:'Thêm ảnh tay nghề (không bắt buộc)', claimPicsHint:'Chọn ảnh từ điện thoại. Có thể thêm sau.',
+  claimMine:'Tin này đã chuyển về tài khoản của bạn.', modPending:'⏳ Đang chờ Nail101 duyệt, thường trong vòng 12 giờ.', modRejected:'Tin này không được duyệt. Liên hệ Nail101 để biết thêm.',
+  byAdmin:'Do Nail101 quản lý'
+});
+Object.assign(T.en, {
+  adm:'Admin', admOpen:'Admin panel',
+  admT_over:'Overview', admT_draft:'Drafts & links', admT_mod:'To review', admT_ad:'New salon post', admT_tech:'New tech profile', admT_rdy:'Ready switch', admT_rep:'Reports', admT_set:'Settings',
+  admStats:'Numbers', admNAd:'Job posts', admNTech:'Tech profiles', admNDraft:'Waiting on them', admNMod:'Waiting on me', admNRep:'New reports', admExport:'Export CSV',
+  admMakeAd:'+ Create a job post for a salon', admMakeTech:'+ Create a profile for a tech', admImport:'Import from CSV',
+  admForPhone:'Salon phone number', admForPhoneT:'Tech phone number', admForHint:'They get a link to approve. When they sign in with this number, the post moves to their account.',
+  admOnBehalf:'You are creating this for someone else', admNeedPhone:'Enter a 10-digit phone number.',
+  admLinkT:'Done. Send them this link:', admCopy:'Copy message', admCopyLink:'Copy link only', admCopied:'Copied.',
+  admMsg:(n, l) => `Hi ${n}, Nail101 prepared a listing for you. Tap to review and approve: ${l}`,
+  admDraftNone:'No drafts yet.', admSent:'Link sent', admOk:'Approved', admWait:'Waiting',
+  admDel:'Delete', admDelQ:'Delete this for good?', admDeleted:'Deleted.',
+  admModNone:'Nothing to review.', admApprove:'Approve', admReject:'Reject', admApproved:'Approved.', admRejected:'Rejected.',
+  admPin:'Pin', admUnpin:'Unpin', admHide:'Hide', admShow:'Show again', admNote:'Internal note', admNoteSave:'Save note', admNoteSaved:'Note saved.',
+  admLic:'Verify license', admLicOn:'Verified ✓', admLicOff:'Remove badge',
+  admRdyNone:'No tech profiles yet.', admRdyFor:n => `Turn on “ready” for ${n}`, admRdyOn:'On', admRdyOff:'Off',
+  admRepNone:'No reports yet.', admBan:'Ban account', admUnban:'Unban', admBanned:'Account banned.', admUnbanned:'Unbanned.', admBanTag:'Banned',
+  admAdmins:'Admins', admInvite:'Invite an admin', admInviteP:'10-digit phone number', admAdd:'Add', admRemove:'Remove', admMain:'Main admin', admInvited:'Admin added.', admRemoved:'Removed.',
+  admNotice:'Home page notice', admNoticeP:'Leave empty to hide', admNoticeSave:'Save notice', admNoticeSaved:'Saved.',
+  admTz:'Show times in', admTzTx:'Texas', admTzVn:'Vietnam', admLog:'Activity log', admLogNone:'Nothing yet.',
+  admAsUser:'View as user', admOnlyMain:'Only the main admin can do this.',
+  claimT:'Nail101 prepared a job post for you', claimLead:'Look it over and tap Approve to publish. Until then nobody can see it.',
+  claimTechT:'Nail101 prepared a profile for you', claimOk:'✓ Approve and publish', claimEdit:'✎ Edit first', claimNo:'✕ Don’t publish',
+  claimDone:'Published! Your job post is live.', claimDoneT:'Published! Your profile is live.',
+  claimNoThanks:'Cancelled. It will not be published.', claimGone:'This link is no longer valid.',
+  claimAddPics:'Add work photos (optional)', claimPicsHint:'Pick photos from your phone. You can add them later.',
+  claimMine:'This post now belongs to your account.', modPending:'⏳ Waiting for Nail101 to review, usually within 12 hours.', modRejected:'This post was not approved. Contact Nail101 for details.',
+  byAdmin:'Managed by Nail101'
+});
+
+/* ---------- config ---------- */
+const ADM_BOOT = ['2108687686'];
+const ADM_BOOT_MAIL = ['janephan686@gmail.com'];
+function admBoot(u){
+  if (!u) return false;
+  const ph = String(u.phone || '').replace(/\D/g, '').slice(-10);
+  const em = String(u.email || '').trim().toLowerCase();
+  return (ph && ADM_BOOT.indexOf(ph) >= 0) || (em && ADM_BOOT_MAIL.indexOf(em) >= 0);
+}
+const TZ = {tx:'America/Chicago', vn:'Asia/Ho_Chi_Minh'};
+state.adm = {on:false, main:false, tab:'over', creating:null, forPhone:'', link:'', list:[], notice:null, log:[], reports:[], admins:[],
+  tz:(function(){ try { return localStorage.getItem('n1tz') || 'tx'; } catch (e) { return 'tx'; } })()};
+const admTZ = () => TZ[state.adm.tz] || TZ.tx;
+function admParts(d){
+  const f = new Intl.DateTimeFormat('en-CA', {timeZone:admTZ(), year:'numeric', month:'2-digit', day:'2-digit'});
+  return f.format(d);
+}
+n1Today = function(k){ return admParts(new Date(Date.now() + (k || 0) * DAY2)); };
+const admFmt = ms0 => new Date(ms0).toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US', {timeZone:admTZ(), day:'numeric', month:'numeric', hour:'numeric', minute:'2-digit'});
+
+/* ---------- visibility: moderation + unapproved drafts ---------- */
+function admHidden(o){
+  if (!o || !o.live) return false;
+  if (o.mod === 'pending' || o.mod === 'rejected' || o.mod === 'banned') return true;
+  if (o.claim && o.claim.token && !o.claim.okAt) return true;
+  return false;
+}
+const n2Hide0 = n2Hide;
+n2Hide = function(o){ return n2Hide0(o) || admHidden(o); };
+const n2Badges0 = n2Badges;
+n2Badges = function(o){
+  let h = n2Badges0(o);
+  if (o && o.live && o.mod === 'pending') h += `<div class="n2tags"><span class="n2tag warn">${t('admWait')}</span></div>`;
+  if (o && o.claim && o.claim.token && !o.claim.okAt) h += `<div class="n2tags"><span class="n2tag warn">${t('admSent')}</span></div>`;
+  return h;
+};
+const n2Status0 = n2Status;
+n2Status = function(o){
+  let h = n2Status0(o);
+  if (o && o.live && n2Mine(o)){
+    if (o.mod === 'pending') h = `<p class="n2note warn">${t('modPending')}</p>` + h;
+    if (o.mod === 'rejected') h = `<p class="n2note warn">${t('modRejected')}</p>` + h;
+  }
+  return h;
+};
+
+/* ---------- routing ---------- */
+const admRoute = route;
+route = function(){
+  const h = (location.hash || '').replace(/^#/, '');
+  if (h === 'admin' || h.indexOf('admin-') === 0) return {view:'admin', tab:h.split('-')[1] || 'over'};
+  if (h.indexOf('ok-') === 0) return {view:'claim', id:h.slice(3)};
+  return admRoute();
+};
+const admRender = render;
+render = function(){
+  const r = route();
+  if (r.view !== 'admin' && r.view !== 'claim') return admRender();
+  const main = r.view === 'admin' ? viewAdmin(r.tab) : viewClaim(r.id);
+  document.documentElement.lang = lang;
+  document.getElementById('app').innerHTML = header(r) + `<main id="main">${main}</main>
+    <footer class="site-footer"><div class="wrap"><span>${t('footS')}</span>${typeof LEGAL_LINKS === 'function' ? `<span class="foot-legal">${LEGAL_LINKS()}</span>` : ''}</div></footer>`;
+  document.body.classList.toggle('has-mbar', false);
+  renderModal();
+};
+
+/* ---------- notice banner on home ---------- */
+const admHome = viewHome;
+viewHome = function(){
+  const n = state.adm.notice, txt = n && n.on ? (lang === 'vi' ? n.vi : n.en) || n.vi || n.en : '';
+  return (txt ? `<div class="wrap narrow"><p class="adm-notice">${esc(txt)}</p></div>` : '') + admHome();
+};
+
+/* ---------- admin link in account ---------- */
+const admAcc = viewAccount;
+viewAccount = function(){
+  let h = admAcc();
+  if (state.adm.on) h = h.replace('<section style="margin-top:18px">', `<a class="btn btn-ghost btn-block" href="#admin" style="margin-top:14px">⚙️ ${t('admOpen')}</a><section style="margin-top:18px">`);
+  return h;
+};
+
+/* ---------- helpers ---------- */
+const admAds = () => ADS.filter(a => a.live && a.type === 'hiring');
+const admTechs = () => TECHS.filter(x => x.live);
+const admAll = () => admAds().concat(admTechs());
+const admDrafts = () => admAll().filter(o => o.claim && o.claim.token);
+const admMods = () => admAll().filter(o => o.mod === 'pending');
+const admKind = o => TECHS.includes(o) ? 'techs' : 'ads';
+const admName = o => TECHS.includes(o) ? o.name : adBiz(o);
+function admPhone10(v){ return String(v || '').replace(/\D/g, '').slice(-10); }
+function admPretty(p){ const d = admPhone10(p); return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : p; }
+function admLinkOf(o){ return location.origin + location.pathname + '#ok-' + (o.claim ? o.claim.token : ''); }
+function admStatus(o){ return !o.claim ? '' : o.claim.okAt ? `<span class="n2tag">${t('admOk')}</span>` : `<span class="n2tag warn">${t('admSent')}</span>`; }
+
+/* ---------- admin page ---------- */
+function viewAdmin(tab){
+  if (!state.user) return loginGate();
+  if (!state.adm.on) return notFound();
+  state.adm.tab = tab;
+  const tabs = ['over','draft','mod','ad','tech','rdy','rep','set'];
+  const nav = `<nav class="adm-tabs">${tabs.map(k => `<a href="#admin-${k}"${k === tab ? ' class="on" aria-current="page"' : ''}>${t('admT_' + k)}</a>`).join('')}</nav>`;
+  const body = {over:admOver, draft:admDraft, mod:admMod, ad:() => admMake('hiring'), tech:() => admMake('profile'), rdy:admRdy, rep:admRep, set:admSet}[tab] || admOver;
+  return `<div class="wrap page adm"><h1 class="pg-title">${t('adm')}</h1>${nav}<div class="adm-body">${body()}</div></div>`;
+}
+function admOver(){
+  const rows = [[t('admNAd'), admAds().length], [t('admNTech'), admTechs().length],
+    [t('admNDraft'), admDrafts().filter(o => !o.claim.okAt).length], [t('admNMod'), admMods().length], [t('admNRep'), state.adm.reports.length]];
+  return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('admStats')}</h2>
+    <table class="adm-tbl"><tbody>${rows.map(r => `<tr><td>${esc(r[0])}</td><td><b>${r[1]}</b></td></tr>`).join('')}</tbody></table>
+    <button class="btn btn-ghost" type="button" data-act="admcsv">${t('admExport')}</button></div>
+    <div class="adm-two"><a class="btn btn-primary" href="#admin-ad">${t('admMakeAd')}</a><a class="btn btn-ghost" href="#admin-tech">${t('admMakeTech')}</a></div>`;
+}
+function admDraft(){
+  const list = admDrafts().sort((a, b) => (a.claim.okAt ? 1 : 0) - (b.claim.okAt ? 1 : 0));
+  if (!list.length) return `<p class="empty-s">${t('admDraftNone')}</p>`;
+  return `<div class="list">${list.map(o => `<div class="card adm-row"><div>
+    <div class="n1top"><b>${esc(admName(o))}</b>${admStatus(o)}</div>
+    <div class="n1sub">${esc(admPretty((o.claim || {}).phone))} · ${esc(TECHS.includes(o) ? t('admT_tech') : t('admT_ad'))}</div>
+    <div class="adm-link"><code>${esc(admLinkOf(o))}</code></div></div>
+    <div class="adm-acts"><button class="btn btn-primary" type="button" data-act="admcopy" data-v="${esc(o.id)}">${t('admCopy')}</button>
+      <button class="btn btn-ghost" type="button" data-act="admcopy" data-v="${esc(o.id)}" data-l="1">${t('admCopyLink')}</button>
+      <a class="btn btn-ghost" href="#${TECHS.includes(o) ? 'tech' : 'ad'}-${esc(o.id)}">${t('viewAdS')}</a>
+      <button class="btn-link danger" type="button" data-act="admdel" data-k="${admKind(o)}" data-v="${esc(o.id)}">${t('admDel')}</button></div></div>`).join('')}</div>`;
+}
+function admMod(){
+  const list = admMods();
+  if (!list.length) return `<p class="empty-s">${t('admModNone')}</p>`;
+  return `<div class="list">${list.map(o => `<div class="card adm-row"><div>
+    <div class="n1top"><b>${esc(admName(o))}</b></div><div class="n1sub">${esc(TECHS.includes(o) ? t('admT_tech') : titleOf(o))}</div></div>
+    <div class="adm-acts"><a class="btn btn-ghost" href="#${TECHS.includes(o) ? 'tech' : 'ad'}-${esc(o.id)}">${t('viewAdS')}</a>
+      <button class="btn btn-primary" type="button" data-act="admmod" data-k="${admKind(o)}" data-v="${esc(o.id)}" data-m="ok">${t('admApprove')}</button>
+      <button class="btn btn-ghost" type="button" data-act="admmod" data-k="${admKind(o)}" data-v="${esc(o.id)}" data-m="rejected">${t('admReject')}</button></div></div>`).join('')}</div>`;
+}
+function admMake(type){
+  const tech = type === 'profile';
+  return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t(tech ? 'admMakeTech' : 'admMakeAd')}</h2>
+    <div class="fq"><label class="flabel" for="adm-ph">${t(tech ? 'admForPhoneT' : 'admForPhone')}</label>
+      <input id="adm-ph" type="tel" inputmode="tel" maxlength="14" placeholder="(210) 555-0101" value="${esc(state.adm.forPhone)}">
+      <p class="hint">${t('admForHint')}</p><p class="err" id="adm-ph-err" hidden>${t('admNeedPhone')}</p></div>
+    <button class="btn btn-primary btn-block" type="button" data-act="admgo" data-v="${type}">${t(tech ? 'admMakeTech' : 'admMakeAd')}</button></div>
+    ${tech ? '' : `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('admImport')}</h2>
+      <p class="hint">CSV: salon,phone,city,zip,services,jobtype,pay,amount</p>
+      <label class="btn btn-ghost file-btn">${t('admImport')}<input type="file" accept=".csv,text/csv" data-admcsv="1"></label></div>`}`;
+}
+function admRdy(){
+  const list = admTechs();
+  if (!list.length) return `<p class="empty-s">${t('admRdyNone')}</p>`;
+  return `<div class="list">${list.map(tc => { const r = n1Ready(tc);
+    return `<div class="card adm-row"><div><div class="n1top"><b>${esc(tc.name)}</b>${r ? `<span class="n2tag warn">⚡ ${t('admRdyOn')}</span>` : ''}</div>
+      <div class="n1sub">${esc(placeName(tc.zip, tc.city) || '')}${r ? ' · ' + esc(n1ReadyDay(r)) : ''}</div></div>
+      <div class="adm-acts"><button class="btn ${r ? 'btn-ghost' : 'btn-primary'}" type="button" data-act="admrdy" data-v="${esc(tc.id)}" data-on="${r ? '0' : '1'}">${r ? t('readyOff') : t('readyOn')}</button>
+      <button class="btn-link" type="button" data-act="admlic" data-v="${esc(tc.id)}" data-on="${tc.licOk2 ? '0' : '1'}">${tc.licOk2 ? t('admLicOff') : t('admLic')}</button></div></div>`; }).join('')}</div>`;
+}
+function admRep(){
+  const list = state.adm.reports;
+  if (!list.length) return `<p class="empty-s">${t('admRepNone')}</p>`;
+  return `<div class="list">${list.map(r => { const o = (r.kind === 'techs' ? TECHS : ADS).find(x => x.id === r.itemId);
+    return `<div class="card adm-row"><div><div class="n1top"><b>${esc(r.title || r.itemId)}</b><span class="n2tag">${esc(r.reason || '')}</span></div>
+      <p class="n1sub">${esc(r.note || '')}</p></div>
+      <div class="adm-acts">${o ? `<a class="btn btn-ghost" href="#${r.kind === 'techs' ? 'tech' : 'ad'}-${esc(r.itemId)}">${t('viewAdS')}</a>` : ''}
+      ${o ? `<button class="btn btn-ghost" type="button" data-act="admmod" data-k="${esc(r.kind)}" data-v="${esc(r.itemId)}" data-m="rejected">${t('admHide')}</button>` : ''}
+      ${o && n1Owner(o) ? `<button class="btn-link danger" type="button" data-act="admban" data-v="${esc(n1Owner(o))}">${t('admBan')}</button>` : ''}</div></div>`; }).join('')}</div>`;
+}
+function admSet(){
+  const n = state.adm.notice || {vi:'', en:'', on:false};
+  const adms = state.adm.admins;
+  return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('admNotice')}</h2>
+      <div class="fq"><label class="flabel" for="adm-nv">Tiếng Việt</label><input id="adm-nv" type="text" maxlength="120" placeholder="${esc(t('admNoticeP'))}" value="${esc(n.vi || '')}"></div>
+      <div class="fq"><label class="flabel" for="adm-ne">English</label><input id="adm-ne" type="text" maxlength="120" placeholder="${esc(t('admNoticeP'))}" value="${esc(n.en || '')}"></div>
+      <button class="btn btn-primary" type="button" data-act="admnotice">${t('admNoticeSave')}</button></div>
+    <div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('admAdmins')}</h2>
+      ${adms.length ? `<div>${adms.map(a => `<div class="n2blk"><span>${esc(admPretty(a.id))}${a.main ? ` · ${t('admMain')}` : ''}</span>${a.main ? '' : `<button class="btn-link danger" type="button" data-act="admrm" data-v="${esc(a.id)}">${t('admRemove')}</button>`}</div>`).join('')}</div>` : ''}
+      ${state.adm.main ? `<div class="fq" style="margin-top:10px"><label class="flabel" for="adm-new">${t('admInvite')}</label>
+        <div class="adm-two"><input id="adm-new" type="tel" inputmode="tel" maxlength="14" placeholder="${esc(t('admInviteP'))}"><button class="btn btn-primary" type="button" data-act="admadd">${t('admAdd')}</button></div></div>` : `<p class="hint">${t('admOnlyMain')}</p>`}</div>
+    <div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('admTz')}</h2>
+      <div class="chipset">${['tx','vn'].map(k => `<button type="button" class="choice${state.adm.tz === k ? ' on' : ''}" aria-pressed="${state.adm.tz === k}" data-act="admtz" data-v="${k}">${t(k === 'tx' ? 'admTzTx' : 'admTzVn')}</button>`).join('')}</div>
+      <p class="hint">${esc(admFmt(Date.now()))}</p></div>
+    <div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('admLog')}</h2>
+      ${state.adm.log.length ? `<table class="adm-tbl"><tbody>${state.adm.log.slice(0, 40).map(l => `<tr><td>${esc(admFmt(l.atMs))}</td><td>${esc(l.what)}</td><td>${esc(l.target || '')}</td></tr>`).join('')}</tbody></table>` : `<p class="hint">${t('admLogNone')}</p>`}</div>`;
+}
+
+/* ---------- claim page (the link the salon / tech taps) ---------- */
+function viewClaim(token){
+  const o = admAll().find(x => x.claim && x.claim.token === token);
+  if (!o) return `<div class="wrap narrow page"><div class="card n1empty"><p>${t('claimGone')}</p><a class="btn btn-primary" href="#home">${t('goHome2')}</a></div></div>`;
+  const tech = TECHS.includes(o);
+  if (o.claim.okAt) return `<div class="wrap narrow page"><div class="card n1empty"><div class="ok">${ICON.check}</div><h2>${t(tech ? 'claimDoneT' : 'claimDone')}</h2>
+    <a class="btn btn-primary" href="#${tech ? 'tech' : 'ad'}-${esc(o.id)}">${t(tech ? 'viewMyProfile' : 'viewMyAd')}</a></div></div>`;
+  const body = tech ? admTechPreview(o) : admAdPreview(o);
+  const pics = tech ? `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('claimAddPics')}</h2><p class="hint">${t('claimPicsHint')}</p>
+      ${(state.adm.cpics || []).length ? `<div class="thumbs">${state.adm.cpics.map((p, i) => `<div class="thumb"><img src="${esc(p.url)}" alt=""><button type="button" data-act="admcpicdel" data-v="${i}" aria-label="x">×</button></div>`).join('')}</div>` : ''}
+      ${(state.adm.cpics || []).length < 6 ? `<label class="btn btn-ghost file-btn">${t('addPhotos')}<input type="file" accept="image/*" multiple data-admcpic="1"></label>` : ''}</div>` : '';
+  return `<div class="wrap narrow page"><h1 class="pg-title">${t(tech ? 'claimTechT' : 'claimT')}</h1>
+    <p class="lead-s" style="margin-top:0">${t('claimLead')}</p>
+    <div class="card adm-card">${body}</div>${pics}
+    <div class="stack" style="margin-top:14px">
+      <button class="btn btn-primary btn-block" type="button" data-act="admclaimok" data-v="${esc(token)}">${t('claimOk')}</button>
+      <a class="btn btn-ghost btn-block" href="#${tech ? 'tech' : 'ad'}-${esc(o.id)}">${t('viewAdS')}</a>
+      <button class="btn-link danger" type="button" data-act="admclaimno" data-v="${esc(token)}">${t('claimNo')}</button></div></div>`;
+}
+function admAdPreview(ad){
+  const h = ad.hiring, must = (h.services || []).filter(x => x.need === 'must');
+  return `<h2 style="margin:0 0 6px">${esc(adBiz(ad))}</h2><p class="jpay big">${esc(payText(h) || t('payAsk'))}</p>
+    <p class="biz">${esc(titleOf(ad))}</p><p class="n1loc">${ICON.pin}${esc(placeName(ad.zip, ad.city) || 'TX')}</p>
+    ${factChips([opt('jobType', h.jobType), h.experience ? opt('experience', h.experience) : '', h.license === 'required' ? t('licTx2') : ''])}
+    <p class="n1sub">${must.map(x => esc(svcShort(x.id))).join(' · ')}</p>
+    ${dayOn(schedOf(h)).length ? schedTable(schedOf(h)) : ''}`;
+}
+function admTechPreview(tc){
+  return `<h2 style="margin:0 0 6px">${esc(tc.name)}</h2><p class="jpay big">${esc(techPay(tc.payWanted) || '')}</p>
+    <p class="n1loc">${ICON.pin}${esc(placeName(tc.zip, tc.city) || 'TX')}</p>
+    ${factChips([tc.years ? opt('years', tc.years) : '', (tc.jobType || []).map(j => opt('jobType', j)).join(' / ')])}
+    <p class="n1sub">${(tc.services || []).map(x => esc(svcShort(x.id))).join(' · ')}</p>`;
+}
+
+/* ---------- form: on-behalf banner ---------- */
+const admForm = viewForm;
+viewForm = function(type){
+  const c = state.adm.creating, fs = state.forms[type] || {};
+  if (c && c.type === type && fs.done && state.adm.link){
+    const tech = type === 'profile', msg = t('admMsg', c.name || '', state.adm.link);
+    return `<div class="form-wrap narrow"><div class="card done"><div class="ok">${ICON.check}</div><h2>${t('admLinkT')}</h2>
+      <div class="adm-link"><code>${esc(state.adm.link)}</code></div>
+      <div class="stack" style="margin-top:14px">
+        <button class="btn btn-primary btn-block" type="button" data-act="admcopytxt" data-v="${esc(msg)}">${t('admCopy')}</button>
+        <button class="btn btn-ghost btn-block" type="button" data-act="admcopytxt" data-v="${esc(state.adm.link)}">${t('admCopyLink')}</button>
+        <a class="btn btn-ghost btn-block" href="#admin-draft">${t('admT_draft')}</a>
+        <a class="btn-link" href="#${tech ? 'tech' : 'ad'}-${esc(fs.liveId || '')}">${t('viewAdS')}</a>
+      </div></div></div>`;
+  }
+  let h = admForm(type);
+  if (c && c.type === type && !fs.done)
+    h = h.replace('<div class="card form-card">', `<p class="adm-notice">👤 ${t('admOnBehalf')} · ${esc(admPretty(c.phone))}</p><div class="card form-card">`);
+  return h;
+};
+
+/* ---------- offline / demo stubs ---------- */
+['admcopy','admdel','admmod','admgo','admrdy','admlic','admban','admadd','admrm','admnotice','admclaimok','admclaimno','admcsv']
+  .forEach(k => { ACT[k] = function(){ toast(t('liveOnly')); }; });
+ACT.admtz = function(el){ state.adm.tz = el.dataset.v; try { localStorage.setItem('n1tz', el.dataset.v); } catch (e) {} render(); };
+ACT.admcopytxt = async function(el){ await admCopy(el.dataset.v); };
+async function admCopy(txt){
+  try { await navigator.clipboard.writeText(txt); toast(t('admCopied')); }
+  catch (e) { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast(t('admCopied')); } catch (e2) {} ta.remove(); }
+}
+
+/* ---------- style ---------- */
+(() => { const st = document.createElement('style'); st.textContent = `
+.adm{max-width:900px}
+.adm-tabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 14px;padding-bottom:4px}
+.adm-tabs a{white-space:nowrap;padding:8px 14px;border-radius:999px;border:1px solid var(--line);text-decoration:none;color:var(--ink);font-weight:600;font-size:14px;background:#fff}
+.adm-tabs a.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.adm-body{display:grid;gap:12px}
+.adm-card{display:grid;gap:10px;padding:16px}
+.adm-row{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;padding:14px 16px}
+.adm-acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.adm-acts .btn{min-height:40px;padding:0 12px;font-size:14px}
+.adm-link code{display:block;background:var(--page);border-radius:8px;padding:8px 10px;font-size:12px;word-break:break-all;margin-top:6px}
+.adm-tbl{width:100%;border-collapse:collapse;font-size:14px}
+.adm-tbl td{padding:6px 0;border-bottom:1px solid var(--line)}.adm-tbl td:last-child{text-align:right}
+.adm-two{display:grid;grid-template-columns:1fr auto;gap:8px}
+.adm-notice{background:#FFF9EC;border:1px solid #E0B252;border-radius:12px;padding:10px 14px;margin:0 0 14px;font-weight:600;font-size:14px}
+.btn-link.danger{color:#A3263A}
+@media (max-width:560px){.adm-row{flex-direction:column}.adm-acts .btn{flex:1}.adm-two{grid-template-columns:1fr}}`;
+  document.head.appendChild(st); })();
+
+if (state.n1ctx) admLive(state.n1ctx);
+
+/* ================= live ================= */
+function admLive(c){
+  const {db, TS, ms, L_, errText, renderKeep, softRender, stg, shrink} = c;
+  const me = () => state.user;
+  const F = () => firebase.firestore.FieldValue;
+
+  function log(what, target){
+    if (!me()) return;
+    db.collection('audit').add({by:me().uid, byName:me().name || '', what, target:target || '', at:TS()}).catch(e => console.warn('log', e));
+  }
+  /* who is admin */
+  async function checkAdmin(){
+    const u = me();
+    if (!u){ state.adm.on = false; state.adm.main = false; return; }
+    const ph = admPhone10(u.phone);
+    const boot = admBoot(u);
+    let doc = null;
+    try { doc = ph ? await db.collection('adminPhones').doc(ph).get() : null; } catch (e) { console.warn('adm', e); }
+    const inv = doc && doc.exists ? doc.data() : null;
+    state.adm.on = boot || !!inv;
+    state.adm.main = boot || !!(inv && inv.main);
+    if (state.adm.on){
+      try { await db.collection('admins').doc(u.uid).set({phone:ph, name:u.name || '', main:state.adm.main, at:TS()}, {merge:true}); } catch (e) { console.warn('adm2', e); }
+      watchAdmin();
+    }
+    softRender();
+  }
+  let watching = false;
+  function watchAdmin(){
+    if (watching) return; watching = true;
+    db.collection('reports').limit(100).onSnapshot(s => { state.adm.reports = s.docs.map(d => Object.assign({id:d.id}, d.data())); softRender(); }, e => console.warn('rep', e));
+    db.collection('adminPhones').limit(50).onSnapshot(s => { state.adm.admins = s.docs.map(d => Object.assign({id:d.id}, d.data())); softRender(); }, e => console.warn('adms', e));
+    db.collection('audit').orderBy('at', 'desc').limit(60).onSnapshot(s => { state.adm.log = s.docs.map(d => { const x = d.data(); return {what:x.what, target:x.target, atMs:ms(x.at) || Date.now()}; }); softRender(); }, e => console.warn('aud', e));
+  }
+  /* notice is public */
+  db.collection('config').doc('notice').onSnapshot(d => { state.adm.notice = d.exists ? d.data() : null; softRender(); }, e => console.warn('notice', e));
+
+  /* claim a post when the owner signs in with the matching phone */
+  async function claimMine(){
+    const u = me(); if (!u) return;
+    const ph = admPhone10(u.phone); if (!ph) return;
+    for (const o of admAll()){
+      if (!o.claim || admPhone10(o.claim.phone) !== ph || o.ownerUid === u.uid) continue;
+      try { await db.collection(admKind(o)).doc(o.id).update({ownerUid:u.uid, ownerName:u.name || o.ownerName || '', 'claim.claimedAt':TS()}); toast(t('claimMine')); }
+      catch (e) { console.warn('claim', e); }
+    }
+  }
+  let lastUid = null;
+  setInterval(() => { const u = me() && me().uid; if (u !== lastUid){ lastUid = u; checkAdmin(); setTimeout(claimMine, 1200); } }, 500);
+  checkAdmin();
+
+  /* moderation on publish */
+  const prevPub3 = ACT.fpublish;
+  ACT.fpublish = async function(el){
+    const type = el.dataset.ft, fs = getForm(type), cre = state.adm.creating;
+    await prevPub3(el);
+    const u = me(); if (!fs.done || !fs.liveId || !u) return;
+    const coll = type === 'hiring' ? 'ads' : 'techs';
+    try {
+      if (cre && cre.type === type){
+        const token = (Date.now().toString(36) + Math.random().toString(36).slice(2, 8)).slice(-10);
+        await db.collection(coll).doc(fs.liveId).update({mod:'ok', claim:{token, phone:admPhone10(cre.phone), by:u.uid, at:TS()}});
+        state.adm.link = location.origin + location.pathname + '#ok-' + token;
+        log('create_for', admPretty(cre.phone));
+        render();
+      } else if (!state.adm.on && !fs.editId){
+        const trusted = !!u.trusted;
+        if (!trusted) await db.collection(coll).doc(fs.liveId).update({mod:'pending'});
+      }
+    } catch (e) { console.warn('mod', e); }
+  };
+  /* admin: start a create-on-behalf */
+  ACT.admgo = function(el){
+    const type = el.dataset.v, inp = document.getElementById('adm-ph'), ph = admPhone10(inp && inp.value);
+    if (ph.length !== 10){ const e0 = document.getElementById('adm-ph-err'); if (e0) e0.hidden = false; if (inp) inp.focus(); return; }
+    state.adm.forPhone = ph; state.adm.link = '';
+    state.adm.creating = {type, phone:ph, name:''};
+    delete state.forms[type];
+    if (type === 'profile') state.myProfile = null;
+    location.hash = type === 'hiring' ? '#post-hiring' : '#post-profile';
+  };
+  ACT.admcopy = async function(el){
+    const o = admAll().find(x => x.id === el.dataset.v); if (!o) return;
+    const link = admLinkOf(o);
+    await admCopy(el.dataset.l ? link : t('admMsg', admName(o), link));
+  };
+  ACT.admdel = async function(el){
+    if (!confirm(t('admDelQ'))) return;
+    try { await db.collection(el.dataset.k).doc(el.dataset.v).delete(); log('delete', el.dataset.v); toast(t('admDeleted')); render(); }
+    catch (e) { console.warn(e); toast(errText(e)); }
+  };
+  ACT.admmod = async function(el){
+    const m = el.dataset.m; el.disabled = true;
+    try {
+      await db.collection(el.dataset.k).doc(el.dataset.v).update({mod:m});
+      const o = admAll().find(x => x.id === el.dataset.v);
+      if (m === 'ok' && o && n1Owner(o)) await db.collection('users').doc(n1Owner(o)).set({trusted:true}, {merge:true}).catch(() => {});
+      log('mod_' + m, el.dataset.v); toast(t(m === 'ok' ? 'admApproved' : 'admRejected')); render();
+    } catch (e) { console.warn(e); el.disabled = false; toast(errText(e)); }
+  };
+  ACT.admrdy = async function(el){
+    const on = el.dataset.on === '1', id = el.dataset.v;
+    el.disabled = true;
+    try {
+      const ready = on ? {on:true, day:'today', from:'10:00', to:'19:00', until:Date.now() + 24 * 3600e3, at:TS(), atC:Date.now()} : {on:false};
+      await db.collection('techs').doc(id).update(on ? {ready} : {'ready.on':false});
+      log(on ? 'ready_on' : 'ready_off', id); render();
+    } catch (e) { console.warn(e); el.disabled = false; toast(errText(e)); }
+  };
+  ACT.admlic = async function(el){
+    const on = el.dataset.on === '1';
+    try { await db.collection('techs').doc(el.dataset.v).update({licOk2:on}); log('license', el.dataset.v); render(); }
+    catch (e) { console.warn(e); toast(errText(e)); }
+  };
+  ACT.admban = async function(el){
+    const uid = el.dataset.v;
+    try {
+      await db.collection('users').doc(uid).set({banned:true}, {merge:true});
+      for (const o of admAll()) if (n1Owner(o) === uid) await db.collection(admKind(o)).doc(o.id).update({mod:'banned'}).catch(() => {});
+      log('ban', uid); toast(t('admBanned')); render();
+    } catch (e) { console.warn(e); toast(errText(e)); }
+  };
+  ACT.admadd = async function(){
+    const inp = document.getElementById('adm-new'), ph = admPhone10(inp && inp.value);
+    if (ph.length !== 10) return;
+    try { await db.collection('adminPhones').doc(ph).set({main:false, by:me().uid, at:TS()}); log('admin_add', ph); toast(t('admInvited')); inp.value = ''; }
+    catch (e) { console.warn(e); toast(errText(e)); }
+  };
+  ACT.admrm = async function(el){
+    try { await db.collection('adminPhones').doc(el.dataset.v).delete(); log('admin_remove', el.dataset.v); toast(t('admRemoved')); }
+    catch (e) { console.warn(e); toast(errText(e)); }
+  };
+  ACT.admnotice = async function(){
+    const vi = (document.getElementById('adm-nv') || {}).value || '', en = (document.getElementById('adm-ne') || {}).value || '';
+    try { await db.collection('config').doc('notice').set({vi:vi.trim(), en:en.trim(), on:!!(vi.trim() || en.trim()), at:TS()}); log('notice'); toast(t('admNoticeSaved')); }
+    catch (e) { console.warn(e); toast(errText(e)); }
+  };
+  /* claim page actions */
+  ACT.admclaimok = async function(el){
+    const token = el.dataset.v, o = admAll().find(x => x.claim && x.claim.token === token); if (!o) return;
+    el.disabled = true;
+    try {
+      const pics = state.adm.cpics || [];
+      if (pics.length && TECHS.includes(o)){
+        const urls = [];
+        for (const p of pics){ let b = await (await fetch(p.url)).blob(); b = await shrink(b);
+          const ref = stg.ref(`uploads/claim/${token}_${urls.length}.jpg`); await ref.put(b, {contentType:'image/jpeg'}); urls.push(await ref.getDownloadURL()); }
+        const pf = (o.portfolio || []).concat(urls.map(u => ({img:u})));
+        await db.collection('techs').doc(o.id).update({'ad.portfolio':pf});
+      }
+      await db.collection(admKind(o)).doc(o.id).update({'claim.okAt':TS(), mod:'ok', expMs:Date.now() + LIFE2});
+      state.adm.cpics = []; render();
+    } catch (e) { console.warn(e); el.disabled = false; toast(errText(e)); }
+  };
+  ACT.admclaimno = async function(el){
+    const token = el.dataset.v, o = admAll().find(x => x.claim && x.claim.token === token); if (!o) return;
+    el.disabled = true;
+    try { await db.collection(admKind(o)).doc(o.id).update({mod:'rejected'}); toast(t('claimNoThanks')); location.hash = '#home'; }
+    catch (e) { console.warn(e); el.disabled = false; toast(errText(e)); }
+  };
+  ACT.admcpicdel = function(el){ (state.adm.cpics || []).splice(Number(el.dataset.v), 1); render(); };
+  document.addEventListener('change', e => {
+    const el = e.target; if (!el || !el.dataset) return;
+    if (el.dataset.admcpic){ state.adm.cpics = state.adm.cpics || [];
+      Array.from(el.files || []).filter(f => /^image\//.test(f.type)).slice(0, 6 - state.adm.cpics.length).forEach(f => state.adm.cpics.push({url:URL.createObjectURL(f)}));
+      render(); }
+    if (el.dataset.admcsv && el.files && el.files[0]){ const r = new FileReader(); r.onload = () => admImport(String(r.result || '')); r.readAsText(el.files[0]); }
+  });
+  /* CSV in / out */
+  async function admImport(txt){
+    const rows = txt.split(/\r?\n/).filter(x => x.trim()).map(l => l.split(',').map(s => s.trim().replace(/^"|"$/g, '')));
+    if (!rows.length) return;
+    if (/salon/i.test(rows[0][0])) rows.shift();
+    let n = 0;
+    for (const r of rows){
+      const [salon, phone, city, zip, services, jobtype, pay, amount] = r;
+      const ph = admPhone10(phone); if (!salon || ph.length !== 10) continue;
+      const svc = {}; String(services || 'acrylic_full').split(/[;|]/).forEach(s => { if (s.trim()) svc[s.trim()] = 'must'; });
+      const token = (Date.now().toString(36) + Math.random().toString(36).slice(2, 8)).slice(-10);
+      const ad = {businessName:salon, city:city || 'San Antonio', zip:zip || '', type:'hiring',
+        hiring:{services:Object.keys(svc).map(k => ({id:k, need:'must'})), jobType:jobtype || 'full_time', payType:pay || 'per_day',
+          amount:Number(amount) || 0, techsNeeded:1, tier:1, payPublic:true, perks:[], reqs:[], license:'not_stated', experience:'any', schedule:{}}};
+      try { await db.collection('ads').add({ownerUid:me().uid, ownerName:salon, kind:'hiring', createdAt:TS(), ad, form:null, mod:'ok',
+        claim:{token, phone:ph, by:me().uid, at:TS()}}); n++; } catch (e) { console.warn('csv', e); }
+    }
+    log('csv_import', String(n)); toast(n + ' ✓'); location.hash = '#admin-draft';
+  }
+  ACT.admcsv = function(){
+    const rows = [['kind','name','phone','city','pay','status','link']];
+    admAll().forEach(o => rows.push([admKind(o), admName(o), admPretty((o.claim || {}).phone || ''), placeName(o.zip, o.city) || '',
+      TECHS.includes(o) ? (techPay(o.payWanted) || '') : (payText(o.hiring) || ''), o.mod || 'ok', o.claim ? admLinkOf(o) : '']));
+    const csv = rows.map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8'}));
+    a.download = 'nail101.csv'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  };
+  /* license badge on tech cards */
+  const admTechCard = n1TechCard;
+  n1TechCard = function(tc, o){
+    let h = admTechCard(tc, o);
+    if (tc.licOk2) h = h.replace('</div></a>', `<div class="n1sub">🪪 ${t('admLicOn')}</div></div></a>`);
     return h;
   };
 }
