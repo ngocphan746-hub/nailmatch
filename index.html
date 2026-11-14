@@ -5295,9 +5295,6 @@ Object.assign(T.vi, {
   n3Switch:r => `Đổi sang ${r}`,
   n3SwitchQ:r => `Đổi sang giao diện ${r}?\n\nTin đã đăng và hồ sơ của bạn vẫn được giữ nguyên, chỉ tạm ẩn khỏi trang chính. Bạn đổi lại bất cứ lúc nào.`,
   n3SwitchOk:r => `Đã đổi sang ${r}.`,
-  n3As:'Xem web như', n3AsAdmin:'Quản trị', n3AsSalon:'Tiệm', n3AsTech:'Thợ',
-  n3AsHint:'Chuyển vai để tự thử web. Muốn thử nhắn tin thì cần thêm 1 tài khoản nữa (số điện thoại khác).',
-  n3AsBar:r => `Bạn đang xem web như ${r}`, n3AsBack:'Quay lại Quản trị', n3AsOk:r => `Đang xem như ${r}.`,
   n3Show:'Chọn ▾', n3Hide:'Thu gọn ▴', n3Picked:n => `đã chọn ${n}`,
   n3AccTech:'Tạo hồ sơ để tiệm tìm thấy bạn.', n3AccSalon:'Đăng tin để thợ tìm thấy tiệm của bạn.',
   n3AdmAs:'Xem web như người dùng', n3AdmSalon:'Trang tiệm', n3AdmTech:'Trang thợ'
@@ -5313,9 +5310,6 @@ Object.assign(T.en, {
   n3Switch:r => `Switch to ${r}`,
   n3SwitchQ:r => `Switch to the ${r} view?\n\nYour post and profile stay saved — they are only hidden from the main page. You can switch back any time.`,
   n3SwitchOk:r => `Switched to ${r}.`,
-  n3As:'View the site as', n3AsAdmin:'Admin', n3AsSalon:'Salon', n3AsTech:'Tech',
-  n3AsHint:'Switch roles to try the site yourself. Testing chat needs a second account (another phone number).',
-  n3AsBar:r => `You are viewing the site as ${r}`, n3AsBack:'Back to Admin', n3AsOk:r => `Viewing as ${r}.`,
   n3Show:'Choose ▾', n3Hide:'Collapse ▴', n3Picked:n => `${n} selected`,
   n3AccTech:'Create a profile so salons can find you.', n3AccSalon:'Post a job so techs can find your salon.',
   n3AdmAs:'View the site as a user', n3AdmSalon:'Salon side', n3AdmTech:'Tech side'
@@ -5323,11 +5317,9 @@ Object.assign(T.en, {
 
 /* ---------- role ---------- */
 function n3Admin(){ return !!(state.adm && state.adm.on); }
-try { if (state.adm) state.adm.as = localStorage.getItem('n101_as') || 'admin'; } catch (e) {}
-function n3As(){ const a = state.adm && state.adm.as; return a === 'salon' || a === 'tech' ? a : 'admin'; }
 function n3Role(){
   if (!state.user) return '';
-  if (n3Admin()) return n3As();
+  if (n3Admin()) return 'admin';
   return state.user.role === 'tech' ? 'tech' : 'salon';
 }
 function n3RoleName(r){ return t(r === 'tech' ? 'n3RoleTech' : r === 'admin' ? 'n3RoleAdmin' : 'n3RoleSalon'); }
@@ -5444,8 +5436,6 @@ header = function(r){
   const role = n3Role();
   let h = n3Head0(r);
   if (role) h = h.replace('<div class="hdr-right">', `<div class="hdr-right"><span class="n3chiprole">${esc(n3RoleName(role))}</span>`);
-  if (n3Admin() && n3As() !== 'admin')
-    h += `<div class="n3asbar"><span>⚙️ ${esc(t('n3AsBar', n3RoleName(n3As())))}</span><button type="button" class="btn-link" data-act="n3as" data-v="admin">${t('n3AsBack')}</button></div>`;
   return h;
 };
 
@@ -5455,7 +5445,6 @@ viewAccount = function(){
   let h = n3Acc0();
   const role = n3Role();
   if (role !== 'salon' && role !== 'tech') return h;
-  if (n3Admin()) return h;
   const other = role === 'salon' ? 'tech' : 'salon';
   const row = `<p class="n2note n3role">${esc(t('n3RoleLbl'))}: <b>${esc(n3RoleName(role))}</b>
     <button class="btn-link" type="button" data-act="n3switch" data-v="${other}">${esc(t('n3Switch', n3RoleName(other)))}</button></p>`;
@@ -5484,27 +5473,9 @@ ACT.n3switch = async function(el){
 
 /* ---------- admin: straight to the panel, with a way back out ---------- */
 const n3Over0 = typeof admOver === 'function' ? admOver : null;
-function n3AsBox(){
-  const a = n3As();
-  return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('n3As')}</h2>
-    <div class="chipset">${['admin','salon','tech'].map(k => `<button type="button" class="choice${a === k ? ' on' : ''}" aria-pressed="${a === k}" data-act="n3as" data-v="${k}">${t(k === 'admin' ? 'n3AsAdmin' : k === 'salon' ? 'n3AsSalon' : 'n3AsTech')}</button>`).join('')}</div>
-    <p class="hint">${t('n3AsHint')}</p></div>`;
-}
-if (n3Over0) admOver = function(){ return n3AsBox() + n3Over0(); };
-ACT.n3as = async function(el){
-  const to = el.dataset.v;
-  if (state.adm) state.adm.as = to;
-  try { localStorage.setItem('n101_as', to); } catch (e) {}
-  if (to !== 'admin' && state.user){
-    state.user.role = to;
-    try {
-      if (state.n1ctx && state.n1ctx.db && state.user.uid)
-        await state.n1ctx.db.collection('users').doc(state.user.uid).set({role:to}, {merge:true});
-    } catch (e) { console.warn(e); }
-  }
-  location.hash = '#home';
-  toast(to === 'admin' ? t('n3AsOk', t('n3AsAdmin')) : t('n3AsOk', n3RoleName(to)));
-  render();
+if (n3Over0) admOver = function(){
+  return n3Over0() + `<section style="margin-top:18px"><h2 class="sec">${t('n3AdmAs')}</h2>
+    <div class="adm-acts"><a class="btn btn-ghost" href="#salon">${t('n3AdmSalon')}</a><a class="btn btn-ghost" href="#jobs">${t('n3AdmTech')}</a></div></section>`;
 };
 
 /* ---------- form: nhóm chip dài thu gọn + 3 mục bắt buộc cho thợ ---------- */
@@ -5544,7 +5515,6 @@ ACT.n3fold = function(el){
 (() => { const st = document.createElement('style'); st.textContent = `
 .n1tabs.n3t4{grid-template-columns:repeat(4,1fr) !important}
 .n1tabs.n3t4 a{font-size:10.5px;padding:0 2px}
-.n3asbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#FFF7E8;border-bottom:1px solid #F0D9A8;padding:8px 16px;font-size:14px;font-weight:700}
 .n3fold{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;font:inherit;font-weight:700;color:var(--ink);text-align:left;cursor:pointer}
 .n3fold:hover{border-color:var(--primary)}
 .n3fold.on{border-color:var(--primary);border-bottom-left-radius:0;border-bottom-right-radius:0}
