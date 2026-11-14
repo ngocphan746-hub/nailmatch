@@ -5295,6 +5295,7 @@ Object.assign(T.vi, {
   n3Switch:r => `Đổi sang ${r}`,
   n3SwitchQ:r => `Đổi sang giao diện ${r}?\n\nTin đã đăng và hồ sơ của bạn vẫn được giữ nguyên, chỉ tạm ẩn khỏi trang chính. Bạn đổi lại bất cứ lúc nào.`,
   n3SwitchOk:r => `Đã đổi sang ${r}.`,
+  n3Show:'Chọn ▾', n3Hide:'Thu gọn ▴', n3Picked:n => `đã chọn ${n}`,
   n3AccTech:'Tạo hồ sơ để tiệm tìm thấy bạn.', n3AccSalon:'Đăng tin để thợ tìm thấy tiệm của bạn.',
   n3AdmAs:'Xem web như người dùng', n3AdmSalon:'Trang tiệm', n3AdmTech:'Trang thợ'
 });
@@ -5309,6 +5310,7 @@ Object.assign(T.en, {
   n3Switch:r => `Switch to ${r}`,
   n3SwitchQ:r => `Switch to the ${r} view?\n\nYour post and profile stay saved — they are only hidden from the main page. You can switch back any time.`,
   n3SwitchOk:r => `Switched to ${r}.`,
+  n3Show:'Choose ▾', n3Hide:'Collapse ▴', n3Picked:n => `${n} selected`,
   n3AccTech:'Create a profile so salons can find you.', n3AccSalon:'Post a job so techs can find your salon.',
   n3AdmAs:'View the site as a user', n3AdmSalon:'Salon side', n3AdmTech:'Tech side'
 });
@@ -5476,10 +5478,49 @@ if (n3Over0) admOver = function(){
     <div class="adm-acts"><a class="btn btn-ghost" href="#salon">${t('n3AdmSalon')}</a><a class="btn btn-ghost" href="#jobs">${t('n3AdmTech')}</a></div></section>`;
 };
 
+/* ---------- form: nhóm chip dài thu gọn + 3 mục bắt buộc cho thợ ---------- */
+(() => {
+  const H = FORMS.hiring.steps[0].fields, P = FORMS.profile.steps[0].fields;
+  ['perks', 'reqs'].forEach(k => { const f = H.find(x => x.k === k); if (f) f.fold = 1; });
+  const w = P.find(x => x.k === 'wants'); if (w) w.fold = 1;
+  const tr = (OPTS.wants || []).find(o => o.v === 'training');
+  if (tr){ tr.vi = 'Được training'; tr.en = 'Training provided'; }
+  const take = k => { const i = P.findIndex(x => x.k === k); return i < 0 ? null : P.splice(i, 1)[0]; };
+  const up = ['jobType', 'days', 'license'].map(take).filter(Boolean);
+  up.forEach(f => { delete f.more; f.req = 1; });
+  const at = P.findIndex(x => x.k === 'years');
+  if (at >= 0 && up.length) P.splice(at + 1, 0, ...up);
+})();
+
+const n3Field0 = renderField;
+renderField = function(type, f, fs){
+  if (!f.fold) return n3Field0(type, f, fs);
+  const open = !!(fs.fold && fs.fold[f.k]), arr = fs.data[f.k] || [];
+  const sum = arr.map(v => opt(f.opt, v)).filter(Boolean).join(' · ');
+  const head = `<button type="button" class="n3fold${open ? ' on' : ''}" data-act="n3fold" data-ft="${esc(type)}" data-fk="${esc(f.k)}" aria-expanded="${open}">
+    <span class="n3foldl">${esc(fieldLabel(f, fs.data))}${arr.length ? ` · ${esc(t('n3Picked', arr.length))}` : ''}</span>
+    <span class="n3foldc">${open ? t('n3Hide') : t('n3Show')}</span></button>`;
+  const body = open
+    ? n3Field0(type, f, fs).replace(/^<div class="fq[^"]*"[^>]*>/, '').replace(/<\/div>$/, '').replace(/<label class="flabel"[\s\S]*?<\/label>/, '')
+    : (sum ? `<p class="n3foldsum">${esc(sum)}</p>` : '');
+  return `<div class="fq n3foldw" data-q="${esc(f.k)}">${head}${body}</div>`;
+};
+ACT.n3fold = function(el){
+  const fs = getForm(el.dataset.ft), k = el.dataset.fk;
+  fs.fold = fs.fold || {}; fs.fold[k] = !fs.fold[k];
+  render();
+};
+
 /* ---------- styles ---------- */
 (() => { const st = document.createElement('style'); st.textContent = `
 .n1tabs.n3t4{grid-template-columns:repeat(4,1fr) !important}
 .n1tabs.n3t4 a{font-size:10.5px;padding:0 2px}
+.n3fold{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;font:inherit;font-weight:700;color:var(--ink);text-align:left;cursor:pointer}
+.n3fold:hover{border-color:var(--primary)}
+.n3fold.on{border-color:var(--primary);border-bottom-left-radius:0;border-bottom-right-radius:0}
+.n3foldc{font-size:14px;font-weight:700;color:var(--primary);white-space:nowrap}
+.n3foldsum{margin:8px 2px 0;font-size:14px;color:var(--muted)}
+.n3foldw .chipset{border:1px solid var(--primary);border-top:0;border-radius:0 0 14px 14px;padding:14px 16px;margin:0}
 .n3h{margin:18px 0 0}
 .n3me{margin-bottom:10px}
 .n3empty{text-align:center}
