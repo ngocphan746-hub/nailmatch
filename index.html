@@ -2999,7 +2999,7 @@ function viewLegal(kind){
   return `<div class="wrap narrow page legal"><a class="back" href="#home">${ICON.back}${t('back')}</a>
     <h1 class="pg-title">${L(d.title)}</h1><p class="hint">${L(LEGAL_DATE)}</p><p>${L(d.intro)}</p>
     ${d.secs.map(s => `<section class="jd-sec"><h2>${L(s.h)}</h2><ul class="jd-list">${s.li.map(x => `<li>${L(x)}</li>`).join('')}</ul></section>`).join('')}
-    <section class="jd-sec"><h2>${lang === 'vi' ? 'Liên hệ' : 'Contact'}</h2><p style="margin:0">Nail101 · ${t('support')} <a href="tel:+12108687686">(210) 868-7686</a> (Ms. Jane)</p></section>
+    <section class="jd-sec"><h2>${lang === 'vi' ? 'Liên hệ' : 'Contact'}</h2><p style="margin:0">Nail101 · ${supLine()}</p></section>
     <p style="margin-top:16px"><a class="btn-link" href="#${other}">${L(LEGAL[other].title)} →</a></p></div>`;
 }
 const origNotFound = notFound;
@@ -4042,7 +4042,7 @@ render = function(){
   const mb = mobileBar(r);
   document.documentElement.lang = lang;
   document.getElementById('app').innerHTML = header(r) + `<main id="main">${main}</main>
-    <footer class="site-footer"><div class="wrap"><span>${t('footS')}</span>${typeof LEGAL_LINKS === 'function' ? `<span class="foot-legal">${LEGAL_LINKS()}</span>` : ''}<span>${t('support')} <a href="tel:+12108687686">(210) 868-7686</a> (Ms. Jane)</span><span>${t('photoCredit')}</span></div></footer>
+    <footer class="site-footer"><div class="wrap"><span>${t('footS')}</span>${typeof LEGAL_LINKS === 'function' ? `<span class="foot-legal">${LEGAL_LINKS()}</span>` : ''}<span>${supLine()}</span><span>${t('photoCredit')}</span></div></footer>
     ${mb ? `<div class="mbar">${mb}</div>` : (r.view === 'form' || r.view === 'thread' ? '' : tabBar(r))}`;
   document.body.classList.toggle('has-mbar', !!mb || (r.view !== 'form' && r.view !== 'thread'));
   renderModal();
@@ -4776,6 +4776,7 @@ function n2Live(c){
 /* ================= Nail101 – Admin ================= */
 Object.assign(T.vi, {
   adm:'Quản trị', admOpen:'Trang quản trị',
+  admSup:'Liên hệ hỗ trợ ở chân trang', admSupPh:'Số điện thoại', admSupNm:'Tên hiển thị (tuỳ chọn)', admSupSave:'Lưu liên hệ', admSupOk:'Đã lưu liên hệ hỗ trợ.', admSupBad:'Số điện thoại phải đủ 10 số.', admSupNow:'Chân trang đang hiện:',
   admT_over:'Tổng quan', admT_draft:'Nháp', admT_mod:'Chờ duyệt', admT_ad:'Tạo tin tiệm', admT_tech:'Tạo hồ sơ thợ', admT_rep:'Báo cáo', admT_set:'Cài đặt',
   admStats:'Số liệu', admNAd:'Tin tuyển', admNTech:'Hồ sơ thợ', admNDraft:'Chờ tiệm duyệt', admNMod:'Chờ mình duyệt', admNRep:'Báo cáo mới', admExport:'Xuất Excel (CSV)',
   admMakeAd:'+ Tạo tin tuyển thay tiệm', admMakeTech:'+ Tạo hồ sơ thay thợ', admImport:'Nhập từ file CSV',
@@ -4800,6 +4801,7 @@ Object.assign(T.vi, {
 });
 Object.assign(T.en, {
   adm:'Admin', admOpen:'Admin panel',
+  admSup:'Footer support contact', admSupPh:'Phone number', admSupNm:'Display name (optional)', admSupSave:'Save contact', admSupOk:'Support contact saved.', admSupBad:'The phone number needs 10 digits.', admSupNow:'The footer currently shows:',
   admT_over:'Overview', admT_draft:'Drafts', admT_mod:'To review', admT_ad:'New salon post', admT_tech:'New tech profile', admT_rep:'Reports', admT_set:'Settings',
   admStats:'Numbers', admNAd:'Job posts', admNTech:'Tech profiles', admNDraft:'Waiting on them', admNMod:'Waiting on me', admNRep:'New reports', admExport:'Export CSV',
   admMakeAd:'+ Create a job post for a salon', admMakeTech:'+ Create a profile for a tech', admImport:'Import from CSV',
@@ -4824,6 +4826,13 @@ Object.assign(T.en, {
 });
 
 /* ---------- config ---------- */
+const SUP_DEF = {phone:'2108687686', name:'Ms. Jane'};
+function supInfo(){
+  const s = (typeof state !== 'undefined' && state.adm && state.adm.support) || null;
+  const ph = s ? String(s.phone || '').replace(/\D/g, '').slice(-10) : '';
+  return {phone:ph.length === 10 ? ph : SUP_DEF.phone, name:(s && s.name) || ''};
+}
+function supLine(){ const s = supInfo(); return `${t('support')} <a href="tel:+1${s.phone}">${esc(admPretty(s.phone))}</a>${s.name ? ` (${esc(s.name)})` : ''}`; }
 const ADM_BOOT = ['2108687686'];
 const ADM_BOOT_MAIL = ['janephan686@gmail.com'];
 function admBoot(u){
@@ -4833,7 +4842,7 @@ function admBoot(u){
   return (ph && ADM_BOOT.indexOf(ph) >= 0) || (em && ADM_BOOT_MAIL.indexOf(em) >= 0);
 }
 const TZ = {tx:'America/Chicago', vn:'Asia/Ho_Chi_Minh'};
-state.adm = {on:false, main:false, tab:'over', creating:null, forPhone:'', notes:{}, notice:null, log:[], reports:[], admins:[],
+state.adm = {on:false, main:false, support:null, tab:'over', creating:null, forPhone:'', notes:{}, notice:null, log:[], reports:[], admins:[],
   tz:(function(){ try { return localStorage.getItem('n1tz') || 'tx'; } catch (e) { return 'tx'; } })()};
 const admTZ = () => TZ[state.adm.tz] || TZ.tx;
 function admParts(d){
@@ -4881,7 +4890,7 @@ render = function(){
   const main = viewAdmin(r.tab);
   document.documentElement.lang = lang;
   document.getElementById('app').innerHTML = header(r) + `<main id="main">${main}</main>
-    <footer class="site-footer"><div class="wrap"><span>${t('footS')}</span>${typeof LEGAL_LINKS === 'function' ? `<span class="foot-legal">${LEGAL_LINKS()}</span>` : ''}</div></footer>`;
+    <footer class="site-footer"><div class="wrap"><span>${t('footS')}</span>${typeof LEGAL_LINKS === 'function' ? `<span class="foot-legal">${LEGAL_LINKS()}</span>` : ''}<span>${supLine()}</span></div></footer>`;
   document.body.classList.toggle('has-mbar', false);
   renderModal();
 };
@@ -4897,7 +4906,10 @@ viewHome = function(){
 const admAcc = viewAccount;
 viewAccount = function(){
   let h = admAcc();
-  if (state.adm.on) h = h.replace('<section style="margin-top:18px">', `<a class="btn btn-ghost btn-block" href="#admin" style="margin-top:14px">⚙️ ${t('admOpen')}</a><section style="margin-top:18px">`);
+  if (state.adm.on){
+    const i = h.indexOf('<section style="margin-top:18px">'), j = h.indexOf('</section>', i);
+    if (i >= 0 && j >= 0) h = h.slice(0, i) + h.slice(j + 10);
+  }
   return h;
 };
 
@@ -5021,6 +5033,11 @@ function admSet(){
       ${adms.length ? `<div>${adms.map(a => `<div class="n2blk"><span>${esc(admPretty(a.id))}${a.main ? ` · ${t('admMain')}` : ''}</span>${a.main ? '' : `<button class="btn-link danger" type="button" data-act="admrm" data-v="${esc(a.id)}">${t('admRemove')}</button>`}</div>`).join('')}</div>` : ''}
       ${state.adm.main ? `<div class="fq" style="margin-top:10px"><label class="flabel" for="adm-new">${t('admInvite')}</label>
         <div class="adm-two"><input id="adm-new" type="tel" inputmode="tel" maxlength="14" placeholder="${esc(t('admInviteP'))}"><button class="btn btn-primary" type="button" data-act="admadd">${t('admAdd')}</button></div></div>` : `<p class="hint">${t('admOnlyMain')}</p>`}</div>
+    <div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('admSup')}</h2>
+      <div class="fq"><label class="flabel" for="adm-sph">${t('admSupPh')}</label><input id="adm-sph" type="tel" inputmode="tel" maxlength="14" placeholder="(210) 868-7686" value="${esc(admPretty(supInfo().phone))}"></div>
+      <div class="fq"><label class="flabel" for="adm-snm">${t('admSupNm')}</label><input id="adm-snm" type="text" maxlength="40" placeholder="Ms. Jane" value="${esc(supInfo().name)}"></div>
+      <button class="btn btn-primary" type="button" data-act="admsup">${t('admSupSave')}</button>
+      <p class="hint">${t('admSupNow')} ${supLine()}</p></div>
     <div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('admTz')}</h2>
       <div class="chipset">${['tx','vn'].map(k => `<button type="button" class="choice${state.adm.tz === k ? ' on' : ''}" aria-pressed="${state.adm.tz === k}" data-act="admtz" data-v="${k}">${t(k === 'tx' ? 'admTzTx' : 'admTzVn')}</button>`).join('')}</div>
       <p class="hint">${esc(admFmt(Date.now()))}</p></div>
@@ -5043,7 +5060,7 @@ viewForm = function(type){
 };
 
 /* ---------- offline / demo stubs ---------- */
-['admdel','admmod','admgo','admlic','admban','admadd','admrm','admnotice','admcsv','admpost']
+['admdel','admmod','admgo','admlic','admsup','admban','admadd','admrm','admnotice','admcsv','admpost']
   .forEach(k => { ACT[k] = function(){ toast(t('liveOnly')); }; });
 ACT.admtz = function(el){ state.adm.tz = el.dataset.v; try { localStorage.setItem('n1tz', el.dataset.v); } catch (e) {} render(); };
 ACT.admcopytxt = async function(el){ await admCopy(el.dataset.v); };
@@ -5116,6 +5133,7 @@ function admLive(c){
   }
   /* notice is public */
   db.collection('config').doc('notice').onSnapshot(d => { state.adm.notice = d.exists ? d.data() : null; softRender(); }, e => console.warn('notice', e));
+  db.collection('config').doc('support').onSnapshot(d => { state.adm.support = d.exists ? d.data() : null; softRender(); }, e => console.warn('support', e));
 
   let lastUid = null;
   setInterval(() => { const u = me() && me().uid; if (u !== lastUid){ lastUid = u; checkAdmin(); } }, 500);
@@ -5173,6 +5191,15 @@ function admLive(c){
       if (m === 'ok' && o && n1Owner(o)) await db.collection('users').doc(n1Owner(o)).set({trusted:true}, {merge:true}).catch(() => {});
       log('mod_' + m, el.dataset.v); toast(t(m === 'ok' ? 'admApproved' : 'admRejected')); render();
     } catch (e) { console.warn(e); el.disabled = false; toast(errText(e)); }
+  };
+  ACT.admsup = async function(el){
+    const ph = String((document.getElementById('adm-sph') || {}).value || '').replace(/\D/g, '').slice(-10);
+    const nm = String((document.getElementById('adm-snm') || {}).value || '').trim();
+    if (ph.length !== 10){ toast(t('admSupBad')); return; }
+    el.disabled = true;
+    try { await db.collection('config').doc('support').set({phone:ph, name:nm, at:TS()}); log('support'); toast(t('admSupOk')); }
+    catch (e) { console.warn(e); toast(errText(e)); }
+    el.disabled = false;
   };
   ACT.admlic = async function(el){
     const on = el.dataset.on === '1';
@@ -5395,7 +5422,7 @@ render = function(){
   const main = r.view === 'myads' ? n3MyAds() : n3MyProf();
   document.documentElement.lang = lang;
   document.getElementById('app').innerHTML = header(r) + `<main id="main">${main}</main>
-    <footer class="site-footer"><div class="wrap"><span>${t('footS')}</span>${typeof LEGAL_LINKS === 'function' ? `<span class="foot-legal">${LEGAL_LINKS()}</span>` : ''}<span>${t('support')} <a href="tel:+12108687686">(210) 868-7686</a> (Ms. Jane)</span></div></footer>
+    <footer class="site-footer"><div class="wrap"><span>${t('footS')}</span>${typeof LEGAL_LINKS === 'function' ? `<span class="foot-legal">${LEGAL_LINKS()}</span>` : ''}<span>${supLine()}</span></div></footer>
     ${tabBar(r)}`;
   document.body.classList.toggle('has-mbar', true);
   renderModal();
