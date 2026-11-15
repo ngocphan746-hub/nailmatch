@@ -4778,7 +4778,7 @@ Object.assign(T.vi, {
   adm:'Quản trị', admOpen:'Trang quản trị',
   admSup:'Liên hệ hỗ trợ ở chân trang', admSupPh:'Số điện thoại', admSupNm:'Tên hiển thị (tuỳ chọn)', admSupSave:'Lưu liên hệ', admSupOk:'Đã lưu liên hệ hỗ trợ.', admSupBad:'Số điện thoại phải đủ 10 số.', admSupNow:'Chân trang đang hiện:',
   admT_over:'Tổng quan', admT_draft:'Nháp', admT_mod:'Chờ duyệt', admT_ad:'Tạo tin tiệm', admT_tech:'Tạo hồ sơ thợ', admT_rep:'Báo cáo', admT_set:'Cài đặt',
-  admStats:'Số liệu', admNAd:'Tin tuyển', admNTech:'Hồ sơ thợ', admNDraft:'Chờ tiệm duyệt', admNMod:'Chờ mình duyệt', admNRep:'Báo cáo mới', admExport:'Xuất Excel (CSV)',
+  admStats:'Số liệu', admNAd:'Tin tuyển', admNTech:'Hồ sơ thợ', admNDraft:'Chờ tiệm duyệt', admNDraftT:'Chờ thợ duyệt', admNMod:'Chờ admin duyệt', admNRep:'Báo cáo mới', admExport:'Xuất Excel (CSV)',
   admMakeAd:'+ Tạo tin tuyển thay tiệm', admMakeTech:'+ Tạo hồ sơ thay thợ', admImport:'Nhập từ file CSV',
   admForPhone:'Số điện thoại của tiệm', admForPhoneT:'Số điện thoại của thợ', admForHint:'Chỉ bạn thấy số này, dùng để gọi lại. Khách không thấy.',
   admOnBehalf:'Bạn đang tạo thay cho người khác', admNeedPhone:'Nhập số điện thoại 10 số.',
@@ -4797,13 +4797,13 @@ Object.assign(T.vi, {
   modPending:'⏳ Đang chờ Nail101 duyệt, thường trong vòng 12 giờ.', modRejected:'Tin này không được duyệt. Liên hệ Nail101 để biết thêm.',
   byAdmin:'Do Nail101 quản lý',
   cpAd:'TIN TUYỂN THỢ', cpTech:'HỒ SƠ THỢ NAIL', cpNeed:'Cần thợ', cpHours:'Giờ làm', cpPerks:'Quyền lợi', cpReq:'Yêu cầu', cpSkill:'Làm được', cpExp:'Kinh nghiệm', cpWant:'Mong muốn',
-  cpAsk:'Anh/chị xem giúp em đúng chưa ạ? Đúng thì em đăng lên web.', cpSign:'– Nail101 · (210) 868-7686'
+  cpAsk:'Anh/chị xem giúp em đúng chưa ạ? Đúng thì em đăng lên web.', cpSign:'– Nail101'
 });
 Object.assign(T.en, {
   adm:'Admin', admOpen:'Admin panel',
   admSup:'Footer support contact', admSupPh:'Phone number', admSupNm:'Display name (optional)', admSupSave:'Save contact', admSupOk:'Support contact saved.', admSupBad:'The phone number needs 10 digits.', admSupNow:'The footer currently shows:',
   admT_over:'Overview', admT_draft:'Drafts', admT_mod:'To review', admT_ad:'New salon post', admT_tech:'New tech profile', admT_rep:'Reports', admT_set:'Settings',
-  admStats:'Numbers', admNAd:'Job posts', admNTech:'Tech profiles', admNDraft:'Waiting on them', admNMod:'Waiting on me', admNRep:'New reports', admExport:'Export CSV',
+  admStats:'Numbers', admNAd:'Job posts', admNTech:'Tech profiles', admNDraft:'Waiting on salon', admNDraftT:'Waiting on tech', admNMod:'Waiting on admin', admNRep:'New reports', admExport:'Export CSV',
   admMakeAd:'+ Create a job post for a salon', admMakeTech:'+ Create a profile for a tech', admImport:'Import from CSV',
   admForPhone:'Salon phone number', admForPhoneT:'Tech phone number', admForHint:'Only you see this, for calling them back. Users never see it.',
   admOnBehalf:'You are creating this for someone else', admNeedPhone:'Enter a 10-digit phone number.',
@@ -4822,7 +4822,7 @@ Object.assign(T.en, {
   modPending:'⏳ Waiting for Nail101 to review, usually within 12 hours.', modRejected:'This post was not approved. Contact Nail101 for details.',
   byAdmin:'Managed by Nail101',
   cpAd:'NAIL JOB POST', cpTech:'NAIL TECH PROFILE', cpNeed:'Services', cpHours:'Hours', cpPerks:'Perks', cpReq:'Requirements', cpSkill:'Can do', cpExp:'Experience', cpWant:'Looking for',
-  cpAsk:'Does this look right? If yes, I’ll publish it.', cpSign:'– Nail101 · (210) 868-7686'
+  cpAsk:'Does this look right? If yes, I’ll publish it.', cpSign:'– Nail101'
 });
 
 /* ---------- config ---------- */
@@ -4947,7 +4947,8 @@ function admText(o){
       .concat((h.reqs || []).map(x => opt('reqs', x))).filter(Boolean).join(', ');
     if (rq) L0.push(t('cpReq') + ': ' + rq);
   }
-  L0.push('', t('cpAsk'), t('cpSign'));
+  const sup = supInfo();
+  L0.push('', t('cpAsk'), t('cpSign') + ' · ' + admPretty(sup.phone) + (sup.name ? ' (' + sup.name + ')' : ''));
   return L0.join('\n');
 }
 
@@ -4962,8 +4963,10 @@ function viewAdmin(tab){
   return `<div class="wrap page adm"><h1 class="pg-title">${t('adm')}</h1>${nav}<div class="adm-body">${body()}</div></div>`;
 }
 function admOver(){
+  const dr = admDrafts();
   const rows = [[t('admNAd'), admAds().length], [t('admNTech'), admTechs().length],
-    [t('admNDraft'), admDrafts().length], [t('admNMod'), admMods().length], [t('admNRep'), state.adm.reports.length]];
+    [t('admNDraft'), dr.filter(o => !TECHS.includes(o)).length], [t('admNDraftT'), dr.filter(o => TECHS.includes(o)).length],
+    [t('admNMod'), admMods().length], [t('admNRep'), state.adm.reports.length]];
   return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('admStats')}</h2>
     <table class="adm-tbl"><tbody>${rows.map(r => `<tr><td>${esc(r[0])}</td><td><b>${r[1]}</b></td></tr>`).join('')}</tbody></table>
     <button class="btn btn-ghost" type="button" data-act="admcsv">${t('admExport')}</button></div>
