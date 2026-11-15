@@ -5288,6 +5288,9 @@ function admLive(c){
    loads after n102 + admin
    =========================================================== */
 Object.assign(T.vi, {
+  n3A2hT:'Thêm Nail101 vào màn hình chính', n3A2hGo:'Cách làm', n3A2hInstall:'Cài đặt',
+  n3A2hIos:'Bấm nút Chia sẻ ⬆️ ở dưới Safari, rồi chọn “Thêm vào Màn hình chính”.',
+  n3A2hAnd:'Bấm dấu ⋮ ở góc Chrome, rồi chọn “Thêm vào màn hình chính”.',
   n3SalonHome:'Thợ đang tìm việc', n3TechHome:'Tiệm đang tuyển',
   n3NavTechs:'Thợ', n3NavJobs:'Việc', n3NavMyAds:'Tin của tôi', n3NavMyProf:'Hồ sơ',
   n3MyAdsTitle:'Tin tuyển thợ của tôi', n3MyProfTitle:'Hồ sơ thợ của tôi',
@@ -5304,6 +5307,9 @@ Object.assign(T.vi, {
   n3AdmAs:'Xem web như người dùng', n3AdmSalon:'Trang tiệm', n3AdmTech:'Trang thợ'
 });
 Object.assign(T.en, {
+  n3A2hT:'Add Nail101 to your home screen', n3A2hGo:'How', n3A2hInstall:'Install',
+  n3A2hIos:'Tap the Share button ⬆️ in Safari, then choose “Add to Home Screen”.',
+  n3A2hAnd:'Tap the ⋮ menu in Chrome, then choose “Add to Home screen”.',
   n3SalonHome:'Techs looking for work', n3TechHome:'Salons hiring now',
   n3NavTechs:'Techs', n3NavJobs:'Jobs', n3NavMyAds:'My post', n3NavMyProf:'Profile',
   n3MyAdsTitle:'My job posts', n3MyProfTitle:'My tech profile',
@@ -5557,6 +5563,38 @@ a.n3chiprole{text-decoration:none;cursor:pointer}
 a.n3chiprole:hover{background:var(--primary);color:#fff}
 @media (max-width:420px){span.n3chiprole{display:none}}
 `; document.head.appendChild(st); })();
+
+/* ---------- gợi ý thêm vào màn hình chính (chỉ điện thoại, chưa cài, ẩn được) ---------- */
+(() => {
+  const ls = { get(k){ try { return localStorage.getItem(k); } catch (e) { return null; } },
+               set(k, v){ try { localStorage.setItem(k, v); } catch (e) {} } };
+  let dip = null, open = false;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); dip = e; if (typeof render === 'function') render(); });
+  window.addEventListener('appinstalled', () => { ls.set('n3a2h', '1'); dip = null; });
+  const standalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  const phone = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
+  const ios = () => /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+  function n3A2hBox(){
+    if (!phone() || standalone() || ls.get('n3a2h')) return '';
+    return `<div class="n3a2h"><div class="n3a2h-r"><span>${esc(t('n3A2hT'))}</span>
+      <button class="btn-link" type="button" data-act="n3a2hgo">${esc(t(dip ? 'n3A2hInstall' : 'n3A2hGo'))}</button>
+      <button class="n3a2h-x" type="button" data-act="n3a2hx" aria-label="×">×</button></div>
+      ${open && !dip ? `<p>${esc(t(ios() ? 'n3A2hIos' : 'n3A2hAnd'))}</p>` : ''}</div>`;
+  }
+  ACT.n3a2hx = () => { ls.set('n3a2h', '1'); render(); };
+  ACT.n3a2hgo = async () => {
+    if (dip) { try { dip.prompt(); await dip.userChoice; } catch (e) {} dip = null; ls.set('n3a2h', '1'); render(); return; }
+    open = !open; render();
+  };
+  const h0 = viewHome;
+  viewHome = function(){ return h0() + n3A2hBox(); };
+  const st = document.createElement('style');
+  st.textContent = `.n3a2h{margin:16px auto 0;max-width:560px;padding:10px 14px;border:1px solid var(--line,#eadde3);border-radius:12px;background:#fff;font-size:14px}
+.n3a2h-r{display:flex;align-items:center;gap:10px}.n3a2h-r span{flex:1;font-weight:600}
+.n3a2h-x{background:none;border:0;font-size:22px;line-height:1;color:#8a7b83;cursor:pointer;padding:0 4px}
+.n3a2h p{margin:8px 0 0;color:#5b4a53}`;
+  document.head.appendChild(st);
+})();
 
 render();
 })();
