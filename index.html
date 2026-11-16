@@ -5777,9 +5777,9 @@ function viewClaim(tok){
     .replace(/<p class="adm-notice">[\s\S]*?<\/p>/, '')
     .replace(/<p class="sample-note">[\s\S]*?<\/p>/, '')
     .replace(/(data-act="(?:n1pub|fpublish)" data-ft="[^"]+">)[^<]*/, `$1${t('clPub')}`);
-  return `<div class="cl-pg cl-full"><div class="wrap narrow cl-head"><h1 class="pg-title">${t('clTitle')}</h1>
+  return `<div class="cl-full"><div class="cl-head"><h1 class="pg-title">${t('clTitle')}</h1>
     <p class="hint">${esc(t('clStep'))}</p></div>${form}
-    <div class="wrap narrow"><p class="hint">${esc(t('clMore'))} ${supLine ? supLine() : ''}</p></div></div>`;
+    <div class="cl-note"><p class="hint">${esc(t('clMore'))} ${supLine ? supLine() : ''}</p></div></div>`;
 }
 
 /* ---------- routing ---------- */
@@ -5954,10 +5954,13 @@ if (state.n1ctx) clLive(state.n1ctx);
 .cl-st{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 14px 10px;font-size:13px;color:#5b4a53;font-weight:600}
 .cl-dot{width:9px;height:9px;border-radius:999px;background:#c9bcc3;flex:none}
 .cl-dot.se{background:#E0B252}.cl-dot.op{background:#2F7D6B}.cl-dot.ok{background:var(--primary)}
-.cl-pg{max-width:620px}
-.cl-head{padding-top:18px}
-.cl-head .pg-title{margin-bottom:4px}
-.cl-full .form-wrap{padding-top:8px}
+.cl-pg{max-width:620px;margin:0 auto}
+.cl-head{max-width:760px;margin:0 auto;padding:26px 20px 0}
+.cl-head .pg-title{margin:0 0 4px}
+.cl-head .hint{margin:0}
+.cl-full .form-wrap{padding-top:10px}
+.cl-note{max-width:760px;margin:0 auto;padding:0 20px 40px}
+.cl-note .hint{margin:0}
 `; document.head.appendChild(st); })();
 
 render();
