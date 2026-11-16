@@ -7357,6 +7357,310 @@ document.addEventListener('change', e => {
 .iv-list{margin:0;padding-left:20px;line-height:1.9}
 `; document.head.appendChild(st); })();
 
+/* ===========================================================
+   n108 – hàng đợi Nhắn tin gộp: ai có tin nháp thì gửi bài kèm link,
+   ai chưa có thì gửi lời mời. Cùng một thao tác.
+   loads after n107
+   =========================================================== */
+Object.assign(T.vi, {
+  sdDraft:'Có tin nháp', sdInvite:'Chưa có tin – gửi lời mời',
+  sdNone:'Không còn ai chờ nhắn.', sdDone:'Nhắn hết rồi. Giỏi lắm!',
+  sdRedo:'Nhắn lại người đã nhắn', sdLink:'(link sẽ tạo khi bấm Copy)',
+  sdLeft:(i, n) => `Người ${i} / ${n}`, sdAdd:'Soạn bài giùm họ'
+});
+Object.assign(T.en, {
+  sdDraft:'Has a draft post', sdInvite:'No post yet – send an invite',
+  sdNone:'Nobody left to text.', sdDone:'All texted. Nice work!',
+  sdRedo:'Text someone again', sdLink:'(link is created when you copy)',
+  sdLeft:(i, n) => `${i} of ${n}`, sdAdd:'Write a post for them'
+});
+
+function sendBuild(){
+  const seen = {}, out = [];
+  admDrafts().forEach(o => {
+    const ph = imDig(admContact(o.id));
+    if (ctNo(ph)) return;
+    if (!state.sq.all && (clFor(o.id) || {}).sent) return;
+    if (ph) seen[ph] = 1;
+    out.push('d:' + o.id);
+  });
+  ctAll().forEach(c => {
+    if (c.consent === 'no' || seen[c.phone]) return;
+    const st = ctStat(c);
+    if (st === 'bad' || st === 'not' || st === 'posted') return;
+    if (!state.sq.all && (c.msgCount || 0) > 0) return;
+    out.push('c:' + c.phone);
+  });
+  state.sq.ids = out;
+  state.sq.i = 0;
+}
+function sendList(){
+  if (!state.sq.ids) sendBuild();
+  return state.sq.ids.map(id => {
+    if (id.indexOf('d:') === 0){
+      const o = admAll().find(x => x.id === id.slice(2));
+      return o && o.mod === 'draft' ? {k:'d', id, o, c:ctGet(admContact(o.id)), ph:imDig(admContact(o.id))} : null;
+    }
+    const c = ctGet(id.slice(2));
+    return c && c.consent !== 'no' ? {k:'c', id, c, ph:c.phone} : null;
+  }).filter(Boolean);
+}
+function sendKind(it){ return it.c ? it.c.kind : (admKind(it.o) === 'techs' ? 'tho' : 'tiem'); }
+function sendTpls(it){
+  const list = tplFor(sendKind(it), 'sms');
+  const def = it.k === 'd' ? 'moibai' : 'moiweb';
+  const cur = list.find(x => x.id === state.sq.tpl) || list.find(x => x.id === def) || list[0] || null;
+  return {list, cur};
+}
+function sendLink(it){
+  if (it.k === 'd'){ const c = clFor(it.o.id); return clOk(c) ? clUrl(c.tok) : ''; }
+  const iv = ivFor(it.ph); return iv ? ivUrl(iv.tok) : '';
+}
+function sendMsg(it, lg){
+  const {cur} = sendTpls(it);
+  if (!cur) return '';
+  return tplFill(cur, lg, tplCtx(it.c, it.o, sendLink(it) || t('sdLink')));
+}
+function sendName(it){ return it.k === 'd' ? (admName(it.o) || (it.c && it.c.name) || '—') : (it.c.name || '—'); }
+function sendSub(it){
+  if (it.k === 'd') return [TECHS.includes(it.o) ? t('imTech') : titleOf(it.o), t('sdDraft')].filter(Boolean).join(' · ');
+  return [it.c.person, it.c.city, t('sdInvite')].filter(Boolean).join(' · ');
+}
+
+admSend = function(){
+  if (sqMode() === 'call') return txBar() + sqTabs() + admCall();
+  const list = sendList();
+  if (!list.length || state.sq.i >= list.length)
+    return txBar() + sqTabs() + `<p class="empty-s">${list.length ? t('sdDone') : t('sdNone')}</p>
+      <div class="stack"><button class="btn btn-ghost" type="button" data-act="sdredo">${t('sdRedo')}</button></div>`;
+  const it = list[state.sq.i], {list:tl, cur} = sendTpls(it);
+  return txBar() + sqTabs() + `<p class="hint">${esc(t('sqHow'))}</p>
+    <div class="card adm-card sq-card">
+      <p class="sq-n">${esc(t('sdLeft', state.sq.i + 1, list.length))}</p>
+      <h2 class="sq-name">${esc(sendName(it))}</h2>
+      <p class="n1sub">${esc(sendSub(it))}</p>
+      <button class="sq-ph" type="button" data-act="sqphone" data-v="${esc(it.ph)}">${esc(admPretty(it.ph) || '—')}<span>${t('sqPhone')}</span></button>
+      ${tl.length ? `<div class="cl-f"><label class="flabel" for="sq-tpl">${t('sqTpl')}</label>
+          <select id="sq-tpl" data-act2="sqtpl">${tl.map(x => `<option value="${esc(x.id)}"${cur && cur.id === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
+        <details class="ct-det"><summary>${t('sqPrev')}</summary><pre class="sq-prev">${esc(sendMsg(it, 'vi'))}</pre></details>
+        <div class="adm-two"><button class="btn btn-primary" type="button" data-act="sdcopy" data-l="vi">${t('clCopyVi')}</button>
+          <button class="btn btn-ghost" type="button" data-act="sdcopy" data-l="en">${t('clCopyEn')}</button></div>`
+      : `<p class="hint">${t('sqNoTpl')}</p>`}
+      <div class="adm-two"><button class="btn btn-primary" type="button" data-act="sdnext" data-v="1">${t('sqSent')}</button>
+        <button class="btn btn-ghost" type="button" data-act="sdnext" data-v="0">${t('sqSkip')}</button></div>
+      ${it.k === 'd'
+        ? `<button class="btn-link" type="button" data-act="liveedit" data-k="${admKind(it.o)}" data-v="${esc(it.o.id)}">${t('admEdit')}</button>`
+        : `<a class="btn-link" href="#admin-ad">${t('sdAdd')}</a>`}
+      <button class="btn-link" type="button" data-act="ctopen" data-v="${esc(it.ph)}">${t('ctHist')}</button>
+    </div>`;
+};
+
+function n8Live(c){
+  const {db, TS, errText} = c;
+  const me = () => (state.user || {});
+  async function log(ph, rec){
+    try { await db.collection('contacts').doc(imDig(ph)).collection('log').add(Object.assign({at:TS(), by:me().uid || '', byName:me().name || ''}, rec)); }
+    catch (e) { console.warn('log', e); }
+  }
+  ACT.sdredo = function(){ state.sq.all = true; state.sq.ids = null; render(); };
+
+  async function linkFor(it){
+    if (it.k === 'd'){
+      let cl = clFor(it.o.id);
+      if (clOk(cl)) return clUrl(cl.tok);
+      const tok = clTok(), rec = {coll:admKind(it.o), docId:it.o.id, phone:it.ph,
+        expMs:Date.now() + CL_LIFE, used:false, sent:false, by:me().uid || '', at:TS()};
+      await db.collection('claims').doc(tok).set(rec);
+      state.cl.map = Object.assign({}, state.cl.map, {[tok]:Object.assign({tok}, rec)});
+      return clUrl(tok);
+    }
+    let iv = ivFor(it.ph);
+    if (iv) return ivUrl(iv.tok);
+    const tok = clTok(), rec = {coll:'invite', docId:'', phone:it.ph, kind:(it.c && it.c.kind) || 'tiem',
+      expMs:Date.now() + 3650 * 86400000, used:false, sent:false, by:me().uid || '', at:TS()};
+    await db.collection('claims').doc(tok).set(rec);
+    state.cl.map = Object.assign({}, state.cl.map, {[tok]:Object.assign({tok}, rec)});
+    return ivUrl(tok);
+  }
+
+  ACT.sdcopy = async function(el){
+    const list = sendList(), it = list[state.sq.i];
+    if (!it) return;
+    const {cur} = sendTpls(it);
+    if (!cur){ toast(t('sqNoTpl')); return; }
+    el.disabled = true;
+    try {
+      const url = await linkFor(it);
+      const body = tplFill(cur, el.dataset.l, tplCtx(it.c, it.o, url));
+      state.sq.last = {id:it.id, text:body};
+      await admCopy(body);
+      render();
+    } catch (er) { console.warn('sdcopy', er); toast(errText(er)); }
+    el.disabled = false;
+  };
+
+  ACT.sdnext = async function(el){
+    const list = sendList(), it = list[state.sq.i];
+    if (!it) return;
+    if (el.dataset.v === '1'){
+      el.disabled = true;
+      const txt = (state.sq.last && state.sq.last.id === it.id) ? state.sq.last.text : sendMsg(it, 'vi');
+      try {
+        if (it.k === 'd'){
+          const cl = clFor(it.o.id);
+          if (clOk(cl)) await db.collection('claims').doc(cl.tok).set({sent:true, sentAt:TS()}, {merge:true});
+          else {
+            const tok = clTok(), rec = {coll:admKind(it.o), docId:it.o.id, phone:it.ph,
+              expMs:Date.now() + CL_LIFE, used:false, sent:true, by:me().uid || '', at:TS(), sentAt:TS()};
+            await db.collection('claims').doc(tok).set(rec);
+            state.cl.map = Object.assign({}, state.cl.map, {[tok]:Object.assign({tok}, rec)});
+          }
+        }
+        if (it.ph){
+          const old = ctGet(it.ph);
+          await window.ctTouch(it.ph, {lastAt:TS(), msgCount:((old && old.msgCount) || 0) + 1,
+            status:(old && ['interested','not','bad'].indexOf(old.status) >= 0) ? old.status : 'contacted',
+            name:(old && old.name) || sendName(it) || '',
+            kind:(old && old.kind) || sendKind(it)});
+          await log(it.ph, {kind:it.k === 'd' ? 'sms' : 'invite', text:txt});
+        }
+      } catch (er) { console.warn('sdnext', er); toast(errText(er)); }
+    }
+    state.sq.i = state.sq.i + 1;
+    render();
+  };
+}
+if (state.n1ctx) n8Live(state.n1ctx);
+
+/* ===========================================================
+   n109 – Hôm nay cần làm · số liệu Tổng quan · cảnh báo nhắn trùng
+          · gộp Tạo tin tiệm + Tạo hồ sơ thợ thành Tạo mới
+   loads after n108
+   =========================================================== */
+Object.assign(T.vi, {
+  admT_new:'Tạo mới',
+  tdH:'Hôm nay cần làm', tdNone:'Hôm nay không có gì phải làm.',
+  tdLate:'Quá hạn', tdToday:'Hôm nay', tdSoon:'Sắp tới', tdAll:'Tất cả',
+  tdCall:'Gọi', tdText:'Nhắn', tdOpen:'Mở',
+  tdDue:d => d < 0 ? `Trễ ${-d} ngày` : d === 0 ? 'Hôm nay' : `Còn ${d} ngày`,
+  tdCount:n => `${n} việc`,
+  stH:'Số liệu danh bạ', stH2:'Số liệu tin đăng', stCt:'Tổng danh bạ', stTouched:'Đã liên hệ', stInt:'Quan tâm',
+  stPosted:'Đã đăng tin', stYes:'Đồng ý nhận tin', stNo:'Đã từ chối',
+  sdWarn:d => `${d <= 0 ? 'Mới nhắn hôm nay' : d === 1 ? 'Mới nhắn hôm qua' : 'Mới nhắn ' + d + ' ngày trước'}. Nhắn lại sớm quá dễ làm phiền.`,
+  mkSalon:'Tin tuyển thợ', mkTech:'Hồ sơ thợ'
+});
+Object.assign(T.en, {
+  admT_new:'New post',
+  tdH:'To do today', tdNone:'Nothing due today.',
+  tdLate:'Overdue', tdToday:'Today', tdSoon:'Coming up', tdAll:'All',
+  tdCall:'Call', tdText:'Text', tdOpen:'Open',
+  tdDue:d => d < 0 ? `${-d} days late` : d === 0 ? 'Today' : `in ${d} days`,
+  tdCount:n => `${n} to do`,
+  stH:'Contact numbers', stH2:'Listing numbers', stCt:'Contacts', stTouched:'Contacted', stInt:'Interested',
+  stPosted:'Published', stYes:'Agreed to texts', stNo:'Opted out',
+  sdWarn:d => `${d <= 0 ? 'Texted today' : d === 1 ? 'Texted yesterday' : 'Texted ' + d + ' days ago'}. Texting again this soon is intrusive.`,
+  mkSalon:'Salon job post', mkTech:'Tech profile'
+});
+
+const n9Day = 86400000;
+function n9Today(){ return new Date().toISOString().slice(0, 10); }
+function n9DueIn(d){
+  if (!d) return null;
+  return Math.round((new Date(d + 'T00:00:00').getTime() - new Date(n9Today() + 'T00:00:00').getTime()) / n9Day);
+}
+/* một danh sách duy nhất: hẹn gọi lại và hẹn nhắn lại nằm chung */
+function tdList(){
+  const f = state.td.f;
+  return ctAll()
+    .filter(c => c.consent !== 'no' && c.nextAt && ctStat(c) !== 'bad')
+    .map(c => ({c, d:n9DueIn(c.nextAt)}))
+    .filter(x => x.d != null)
+    .filter(x => f === 'all' ? true : f === 'late' ? x.d < 0 : f === 'today' ? x.d === 0 : x.d > 0)
+    .sort((a, b) => a.d - b.d);
+}
+function tdCard(){
+  const list = tdList(), ks = ['late','today','soon','all'];
+  const n = ctAll().filter(c => c.consent !== 'no' && c.nextAt && n9DueIn(c.nextAt) != null && n9DueIn(c.nextAt) <= 0).length;
+  return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('tdH')}${n ? ` (${n})` : ''}</h2>
+    <nav class="ct-fs">${ks.map(k => `<button type="button" class="chip${state.td.f === k ? ' on' : ''}" data-act="tdfilter" data-v="${k}">${t('td' + (k === 'late' ? 'Late' : k === 'today' ? 'Today' : k === 'soon' ? 'Soon' : 'All'))}</button>`).join('')}</nav>
+    ${list.length ? `<ul class="td-list">${list.map(({c, d}) => `<li class="${d < 0 ? 'late' : ''}">
+        <div><b>${esc(c.name || admPretty(c.phone))}</b>
+          <span class="td-when">${esc(t('tdDue', d))} · ${esc(admPretty(c.phone))}${c.note ? ' · ' + esc(String(c.note).split('\n')[0].slice(0, 50)) : ''}</span></div>
+        <button class="btn-link" type="button" data-act="ctopen" data-v="${esc(c.phone)}">${t('tdOpen')}</button></li>`).join('')}</ul>`
+      : `<p class="empty-s">${t('tdNone')}</p>`}</div>`;
+}
+function stCard(){
+  const all = ctAll();
+  const rows = [[t('stCt'), all.length],
+    [t('stTouched'), all.filter(c => (c.msgCount || 0) + (c.callCount || 0) > 0).length],
+    [t('stInt'), all.filter(c => ctStat(c) === 'interested').length],
+    [t('stPosted'), all.filter(c => ctStat(c) === 'posted').length],
+    [t('stYes'), all.filter(c => c.consent === 'yes').length],
+    [t('stNo'), all.filter(c => c.consent === 'no').length]];
+  return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('stH')}</h2>
+    <table class="adm-tbl"><tbody>${rows.map(r => `<tr><td>${esc(r[0])}</td><td><b>${r[1]}</b></td></tr>`).join('')}</tbody></table></div>`;
+}
+const n9Over0 = admOver;
+admOver = function(){
+  return tdCard() + stCard() + n9Over0()
+    .replace(/<div class="adm-two"><a class="btn btn-primary" href="#admin-ad">[\s\S]*?<\/div>/,
+      `<div class="stack"><a class="btn btn-primary" href="#admin-new">${t('admT_new')}</a></div>`)
+    .replace(`>${t('admStats')}<`, `>${t('stH2')}<`);
+};
+
+/* ---------- Tạo mới: một tab, hai loại ---------- */
+function admNew(){
+  const k = state.mk === 'profile' ? 'profile' : 'hiring';
+  return `<nav class="ct-fs">${[['hiring','mkSalon'],['profile','mkTech']].map(([v, lab]) =>
+      `<button type="button" class="chip${k === v ? ' on' : ''}" data-act="mkpick" data-v="${v}">${t(lab)}</button>`).join('')}</nav>
+    ${admMake(k)}`;
+}
+state.mk = 'hiring';
+state.td = {f:'late'};
+
+const N9_TABS = ['over','ct','send','imp','tpl','draft','track','mod','new','rep','set'];
+const n9Admin0 = viewAdmin;
+viewAdmin = function(tab){
+  if (tab === 'ad'){ state.mk = 'hiring'; tab = 'new'; }
+  if (tab === 'tech'){ state.mk = 'profile'; tab = 'new'; }
+  const nav = tb => `<nav class="adm-tabs">${N9_TABS.map(k => `<a href="#admin-${k}"${k === tb ? ' class="on" aria-current="page"' : ''}>${t('admT_' + k)}</a>`).join('')}</nav>`;
+  if (tab === 'new'){
+    if (!state.user) return loginGate();
+    if (!state.adm.on) return notFound();
+    state.adm.tab = tab;
+    return `<div class="wrap page adm"><h1 class="pg-title">${t('adm')}</h1>${nav(tab)}<div class="adm-body">${admNew()}</div></div>`;
+  }
+  const h = n9Admin0(tab);
+  if (h.indexOf('class="adm-tabs"') < 0) return h;
+  return h.replace(/<nav class="adm-tabs">[\s\S]*?<\/nav>/, nav(tab));
+};
+
+/* ---------- cảnh báo nhắn trùng trong 7 ngày ---------- */
+const n9Send0 = admSend;
+admSend = function(){
+  const h = n9Send0();
+  if (sqMode() === 'call') return h;
+  const list = sendList(), it = list[state.sq.i];
+  if (!it || !it.c) return h;
+  const ms = n5Ms(it.c.lastAt);
+  if (!ms) return h;
+  const d = Math.floor((Date.now() - ms) / n9Day);
+  if (d > 7) return h;
+  return h.replace('<button class="sq-ph"', `<p class="sq-warn">${esc(t('sdWarn', d))}</p><button class="sq-ph"`);
+};
+
+ACT.tdfilter = function(el){ state.td.f = el.dataset.v; render(); };
+ACT.mkpick = function(el){ state.mk = el.dataset.v; render(); };
+
+(() => { const st = document.createElement('style'); st.textContent = `
+.td-list{list-style:none;margin:0;padding:0}
+.td-list li{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line)}
+.td-list li:first-child{border-top:0}
+.td-list li.late b{color:#B3261E}
+.td-when{display:block;font-size:12px;color:#8A6A72;margin-top:2px}
+.sq-warn{margin:0 0 10px;padding:8px 12px;border-radius:10px;background:#FFF1D9;color:#8A5A00;font-weight:600;font-size:13px}
+`; document.head.appendChild(st); })();
+
 render();
 })();
 </script>
