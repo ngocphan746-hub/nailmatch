@@ -8584,6 +8584,373 @@ function n14Live(c){
 }
 if (state.n1ctx) n14Live(state.n1ctx);
 
+/* ============================================================
+   n115 — một bộ trạng thái duy nhất, có màu; một hàng kết quả
+   dùng chung cho nhắn tin và gọi điện; hẹn lại tự chọn ngày
+   ============================================================ */
+Object.assign(T.vi, {
+  ctS_refused:'Đã từ chối', ctS_unreach:'Không liên hệ được',
+  ctF_refused:'Đã từ chối', ctF_unreach:'Không liên hệ được',
+  n15Sent:'Đã gửi', n15Called:'Đã gọi xong',
+  n15Later:'Hẹn lại…', n15Un:'Không liên hệ được', n15No:'Đã từ chối',
+  n15Pick:'Ngày liên hệ lại', n15Quick:'Chọn nhanh',
+  n15Save:'Lưu ngày hẹn', n15Cancel:'Thôi',
+  n15NoWarn:'Người này đã từ chối nhận tin. Nên hỏi lại trước khi nhắn tiếp.',
+  n15Need:'Chọn ngày trước đã.',
+  n15Ok:'Đã lưu.'
+});
+Object.assign(T.en, {
+  ctS_refused:'Opted out', ctS_unreach:'Unreachable',
+  ctF_refused:'Opted out', ctF_unreach:'Unreachable',
+  n15Sent:'Sent', n15Called:'Call done',
+  n15Later:'Follow up later…', n15Un:'Unreachable', n15No:'Opted out',
+  n15Pick:'Follow-up date', n15Quick:'Quick pick',
+  n15Save:'Save date', n15Cancel:'Cancel',
+  n15NoWarn:'This person opted out. Check with them before texting again.',
+  n15Need:'Pick a date first.',
+  n15Ok:'Saved.'
+});
+
+/* ---------- 7 trạng thái ---------- */
+const N15_ST = ['new', 'contacted', 'later', 'pending', 'posted', 'refused', 'unreach'];
+const N15_MAP = {interested:'contacted', not:'contacted', bad:'unreach'};
+const N15_STICK = ['later', 'refused', 'unreach'];
+const N15_RANK = {new:0, contacted:1, pending:2, posted:3};
+CT_ST.length = 0; N15_ST.forEach(x => CT_ST.push(x));
+
+ctStat = function(c){
+  const s0 = c && c.status, s = N15_MAP[s0] || s0;
+  if (s === 'refused') return 'refused';
+  if (c && c.phone && ctPosted(c.phone)) return 'posted';
+  return N15_ST.indexOf(s) >= 0 ? s : 'new';
+};
+function n15Cur(ph){ return ctStat(Object.assign({}, ctGet(ph) || {}, {phone:imDig(ph)})); }
+
+ctFilters = function(){
+  const ks = ['all', 'tiem', 'tho'].concat(N15_ST);
+  return `<nav class="ct-fs chipset">${ks.map(k => {
+    const col = N15_ST.indexOf(k) >= 0 ? ` n15-${k}` : '';
+    return `<button type="button" class="choice${col}${state.ct.f === k ? ' on' : ''}" data-act="ctfilter" data-v="${k}">${t('ctF_' + k)}</button>`;
+  }).join('')}</nav>`;
+};
+/* lọc "no" cũ giờ là trạng thái refused */
+const n15Match0 = ctMatch;
+ctMatch = function(c){
+  if (state.ct.f === 'no') state.ct.f = 'refused';
+  return n15Match0(c);
+};
+
+/* ---------- ghi trạng thái ---------- */
+function n15Raw(ph, patch){ return n13Touch0(ph, patch); }
+window.ctTouch = async function(ph, patch){
+  const p = Object.assign({}, patch || {});
+  if (p.callCount != null) p.lastKind = 'call';
+  else if (p.msgCount != null) p.lastKind = 'sms';
+  if (p.status && !p.n15set){
+    const cur = n15Cur(ph);
+    const want = N15_MAP[p.status] || p.status;
+    if (N15_STICK.indexOf(cur) >= 0 || cur === 'posted') delete p.status;
+    else {
+      const next = want === 'contacted' ? (n13HasDraft(ph) ? 'pending' : 'contacted') : want;
+      if ((N15_RANK[next] || 0) <= (N15_RANK[cur] || 0)) delete p.status;
+      else p.status = next;
+    }
+  }
+  delete p.n15set;
+  return n15Raw(ph, p);
+};
+
+/* ---------- hàng trạng thái dùng chung ---------- */
+function n15Chips(ph, cur, act){
+  return `<div class="n15-st chipset">${N15_ST.map(s =>
+    `<button type="button" class="choice n15-${s}${cur === s ? ' on' : ''}" data-act="${act}" data-p="${esc(ph || '')}" data-v="${s}">${t('ctS_' + s)}</button>`).join('')}</div>`;
+}
+function n15Nav(pfx, i, n){
+  return `<div class="n13-nav">
+    <button class="btn-link" type="button" data-act="${pfx}go" data-v="-1"${i <= 0 ? ' disabled' : ''}>${t('n13Prev')}</button>
+    <button class="btn-link" type="button" data-act="${pfx}go" data-v="1"${i >= n - 1 ? ' disabled' : ''}>${t('n13Next')}</button></div>`;
+}
+state.n15 = {later:false};
+function n15Date(){
+  const def = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  return `<div class="card n15-box">
+    <label class="flabel" for="n15-d">${t('n15Pick')}</label>
+    <input id="n15-d" type="date" value="${def}">
+    <p class="hint">${esc(t('n15Quick'))}</p>
+    <div class="chipset">${[3, 7, 14].map(d => `<button type="button" class="choice" data-act="n15quick" data-v="${d}">${t('n13D' + d)}</button>`).join('')}</div>
+    <div class="n15-two">
+      <button class="btn btn-primary" type="button" data-act="n15save">${t('n15Save')}</button>
+      <button class="btn btn-ghost" type="button" data-act="n15cancel">${t('n15Cancel')}</button></div></div>`;
+}
+function n15Acts(mode){
+  return `<div class="n15-acts">
+      <button class="btn btn-primary" type="button" data-act="n15done" data-m="${mode}">${t(mode === 'call' ? 'n15Called' : 'n15Sent')}</button>
+      <button class="btn btn-ghost" type="button" data-act="n15later">${t('n15Later')}</button>
+      <button class="btn btn-ghost" type="button" data-act="n15un">${t('n15Un')}</button>
+      <button class="btn btn-ghost danger" type="button" data-act="n15no">${t('n15No')}</button>
+    </div>${state.n15.later ? n15Date() : ''}`;
+}
+
+/* ---------- hàng đợi: không chặn ai nữa ---------- */
+sendBuild = function(){
+  const seen = {}, out = [];
+  admDrafts().forEach(o => {
+    const ph = imDig(admContact(o.id));
+    if (!state.sq.all && (clFor(o.id) || {}).sent) return;
+    if (ph) seen[ph] = 1;
+    out.push('d:' + o.id);
+  });
+  ctAll().forEach(c => {
+    if (seen[c.phone]) return;
+    if (ctStat(c) === 'posted') return;
+    if (!state.sq.all && (c.msgCount || 0) > 0) return;
+    out.push('c:' + c.phone);
+  });
+  state.sq.ids = out;
+  state.sq.i = 0;
+};
+sendList = function(){
+  if (!state.sq.ids) sendBuild();
+  return state.sq.ids.map(id => {
+    if (id.indexOf('d:') === 0){
+      const o = admAll().find(x => x.id === id.slice(2));
+      return o && o.mod === 'draft' ? {k:'d', id, o, c:ctGet(admContact(o.id)), ph:imDig(admContact(o.id))} : null;
+    }
+    const c = ctGet(id.slice(2));
+    return c ? {k:'c', id, c, ph:c.phone} : null;
+  }).filter(Boolean);
+};
+cqBuild = function(){
+  const today = new Date().toISOString().slice(0, 10);
+  state.cq.ids = ctAll().sort((a, b) => {
+    const da = (a.nextAt && a.nextAt <= today) ? 0 : 1, db2 = (b.nextAt && b.nextAt <= today) ? 0 : 1;
+    if (da !== db2) return da - db2;
+    return (n5Ms(a.lastAt) || 0) - (n5Ms(b.lastAt) || 0);
+  }).map(c => c.phone);
+  state.cq.i = 0;
+};
+cqList = function(){
+  if (!state.cq.ids) cqBuild();
+  return state.cq.ids.map(p => ctGet(p)).filter(Boolean);
+};
+imTaken = n6Taken0;
+
+/* ---------- thẻ nhắn tin ---------- */
+admSend = function(){
+  if (sqMode() === 'call') return txBar() + sqTabs() + admCall();
+  const list = sendList();
+  if (!list.length || state.sq.i >= list.length)
+    return txBar() + sqTabs() + `<p class="empty-s">${list.length ? t('sdDone') : t('sdNone')}</p>
+      <div class="stack"><button class="btn btn-ghost" type="button" data-act="sdredo">${t('sdRedo')}</button></div>`;
+  const it = list[state.sq.i], {list:tl, cur} = sendTpls(it);
+  const c = it.c || {}, st = n15Cur(it.ph);
+  const ms = n5Ms(c.lastAt), days = ms ? Math.floor((Date.now() - ms) / 86400000) : null;
+  return txBar() + sqTabs() + `<p class="hint">${esc(t('sqHow'))}</p>
+    <div class="card adm-card sq-card">
+      <p class="sq-n">${esc(t('sdLeft', state.sq.i + 1, list.length))}</p>
+      ${n15Nav('sd', state.sq.i, list.length)}
+      <h2 class="sq-name">${esc(sendName(it))}</h2>
+      <p class="n1sub">${esc(sendSub(it))}</p>
+      ${n15Chips(it.ph, st, 'n15set')}
+      ${st === 'refused' ? `<p class="n15-warn">${esc(t('n15NoWarn'))}</p>` : ''}
+      ${days != null && days <= 7 ? `<p class="sq-warn">${esc(t('sdWarn', days))}</p>` : ''}
+      <button class="sq-ph" type="button" data-act="sqphone" data-v="${esc(it.ph)}">${esc(admPretty(it.ph) || '—')}<span>${t('sqPhone')}</span></button>
+      ${tl.length ? `<div class="cl-f"><label class="flabel" for="sq-tpl">${t('sqTpl')}</label>
+          <select id="sq-tpl" data-act2="sqtpl">${tl.map(x => `<option value="${esc(x.id)}"${cur && cur.id === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
+        <details class="ct-det"><summary>${t('sqPrev')}</summary><pre class="sq-prev">${esc(sendMsg(it, 'vi'))}</pre></details>
+        <div class="n15-two"><button class="btn btn-primary" type="button" data-act="sdcopy" data-l="vi">${t('clCopyVi')}</button>
+          <button class="btn btn-ghost" type="button" data-act="sdcopy" data-l="en">${t('clCopyEn')}</button></div>`
+      : `<p class="hint">${t('sqNoTpl')}</p>`}
+      ${n15Acts('sms')}
+      ${it.k === 'd'
+        ? `<button class="btn-link" type="button" data-act="liveedit" data-k="${admKind(it.o)}" data-v="${esc(it.o.id)}">${t('admEdit')}</button>`
+        : `<a class="btn-link" href="#admin-new">${t('sdAdd')}</a>`}
+      <button class="btn-link" type="button" data-act="ctopen" data-v="${esc(it.ph)}">${t('ctHist')}</button>
+    </div>`;
+};
+
+/* ---------- thẻ gọi điện ---------- */
+admCall = function(){
+  const list = cqList();
+  if (!list.length || state.cq.i >= list.length)
+    return `<p class="empty-s">${t('cqNone')}</p><div class="stack">
+      <button class="btn btn-ghost" type="button" data-act="cqreset">${t('sqRedo')}</button></div>`;
+  const c = list[state.cq.i], today = new Date().toISOString().slice(0, 10);
+  const due = c.nextAt && c.nextAt <= today, st = n15Cur(c.phone);
+  return `<p class="hint">${esc(t('cqHow'))}</p>
+    <div class="card adm-card sq-card">
+      <p class="sq-n">${esc(t('cqLeft', state.cq.i + 1, list.length))}${due ? ` · ${t('cqDue')}` : ''}</p>
+      ${n15Nav('cq', state.cq.i, list.length)}
+      <h2 class="sq-name">${esc(c.name || '—')}</h2>
+      <p class="n1sub">${esc([t(c.kind === 'tho' ? 'ctTech' : 'ctSalon'), c.person, c.city].filter(Boolean).join(' · '))}</p>
+      ${n15Chips(c.phone, st, 'n15set')}
+      ${st === 'refused' ? `<p class="n15-warn">${esc(t('n15NoWarn'))}</p>` : ''}
+      <button class="sq-ph" type="button" data-act="sqphone" data-v="${esc(c.phone)}">${esc(admPretty(c.phone))}<span>${t('sqPhone')}</span></button>
+      ${c.note ? `<p class="hint cq-note">${esc(c.note)}</p>` : ''}
+      ${n15Acts('call')}
+      <button class="btn-link" type="button" data-act="ctopen" data-v="${esc(c.phone)}">${t('ctHist')}</button>
+    </div>`;
+};
+
+/* ---------- thẻ Hồ sơ: hàng nút thay ô xổ xuống, bỏ khối Nhận tin ---------- */
+function n15Cut(h, from){
+  const re = /<\/?div\b[^>]*>/g; re.lastIndex = from;
+  let depth = 0, m;
+  while ((m = re.exec(h))){
+    if (m[0].charAt(1) !== '/') depth++; else depth--;
+    if (depth === 0) return h.slice(0, from) + h.slice(m.index + m[0].length);
+  }
+  return h;
+}
+const n15Ct0 = ctCard;
+ctCard = function(phone){
+  let h = n15Ct0(phone);
+  const e = state.ct.edit || {};
+  const st = N15_ST.indexOf(e.status) >= 0 ? e.status : n15Cur(e.phone || phone);
+  /* ô xổ xuống -> hàng nút */
+  h = h.replace(/<select id="ct-status"[\s\S]*?<\/select>/, n15Chips('', st, 'n15edit'));
+  /* bỏ khối Nhận tin (trùng với trạng thái Đã từ chối) */
+  const mark = `<h2 class="sec" style="margin-top:0">${t('ctMsg')}</h2>`;
+  const i = h.indexOf(mark);
+  if (i > 0){
+    const from = h.lastIndexOf('<div class="card adm-card cl-form">', i);
+    if (from >= 0) h = n15Cut(h, from);
+  }
+  return h;
+};
+/* bỏ thẻ "Đã từ chối" phụ trong bảng vì trạng thái đã nói rồi */
+const n15Row0 = ctRow;
+ctRow = function(c){
+  return n15Row0(c).replace(/<span class="ct-tag ct-off">[^<]*<\/span>/, '');
+};
+
+/* ---------- css ---------- */
+(() => {
+  const COL = {
+    new:     ['#EEF0F2', '#5C6670'],
+    contacted:['#FFEBD6', '#A1520B'],
+    later:   ['#DCE8FB', '#1A4FA3'],
+    pending: ['#FBF0CE', '#8A6A00'],
+    posted:  ['#DCF1E3', '#17683C'],
+    refused: ['#FBE0DE', '#A8201A'],
+    unreach: ['#EFE2FA', '#6B2FA8']
+  };
+  const rules = Object.keys(COL).map(k => {
+    const [bg, fg] = COL[k];
+    return `.ct-tag.ct-${k}{background:${bg};color:${fg}}
+.choice.n15-${k}.on{background:${bg};color:${fg};border-color:${fg}}
+.choice.n15-${k}{border-color:${fg}55;color:${fg}}`;
+  }).join('\n');
+  const s = document.createElement('style');
+  s.textContent = rules + `
+.n15-st{margin:6px 0 12px;justify-content:center}
+.n15-st .choice{font-size:12.5px;padding:5px 10px}
+.n15-acts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.n15-acts .btn{width:100%}
+.n15-two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.n15-two .btn{width:100%}
+.n15-box{margin-top:12px;padding:14px;text-align:left}
+.n15-box input[type=date]{width:100%;margin-bottom:10px}
+.n15-warn{margin:0 0 10px;padding:8px 12px;border-radius:10px;background:#FBE0DE;color:#A8201A;font-weight:600;font-size:13px}`;
+  document.head.appendChild(s);
+})();
+
+/* ---------- live ---------- */
+function n15Live(c){
+  const {db, TS, errText} = c;
+  const me = () => (state.user || {});
+  async function log(ph, rec){
+    try { await db.collection('contacts').doc(imDig(ph)).collection('log').add(Object.assign({at:TS(), by:me().uid || '', byName:me().name || ''}, rec)); }
+    catch (e) { console.warn('n15log', e); }
+  }
+  function here(){
+    if (sqMode() === 'call'){ const l = cqList(), x = l[state.cq.i]; return x ? {ph:x.phone, call:true} : null; }
+    const l = sendList(), x = l[state.sq.i];
+    return x ? {ph:x.ph, it:x, call:false} : null;
+  }
+  function step(){
+    if (sqMode() === 'call') state.cq.i = state.cq.i + 1; else state.sq.i = state.sq.i + 1;
+    state.n15.later = false;
+    render();
+  }
+  async function put(ph, st, extra){
+    const rec = Object.assign({status:st, n15set:1, lastAt:TS()}, extra || {});
+    if (st === 'refused'){ rec.consent = 'no'; rec.consentAt = TS(); }
+    await window.ctTouch(ph, rec);
+  }
+
+  /* hàng trạng thái trong hàng đợi */
+  ACT.n15set = async function(el){
+    const ph = el.dataset.p; if (!ph) return;
+    el.disabled = true;
+    try { await put(ph, el.dataset.v); await log(ph, {kind:'note', outcome:t('ctS_' + el.dataset.v)}); }
+    catch (e) { console.warn('n15set', e); toast(errText(e)); }
+    el.disabled = false; render();
+  };
+  /* hàng trạng thái trong thẻ Hồ sơ: chỉ đổi trong form, bấm Lưu mới ghi */
+  ACT.n15edit = function(el){
+    const e = state.ct.edit; if (!e) return;
+    e.status = el.dataset.v;
+    if (el.dataset.v === 'refused') e.consent = 'no';
+    else if (e.consent === 'no') e.consent = 'unknown';
+    render();
+  };
+
+  ACT.n15done = async function(el){
+    const h = here(); if (!h) return;
+    el.disabled = true;
+    try {
+      if (h.call){
+        const old = ctGet(h.ph) || {};
+        /* gọi điện chỉ đưa "Chưa liên hệ" lên "Đã liên hệ";
+           không đụng tới Đang chờ duyệt, Hẹn lại, Đã từ chối, Không liên hệ được */
+        const rec = {callCount:(old.callCount || 0) + 1, lastAt:TS(), lastKind:'call'};
+        if (n15Cur(h.ph) === 'new'){ rec.status = 'contacted'; rec.n15set = 1; }
+        await window.ctTouch(h.ph, rec);
+        await log(h.ph, {kind:'call', outcome:t('n15Called')});
+      } else {
+        await ACT.sdnext({dataset:{v:'1'}, disabled:false});
+        state.n15.later = false;
+        return;
+      }
+    } catch (e) { console.warn('n15done', e); toast(errText(e)); }
+    el.disabled = false; step();
+  };
+  ACT.n15later = function(){ state.n15.later = !state.n15.later; render(); };
+  ACT.n15cancel = function(){ state.n15.later = false; render(); };
+  ACT.n15quick = function(el){
+    const box = document.getElementById('n15-d'); if (!box) return;
+    box.value = new Date(Date.now() + (Number(el.dataset.v) || 7) * 86400000).toISOString().slice(0, 10);
+  };
+  ACT.n15save = async function(el){
+    const h = here(); if (!h) return;
+    const box = document.getElementById('n15-d'), when = box ? box.value : '';
+    if (!when){ toast(t('n15Need')); return; }
+    el.disabled = true;
+    try {
+      await put(h.ph, 'later', {nextAt:when});
+      await log(h.ph, {kind:'note', outcome:t('n13LaterTo', when)});
+      toast(t('n15Ok'));
+    } catch (e) { console.warn('n15save', e); toast(errText(e)); }
+    el.disabled = false; step();
+  };
+  ACT.n15un = async function(el){
+    const h = here(); if (!h) return;
+    el.disabled = true;
+    try { await put(h.ph, 'unreach'); await log(h.ph, {kind:h.call ? 'call' : 'note', outcome:t('n15Un')}); }
+    catch (e) { console.warn('n15un', e); toast(errText(e)); }
+    el.disabled = false; step();
+  };
+  ACT.n15no = async function(el){
+    const h = here(); if (!h) return;
+    el.disabled = true;
+    try { await put(h.ph, 'refused'); await log(h.ph, {kind:'note', outcome:t('n15No')}); }
+    catch (e) { console.warn('n15no', e); toast(errText(e)); }
+    el.disabled = false; step();
+  };
+}
+if (state.n1ctx) n15Live(state.n1ctx);
+
 render();
 })();
 </script>
