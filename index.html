@@ -5963,6 +5963,468 @@ if (state.n1ctx) clLive(state.n1ctx);
 .cl-note .hint{margin:0}
 `; document.head.appendChild(st); })();
 
+/* ===========================================================
+   n105 – nhập hàng loạt, hàng đợi gửi tin, theo dõi
+   loads after n104
+   =========================================================== */
+Object.assign(T.vi, {
+  admT_imp:'Nhập', admT_send:'Gửi tin', admT_track:'Theo dõi',
+  imRawH:'Dán tin thô', imRawD:'Dán nguyên tin từ chỗ khác. Nhiều tin thì cách nhau một dòng trống.',
+  imTabH:'Dán bảng', imTabD:'Copy các dòng từ Google Sheets / Excel rồi dán vào đây. Dòng tên cột không bắt buộc.',
+  imFile:'…hoặc chọn file CSV', imRead:'Đọc thử', imClear:'Xoá',
+  imFound:n => `Đọc được ${n} tin`, imNone:'Chưa đọc được tin nào. Kiểm tra lại nội dung đã dán.',
+  imMake:n => `Tạo ${n} tin nháp`, imMade:n => `Đã tạo ${n} tin nháp.`,
+  imDup:'Trùng số – bỏ qua', imBad:'Thiếu số điện thoại', imSkip:'Bỏ dòng này',
+  imCols:'Cột: loai, ten, sodienthoai, thanhpho, dichvu, loaiviec, tracong, sotien, phantram, ghichu, nguon, ngonngu',
+  imKind:'Loại', imName:'Tên', imPhone:'Số điện thoại', imCity:'Thành phố', imPay:'Trả công', imNote:'Ghi chú',
+  imSalon:'Tiệm', imTech:'Thợ', imCheck:'Xem lại rồi sửa ô nào sai trước khi tạo.',
+  sqTitle:'Gửi tin', sqNone:'Không còn tin nào chờ gửi.', sqLeft:(i, n) => `Tin ${i} / ${n}`,
+  sqPhone:'Bấm để copy số', sqPhoneOk:'Đã copy số.',
+  sqSent:'Đã gửi → tin kế', sqSkip:'Để sau', sqDone:'Gửi hết rồi. Giỏi lắm!',
+  sqHow:'1. Bấm số để copy → dán vào tin nhắn. 2. Bấm Copy nội dung → dán → gửi. 3. Bấm Đã gửi.',
+  sqRedo:'Gửi lại tin đã gửi',
+  trTitle:'Theo dõi', trDraft:'Tin nháp đã gửi đi', trReq:'Lời mời và ứng tuyển',
+  trWho:'Từ', trTo:'Đến', trKind:'Loại', trSt:'Trạng thái', trAge:'Chờ',
+  trOffer:'Mời làm', trApply:'Ứng tuyển',
+  trPend:'Chờ trả lời', trOk:'Đã đồng ý', trNo:'Đã từ chối', trBlock:'Đã chặn',
+  trNoReq:'Chưa có lời mời hay ứng tuyển nào.', trNoDraft:'Chưa gửi tin nháp nào đi.',
+  trDays:n => n <= 0 ? 'Hôm nay' : `${n} ngày`,
+  trNudge:'Copy lời nhắc', trLate:'Quá hạn trả lời',
+  trOnly:'Chỉ thấy ai gửi cho ai, không thấy nội dung tin nhắn.',
+  nudgeSalon:(a, b) => `Chào anh/chị, có thợ vừa gửi yêu cầu cho tin "${a}" trên Nail101 mà chưa thấy trả lời. Anh/chị vào nail101.com xem giúp em nhé. – Nail101`,
+  nudgeTech:(a, b) => `Chào bạn, có tiệm vừa gửi lời mời cho bạn trên Nail101 mà chưa thấy trả lời. Bạn vào nail101.com xem giúp nhé. – Nail101`,
+  stNotSent:'Chưa gửi', stSent:'Đã gửi', stOpen:'Đã mở link', stPosted:'Đã đăng'
+});
+Object.assign(T.en, {
+  admT_imp:'Import', admT_send:'Send', admT_track:'Tracking',
+  imRawH:'Paste raw ads', imRawD:'Paste an ad as it is written elsewhere. Separate several ads with a blank line.',
+  imTabH:'Paste a table', imTabD:'Copy rows from Google Sheets / Excel and paste them here. A header row is optional.',
+  imFile:'…or pick a CSV file', imRead:'Read it', imClear:'Clear',
+  imFound:n => `Found ${n} ads`, imNone:'Nothing could be read. Check what you pasted.',
+  imMake:n => `Create ${n} drafts`, imMade:n => `${n} drafts created.`,
+  imDup:'Duplicate phone – skipped', imBad:'Phone number missing', imSkip:'Drop this row',
+  imCols:'Columns: loai, ten, sodienthoai, thanhpho, dichvu, loaiviec, tracong, sotien, phantram, ghichu, nguon, ngonngu',
+  imKind:'Type', imName:'Name', imPhone:'Phone', imCity:'City', imPay:'Pay', imNote:'Note',
+  imSalon:'Salon', imTech:'Tech', imCheck:'Look it over and fix anything wrong before creating.',
+  sqTitle:'Send', sqNone:'Nothing waiting to be sent.', sqLeft:(i, n) => `${i} of ${n}`,
+  sqPhone:'Tap to copy the number', sqPhoneOk:'Number copied.',
+  sqSent:'Sent → next', sqSkip:'Later', sqDone:'All sent. Nice work!',
+  sqHow:'1. Tap the number to copy it → paste into your texting app. 2. Tap Copy → paste → send. 3. Tap Sent.',
+  sqRedo:'Send an already-sent one again',
+  trTitle:'Tracking', trDraft:'Drafts you sent out', trReq:'Offers and applications',
+  trWho:'From', trTo:'To', trKind:'Kind', trSt:'Status', trAge:'Waiting',
+  trOffer:'Job offer', trApply:'Application',
+  trPend:'Waiting for a reply', trOk:'Accepted', trNo:'Declined', trBlock:'Blocked',
+  trNoReq:'No offers or applications yet.', trNoDraft:'No drafts sent out yet.',
+  trDays:n => n <= 0 ? 'Today' : `${n} days`,
+  trNudge:'Copy a reminder', trLate:'Overdue',
+  trOnly:'You see who sent what to whom, never the messages themselves.',
+  nudgeSalon:(a, b) => `Hi, a tech sent a request for your post "${a}" on Nail101 and it is still waiting. Please take a look at nail101.com. – Nail101`,
+  nudgeTech:(a, b) => `Hi, a salon sent you a job offer on Nail101 and it is still waiting. Please take a look at nail101.com. – Nail101`,
+  stNotSent:'Not sent', stSent:'Sent', stOpen:'Link opened', stPosted:'Published'
+});
+
+/* ===================== reading what you paste ===================== */
+const IM_COLS = ['loai','ten','sodienthoai','thanhpho','dichvu','loaiviec','tracong','sotien','phantram','ghichu','nguon','ngonngu'];
+const IM_SVC = [
+  [/\bfill\b|dặm|dam\b/i, 'acrylic_fill'], [/\bbột\b|\bbot\b|acrylic|full\s*set/i, 'acrylic_full'],
+  [/\bdip\b|\bsns\b|nhúng/i, 'dip'], [/gel\s*-?\s*x|soft\s*gel/i, 'gelx'],
+  [/hard\s*gel|builder|gel\s*cứng/i, 'hard_gel'], [/sơn\s*gel|gel\s*polish|shellac/i, 'gel_polish'],
+  [/tay\s*nước|manicure|\bmani\b/i, 'manicure'], [/chân\s*nước|pedicure|\bpedi\b|\bp\/?m\b|mani\s*-?\s*pedi/i, 'pedicure'],
+  [/ombre|french|\bp\s*&\s*w\b|pink\s*(and|&)\s*white/i, 'ombre_french'],
+  [/vẽ\s*(móng)?\s*nâng\s*cao|3d|art\s*advanced/i, 'art_advanced'], [/vẽ|design|nail\s*art/i, 'art_basic'],
+  [/\bwax/i, 'waxing'], [/nối\s*mi|lash|eyelash/i, 'lashes']
+];
+function imDig(v){ return String(v || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '').slice(-10); }
+function imCity(txt){
+  const keys = Object.keys(typeof CITIES === 'object' ? CITIES : {});
+  const hit = keys.find(c => new RegExp(c.replace(/\s+/g, '\\s*'), 'i').test(txt));
+  return hit || 'San Antonio';
+}
+function imSvc(txt){
+  const out = [];
+  IM_SVC.forEach(([re, id]) => { if (re.test(txt) && out.indexOf(id) < 0) out.push(id); });
+  return out.length ? out : ['acrylic_full'];
+}
+function imJob(txt){
+  if (/cuối\s*tuần|weekend/i.test(txt)) return 'weekends';
+  if (/part\s*-?\s*time|bán\s*thời\s*gian|\bpt\b/i.test(txt)) return 'part_time';
+  return 'full_time';
+}
+function imMoney(txt){
+  const m = txt.match(/\$\s?([\d,]{3,6})|\b([\d,]{3,5})\s*(?:\$|usd|đô)/i);
+  return m ? Number(String(m[1] || m[2]).replace(/,/g, '')) : 0;
+}
+function imPay(txt){
+  const pct = txt.match(/(\d{2})\s*%/) || txt.match(/\b(\d{2})\s*\/\s*\d{2}\b/) || txt.match(/\b([6-7])\s*\/\s*[3-4]\b/);
+  let p = pct ? Number(pct[1]) : 0;
+  if (p && p < 10) p = p * 10;
+  const amt = imMoney(txt), bao = /bao\s*lương|guarantee/i.test(txt);
+  if (p && bao && amt) return {payType:/tuần|week/i.test(txt) ? 'commission_week' : 'commission_guarantee', pct:p, amount:amt};
+  if (p) return {payType:'commission', pct:p, amount:0};
+  if (amt && /giờ|hour|\/hr/i.test(txt)) return {payType:'per_hour', pct:0, amount:amt};
+  if (amt && /tuần|week/i.test(txt)) return {payType:'per_week', pct:0, amount:amt};
+  if (amt) return {payType:'per_day', pct:0, amount:amt};
+  return {payType:'commission', pct:60, amount:0};
+}
+function imKindOf(txt){
+  const hire = /c[aầ]n\s*th[oợ]|tuy[eể]n|hiring|need\s*(a\s*)?(nail\s*)?tech|looking\s*for\s*(a\s*)?(nail\s*)?tech/i.test(txt);
+  const seek = /t[iì]m\s*vi[eệ]c|c[aầ]n\s*vi[eệ]c|xin\s*vi[eệ]c|nh[aậ]n\s*vi[eệ]c|looking\s*for\s*(a\s*)?(job|work)|h[oồ]\s*s[oơ]\s*th[oợ]/i.test(txt);
+  if (seek && !hire) return 'tho';
+  if (seek && hire) return /t[iì]m\s*vi[eệ]c|looking\s*for\s*(a\s*)?(job|work)/i.test(txt.split(/\n/)[0]) ? 'tho' : 'tiem';
+  return 'tiem';
+}
+function imNameOf(block){
+  const lines = block.split(/\n/).map(x => x.trim()).filter(Boolean);
+  const cities = Object.keys(typeof CITIES === 'object' ? CITIES : {});
+  const trim = l => {
+    let c = l.replace(/\(?\d[\d\s().-]{7,}\d/g, '').replace(/^\s*(?:[-•*]|\d{1,2}[.)])\s+/, '');
+    c = c.split(/\s[–—-]\s|[,:|]/)[0];
+    cities.forEach(ct => { c = c.replace(new RegExp('\\s*(ở|o|in|at)?\\s*' + ct.replace(/\s+/g, '\\s*') + '\\s*$', 'i'), ''); });
+    return c.replace(/[:,–-]\s*$/, '').trim();
+  };
+  for (const l of lines){
+    const c = trim(l);
+    if (c.length >= 2 && c.length <= 50 && !/^(c[aầ]n|tuy[eể]n|need|hiring|looking|g[oọ]i|call|text|lh|li[eê]n\s*h[eệ])/i.test(c)) return c;
+  }
+  const m = block.match(/(?:ti[eệ]m|salon|shop)\s+([A-Za-zÀ-ỹ0-9'&. ]{2,40})/i);
+  return m ? trim(m[1]) : '';
+}
+function imNote(block, name){
+  return block.split(/\n/).map(x => x.trim()).filter(Boolean)
+    .filter(l => l.replace(/\(?\d[\d\s().-]{7,}\d/g, '').trim().length > 2)
+    .filter(l => !name || l.trim().toLowerCase().indexOf(name.toLowerCase()) !== 0)
+    .join(' ').replace(/\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/g, '').replace(/\s+/g, ' ')
+    .replace(/\b(g[oọ]i|call|text|lh|li[eê]n\s*h[eệ])\b[\s:.-]*$/i, '').trim().slice(0, 280);
+}
+/* free text → rows */
+function imReadRaw(txt){
+  return String(txt || '').split(/\n\s*\n+/).map(b => b.trim()).filter(b => b.length > 10).map(b => {
+    const ph = (b.match(/\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/) || [''])[0];
+    const pay = imPay(b), name = imNameOf(b);
+    return {kind:imKindOf(b), name, phone:imDig(ph), city:imCity(b), svc:imSvc(b),
+      jobType:imJob(b), payType:pay.payType, amount:pay.amount, pct:pay.pct,
+      note:imNote(b, name), src:'', lang:/[àáâãèéêìíòóôõùúăđĩũơưạảấầẩẫậắằ]/i.test(b) ? 'vi' : 'en'};
+  });
+}
+/* one line of a pasted table → cells */
+function imCells(line){
+  if (line.indexOf('\t') >= 0) return line.split('\t').map(x => x.trim());
+  const out = []; let cur = '', q = false;
+  for (const ch of line){
+    if (ch === '"'){ q = !q; continue; }
+    if (ch === ',' && !q){ out.push(cur.trim()); cur = ''; continue; }
+    cur += ch;
+  }
+  out.push(cur.trim());
+  return out;
+}
+function imReadTable(txt){
+  const lines = String(txt || '').split(/\r?\n/).filter(x => x.trim());
+  if (!lines.length) return [];
+  let cols = IM_COLS.slice();
+  const head = imCells(lines[0]).map(x => x.toLowerCase().replace(/\s|_/g, ''));
+  if (head.some(h => ['sodienthoai','phone','ten','name','loai'].indexOf(h) >= 0)){
+    cols = head.map(h => ({phone:'sodienthoai', name:'ten', type:'loai', city:'thanhpho', note:'ghichu',
+      source:'nguon', lang:'ngonngu', pay:'tracong', amount:'sotien', percent:'phantram',
+      services:'dichvu', jobtype:'loaiviec'}[h] || h));
+    lines.shift();
+  }
+  return lines.map(l => {
+    const c = imCells(l), g = k => { const i = cols.indexOf(k); return i >= 0 ? (c[i] || '') : ''; };
+    const svc = g('dichvu').split(/[;|,]/).map(x => x.trim()).filter(Boolean);
+    const all = c.join(' ');
+    return {kind:/tho|tech/i.test(g('loai')) ? 'tho' : 'tiem', name:g('ten'), phone:imDig(g('sodienthoai')),
+      city:g('thanhpho') || imCity(all), svc:svc.length ? svc : imSvc(all),
+      jobType:g('loaiviec') || 'full_time',
+      payType:g('tracong') || (Number(g('phantram')) ? 'commission' : 'per_day'),
+      amount:Number(String(g('sotien')).replace(/[^\d.]/g, '')) || 0,
+      pct:Number(String(g('phantram')).replace(/[^\d.]/g, '')) || 0,
+      note:g('ghichu'), src:g('nguon'), lang:/en/i.test(g('ngonngu')) ? 'en' : 'vi'};
+  }).filter(r => r.name || r.phone);
+}
+
+/* ===================== row → a real draft ===================== */
+function imSvcMap(list, lvl){ const m = {}; (list || []).forEach(x => { if (x) m[x] = lvl; }); return m; }
+function imBuild(r){
+  const type = r.kind === 'tho' ? 'profile' : 'hiring';
+  const data = Object.assign({city:'San Antonio'}, JSON.parse(JSON.stringify(DEFAULTS[type] || {})));
+  if (type === 'hiring'){
+    Object.assign(data, {businessName:r.name || '—', city:r.city, services:imSvcMap(r.svc, 'must'),
+      jobType:r.jobType || 'full_time', experience:'any', payShow:'public',
+      payType:r.payType || 'per_day', amount:r.amount || null, commissionPct:r.pct || null,
+      extras:r.note || '', license:false, reqs:[], perks:[]});
+  } else {
+    Object.assign(data, {name:r.name || '—', city:r.city, services:imSvcMap(r.svc, 'good'),
+      years:'3_5', jobType:[r.jobType || 'full_time'], days:['mon','tue','wed','thu','fri','sat'],
+      license:'have', travel:'10', wants:[],
+      payType:r.payType || 'per_day', amount:r.amount || null, commissionPct:r.pct || null,
+      about:r.note || ''});
+  }
+  const fs = {step:0, data, errors:{}, titleEdited:false};
+  if (typeof fixFormData === 'function') fixFormData(type, fs);
+  const obj = previewObject(type, fs);
+  delete obj.id; delete obj.phone; delete obj.contactBy; delete obj.receiveBy;
+  obj.hasPhone = true;
+  if (type === 'profile' && r.note) obj.about = {vi:r.note, en:r.note};
+  const form = JSON.parse(JSON.stringify(data));
+  delete form.phone; delete form.licNo; delete form.address;
+  if (typeof N1_PRIV !== 'undefined') N1_PRIV.forEach(k => { delete form[k]; });
+  form._titleEdited = false;
+  return {type, coll:type === 'profile' ? 'techs' : 'ads', ad:JSON.parse(JSON.stringify(obj)), form};
+}
+
+/* ===================== admin: three new tabs ===================== */
+state.im = {raw:'', tab:'', rows:[], busy:false};
+state.sq = {i:0, all:false};
+
+function imRow(r, i){
+  const bad = r.phone.length !== 10, dup = !bad && imTaken(r.phone);
+  return `<tr class="${bad || dup ? 'im-bad' : ''}">
+    <td><select data-im="kind" data-i="${i}"><option value="tiem"${r.kind === 'tiem' ? ' selected' : ''}>${t('imSalon')}</option><option value="tho"${r.kind === 'tho' ? ' selected' : ''}>${t('imTech')}</option></select></td>
+    <td><input data-im="name" data-i="${i}" value="${esc(r.name)}"></td>
+    <td><input data-im="phone" data-i="${i}" value="${esc(admPretty(r.phone) || r.phone)}" class="${bad || dup ? 'has' : ''}"></td>
+    <td><input data-im="city" data-i="${i}" value="${esc(r.city)}"></td>
+    <td class="im-pay">${esc(payText({payType:r.payType, amount:r.amount, commissionPct:r.pct, payPublic:true}) || '—')}</td>
+    <td class="im-note">${esc((r.note || '').slice(0, 60))}</td>
+    <td>${bad ? `<span class="im-x">${t('imBad')}</span>` : dup ? `<span class="im-x">${t('imDup')}</span>` : ''}
+      <button class="btn-link danger" type="button" data-act="imdrop" data-i="${i}">×</button></td></tr>`;
+}
+function imTaken(ph){
+  const p = imDig(ph);
+  return admAll().some(o => imDig(admContact(o.id)) === p) || state.im.rows.filter(r => imDig(r.phone) === p).length > 1;
+}
+function admImp(){
+  const rows = state.im.rows, ok = rows.filter(r => r.phone.length === 10 && !imTaken(r.phone));
+  return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('imRawH')}</h2>
+      <p class="hint">${esc(t('imRawD'))}</p>
+      <textarea id="im-raw" rows="6" placeholder="101 Nail Salon – cần thợ bột full time, ăn chia 6/4, (210) 854-2311"></textarea>
+      <button class="btn btn-ghost" type="button" data-act="imread" data-v="raw">${t('imRead')}</button></div>
+    <div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('imTabH')}</h2>
+      <p class="hint">${esc(t('imTabD'))}<br>${esc(t('imCols'))}</p>
+      <textarea id="im-tab" rows="5" placeholder="tiem	101 Nail Salon	(210) 854-2311	San Antonio"></textarea>
+      <button class="btn btn-ghost" type="button" data-act="imread" data-v="tab">${t('imRead')}</button>
+      <label class="btn btn-ghost" style="text-align:center">${t('imFile')}<input type="file" accept=".csv,text/csv" data-imcsv="1" hidden></label></div>
+    ${rows.length ? `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('imFound', rows.length)}</h2>
+      <p class="hint">${esc(t('imCheck'))}</p>
+      <div class="im-wrap"><table class="im-tbl"><thead><tr><th>${t('imKind')}</th><th>${t('imName')}</th><th>${t('imPhone')}</th><th>${t('imCity')}</th><th>${t('imPay')}</th><th>${t('imNote')}</th><th></th></tr></thead>
+        <tbody>${rows.map(imRow).join('')}</tbody></table></div>
+      <div class="adm-two"><button class="btn btn-primary" type="button" data-act="immake"${ok.length && !state.im.busy ? '' : ' disabled'}>${t('imMake', ok.length)}</button>
+        <button class="btn btn-ghost" type="button" data-act="imclear">${t('imClear')}</button></div></div>` : ''}`;
+}
+
+/* ---------- send queue ---------- */
+function sqBuild(){
+  state.sq.ids = admDrafts()
+    .filter(o => state.sq.all || !(clFor(o.id) || {}).sent)
+    .sort((a, b) => String(admName(a)).localeCompare(String(admName(b))))
+    .map(o => o.id);
+  state.sq.i = 0;
+}
+/* the queue stays put while you work through it: pressing Copy must not
+   swap the card out from under you */
+function sqList(){
+  if (!state.sq.ids) sqBuild();
+  return state.sq.ids.map(id => admAll().find(o => o.id === id)).filter(o => o && o.mod === 'draft');
+}
+/* a fresh visit to the tab rebuilds the queue; working through it does not */
+window.addEventListener('hashchange', () => { if (location.hash.indexOf('admin-send') >= 0) state.sq.ids = null; });
+function admSend(){
+  const list = sqList();
+  if (!list.length || state.sq.i >= list.length) return `<p class="empty-s">${list.length ? t('sqDone') : t('sqNone')}</p>
+    <div class="stack"><button class="btn btn-ghost" type="button" data-act="sqall">${t('sqRedo')}</button></div>`;
+  const i = state.sq.i, o = list[i], ph = admContact(o.id), c = clFor(o.id);
+  return `<p class="hint">${esc(t('sqHow'))}</p>
+    <div class="card adm-card sq-card">
+      <p class="sq-n">${esc(t('sqLeft', i + 1, list.length))}</p>
+      <h2 class="sq-name">${esc(admName(o))}</h2>
+      <p class="n1sub">${esc(TECHS.includes(o) ? t('imTech') : titleOf(o))}</p>
+      <button class="sq-ph" type="button" data-act="sqphone" data-v="${esc(ph)}">${esc(admPretty(ph) || '—')}<span>${t('sqPhone')}</span></button>
+      <div class="adm-two"><button class="btn btn-primary" type="button" data-act="clcopy" data-k="${admKind(o)}" data-v="${esc(o.id)}" data-l="vi">${t('clCopyVi')}</button>
+        <button class="btn btn-ghost" type="button" data-act="clcopy" data-k="${admKind(o)}" data-v="${esc(o.id)}" data-l="en">${t('clCopyEn')}</button></div>
+      ${c && c.sent ? `<p class="hint">${esc(clStat(c))}</p>` : ''}
+      <div class="adm-two"><button class="btn btn-primary" type="button" data-act="sqnext" data-v="1">${t('sqSent')}</button>
+        <button class="btn btn-ghost" type="button" data-act="sqnext" data-v="0">${t('sqSkip')}</button></div>
+      <button class="btn-link" type="button" data-act="liveedit" data-k="${admKind(o)}" data-v="${esc(o.id)}">${t('admEdit')}</button>
+    </div>`;
+}
+
+/* ---------- tracking ---------- */
+function n5Ms(x){ return x && x.toMillis ? x.toMillis() : (typeof x === 'number' ? x : 0); }
+function trAgeMs(x){ return Math.max(0, Date.now() - x); }
+function trDaysOf(x){ return Math.floor(trAgeMs(x) / 86400000); }
+function admTrack(){
+  const drafts = admAll().filter(o => clFor(o.id)).map(o => ({o, c:clFor(o.id)}));
+  const dRows = drafts.map(({o, c}) => {
+    const st = o.mod !== 'draft' ? t('stPosted') : c.openedAt ? t('stOpen') : c.sent ? t('stSent') : t('stNotSent');
+    const late = o.mod === 'draft' && c.sent && trDaysOf(n5Ms(c.sentAt) || Date.now()) >= 3;
+    return `<tr class="${late ? 'tr-late' : ''}"><td>${esc(admName(o))}</td><td>${esc(admPretty(admContact(o.id)))}</td>
+      <td>${esc(st)}</td><td>${esc(t('trDays', trDaysOf(n5Ms(c.sentAt) || Date.now())))}</td>
+      <td>${o.mod === 'draft' ? `<button class="btn-link" type="button" data-act="clcopy" data-k="${admKind(o)}" data-v="${esc(o.id)}" data-l="vi">${t('clCopyVi')}</button>` : ''}</td></tr>`;
+  }).join('');
+  const reqs = (state.tr && state.tr.threads || []).slice().sort((a, b) => (n5Ms(b.lastAt) || 0) - (n5Ms(a.lastAt) || 0));
+  const rRows = reqs.map(x => {
+    const ab = x.about || {}, item = admAll().find(o => o.id === ab.id);
+    const offer = ab.kind === 'tech' || (item && TECHS.includes(item));
+    const names = x.names || {}, from = names[x.lastFrom] || names[(x.members || [])[0]] || '—';
+    const to = (x.members || []).map(u => names[u]).filter(n => n && n !== from)[0] || '—';
+    const st = x.status === 'accepted' ? t('trOk') : x.status === 'declined' ? t('trNo') : x.status === 'blocked' ? t('trBlock') : t('trPend');
+    const d = trDaysOf(n5Ms(x.lastAt) || Date.now());
+    const late = (!x.status || x.status === 'pending') && trAgeMs(n5Ms(x.lastAt) || Date.now()) >= 86400000;
+    return `<tr class="${late ? 'tr-late' : ''}"><td>${esc(from)}</td><td>${esc(to)}</td>
+      <td>${esc(offer ? t('trOffer') : t('trApply'))}</td><td>${esc(st)}${late ? ` <b class="im-x">${t('trLate')}</b>` : ''}</td>
+      <td>${esc(t('trDays', d))}</td>
+      <td>${late ? `<button class="btn-link" type="button" data-act="trnudge" data-v="${esc(offer ? 'tech' : 'salon')}" data-t="${esc(ab.title || admName(item || {}) || '')}">${t('trNudge')}</button>` : ''}</td></tr>`;
+  }).join('');
+  return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('trDraft')} (${drafts.length})</h2>
+      ${drafts.length ? `<div class="im-wrap"><table class="im-tbl"><thead><tr><th>${t('imName')}</th><th>${t('imPhone')}</th><th>${t('trSt')}</th><th>${t('trAge')}</th><th></th></tr></thead><tbody>${dRows}</tbody></table></div>` : `<p class="empty-s">${t('trNoDraft')}</p>`}</div>
+    <div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('trReq')} (${reqs.length})</h2>
+      <p class="hint">${esc(t('trOnly'))}</p>
+      ${reqs.length ? `<div class="im-wrap"><table class="im-tbl"><thead><tr><th>${t('trWho')}</th><th>${t('trTo')}</th><th>${t('trKind')}</th><th>${t('trSt')}</th><th>${t('trAge')}</th><th></th></tr></thead><tbody>${rRows}</tbody></table></div>` : `<p class="empty-s">${t('trNoReq')}</p>`}</div>`;
+}
+
+/* ---------- wire the tabs in ---------- */
+const n5Admin0 = viewAdmin;
+viewAdmin = function(tab){
+  if (!state.user) return loginGate();
+  if (!state.adm.on) return notFound();
+  const extra = {imp:admImp, send:admSend, track:admTrack};
+  if (!extra[tab]) return n5Admin0(tab);
+  state.adm.tab = tab;
+  const tabs = ['over','imp','send','draft','track','mod','ad','tech','rep','set'];
+  const nav = `<nav class="adm-tabs">${tabs.map(k => `<a href="#admin-${k}"${k === tab ? ' class="on" aria-current="page"' : ''}>${t('admT_' + k)}</a>`).join('')}</nav>`;
+  return `<div class="wrap page adm"><h1 class="pg-title">${t('adm')}</h1>${nav}<div class="adm-body">${extra[tab]()}</div></div>`;
+};
+const n5Admin1 = viewAdmin;
+viewAdmin = function(tab){
+  let h = n5Admin1(tab);
+  if (h.indexOf('class="adm-tabs"') < 0) return h;
+  const tabs = ['over','imp','send','draft','track','mod','ad','tech','rep','set'];
+  const nav = `<nav class="adm-tabs">${tabs.map(k => `<a href="#admin-${k}"${k === tab ? ' class="on" aria-current="page"' : ''}>${t('admT_' + k)}</a>`).join('')}</nav>`;
+  return h.replace(/<nav class="adm-tabs">[\s\S]*?<\/nav>/, nav);
+};
+
+/* ---------- live wiring ---------- */
+function n5Live(c){
+  const {db, TS, errText} = c;
+  state.tr = {threads:[]};
+  let watching = false;
+  setInterval(() => {
+    if (watching || !(state.adm && state.adm.on)) return;
+    watching = true;
+    db.collection('threads').limit(300).onSnapshot(s => {
+      state.tr.threads = s.docs.map(d => Object.assign({id:d.id}, d.data()));
+      if (typeof softRender === 'function') softRender();
+    }, e => { console.warn('track', e); watching = false; });
+  }, 900);
+
+  function readInto(which){
+    const el = document.getElementById(which === 'raw' ? 'im-raw' : 'im-tab');
+    const txt = el ? el.value : '';
+    state.im.rows = which === 'raw' ? imReadRaw(txt) : imReadTable(txt);
+    if (!state.im.rows.length) toast(t('imNone'));
+    render();
+  }
+  ACT.imread = function(el){ readInto(el.dataset.v); };
+  ACT.imclear = function(){ state.im.rows = []; render(); };
+  ACT.imdrop = function(el){ state.im.rows.splice(Number(el.dataset.i), 1); render(); };
+  ACT.immake = async function(el){
+    const rows = state.im.rows.filter(r => imDig(r.phone).length === 10 && !imTaken(r.phone));
+    if (!rows.length || state.im.busy) return;
+    state.im.busy = true; el.disabled = true;
+    let n = 0;
+    for (const r of rows){
+      try {
+        const b = imBuild(r);
+        const ref = await db.collection(b.coll).add({ownerUid:(state.user || {}).uid, ownerName:r.name || '', kind:b.type,
+          createdAt:TS(), updatedAt:TS(), ad:b.ad, form:b.form, mod:'draft', src:r.src || ''});
+        await db.collection('admNotes').doc(ref.id).set({phone:imDig(r.phone), lang:r.lang, by:(state.user || {}).uid, at:TS()});
+        n++;
+      } catch (e) { console.warn('import', e); }
+    }
+    state.im.busy = false; state.im.rows = []; state.sq.ids = null; state.sq.all = false;
+    toast(t('imMade', n));
+    location.hash = '#admin-send'; render();
+    setTimeout(() => { state.sq.ids = null; render(); }, 900);
+  };
+  document.addEventListener('input', e => {
+    const el = e.target;
+    if (!el || !el.dataset || !el.dataset.im) return;
+    const r = state.im.rows[Number(el.dataset.i)];
+    if (r) r[el.dataset.im] = el.dataset.im === 'phone' ? imDig(el.value) : el.value;
+  });
+  document.addEventListener('change', e => {
+    const el = e.target;
+    if (el && el.dataset && el.dataset.im === 'kind'){
+      const r = state.im.rows[Number(el.dataset.i)]; if (r){ r.kind = el.value; render(); }
+    }
+    if (el && el.dataset && el.dataset.imcsv && el.files && el.files[0]){
+      const rd = new FileReader();
+      rd.onload = () => { state.im.rows = imReadTable(String(rd.result || '')); if (!state.im.rows.length) toast(t('imNone')); render(); };
+      rd.readAsText(el.files[0]);
+    }
+  });
+
+  ACT.sqphone = async function(el){ await admCopy(admPretty(el.dataset.v)); toast(t('sqPhoneOk')); };
+  ACT.sqall = function(){ state.sq.all = true; state.sq.ids = null; render(); };
+  ACT.sqnext = async function(el){
+    const list = sqList(), o = list[state.sq.i];
+    if (!o) return;
+    if (el.dataset.v === '1'){
+      try {
+        const c = clFor(o.id);
+        if (!clOk(c)){
+          const tok = clTok(), rec = {coll:admKind(o), docId:o.id, phone:imDig(admContact(o.id)),
+            expMs:Date.now() + CL_LIFE, used:false, sent:true, by:(state.user || {}).uid || '', at:TS(), sentAt:TS()};
+          await db.collection('claims').doc(tok).set(rec);
+          state.cl.map = Object.assign({}, state.cl.map, {[tok]:Object.assign({tok}, rec)});
+        } else if (!c.sent) await db.collection('claims').doc(c.tok).set({sent:true, sentAt:TS()}, {merge:true});
+      } catch (e) { console.warn('sent', e); toast(errText(e)); }
+    }
+    state.sq.i = state.sq.i + 1;
+    render();
+  };
+  ACT.trnudge = async function(el){
+    const txt = el.dataset.v === 'tech' ? t('nudgeTech', el.dataset.t) : t('nudgeSalon', el.dataset.t);
+    await admCopy(txt);
+  };
+}
+if (state.n1ctx) n5Live(state.n1ctx);
+
+/* ---------- privacy policy: say that admin can see who asked whom ---------- */
+(() => {
+  const P = typeof LEGAL !== 'undefined' && LEGAL.privacy;
+  if (!P) return;
+  const s3 = P.secs.find(x => /3\./.test(x.h.vi));
+  if (!s3 || s3.li.some(l => /quản trị viên/i.test(l.vi))) return;
+  s3.li.push({
+    vi: '<b>Quản trị viên Nail101:</b> để hỗ trợ khi một yêu cầu bị bỏ lỡ, quản trị viên thấy được ai đã gửi lời mời hoặc đơn ứng tuyển cho ai, cho tin nào, và trạng thái của yêu cầu đó. Quản trị viên <b>không đọc được nội dung tin nhắn</b> giữa hai bên.',
+    en: '<b>Nail101 admins:</b> so we can help when a request is missed, admins can see who sent an offer or application to whom, for which listing, and the status of that request. Admins <b>cannot read the messages</b> between the two sides.'
+  });
+})();
+
+/* ---------- styles ---------- */
+(() => { const st = document.createElement('style'); st.textContent = `
+.im-wrap{overflow-x:auto;margin:0 -4px}
+.im-tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:620px}
+.im-tbl th{text-align:left;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:#8A6A72;padding:0 6px 6px;white-space:nowrap}
+.im-tbl td{padding:4px 6px;border-top:1px solid var(--line);vertical-align:middle}
+.im-tbl input,.im-tbl select{min-height:36px;padding:4px 8px;font-size:13px;width:100%;min-width:92px}
+.im-tbl input.has{border-color:#B3261E;background:#FFF4F3}
+.im-tbl .im-note{color:#6b5a62;max-width:220px}
+.im-tbl .im-pay{white-space:nowrap}
+.im-x{color:#B3261E;font-weight:700;font-size:12px}
+tr.im-bad td{background:#FFF8F7}
+tr.tr-late td{background:#FFF9EC}
+.sq-card{text-align:center;gap:14px}
+.sq-n{margin:0;font-size:13px;color:#8A6A72;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.sq-name{margin:0;font-size:24px;font-weight:800;letter-spacing:-.01em}
+.sq-ph{display:block;width:100%;background:var(--page);border:1px solid var(--line);border-radius:14px;padding:14px;font-size:26px;font-weight:800;letter-spacing:.01em;cursor:pointer;color:var(--ink)}
+.sq-ph span{display:block;font-size:12px;font-weight:600;color:#8A6A72;letter-spacing:0;margin-top:4px}
+.sq-ph:hover{border-color:var(--primary)}
+.adm-card textarea{width:100%;font-size:14px}
+`; document.head.appendChild(st); })();
+
 render();
 })();
 </script>
