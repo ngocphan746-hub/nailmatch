@@ -7888,6 +7888,702 @@ stCard = function(){
 
 ACT.rdcopy = async function(el){ await admCopy(t('rdMsg', el.dataset.v, el.dataset.c || 'San Antonio')); };
 
+/* ============================================================
+   n113 — đợt sửa 13 việc (admin + địa chỉ tiệm)
+   ============================================================ */
+Object.assign(T.vi, {
+  n13SendAt:'Gửi tin ở tab Liên hệ',
+  n13Prev:'← Trước', n13Next:'Sau →',
+  n13More:'Hẹn lại / Từ chối',
+  n13D3:'Hẹn 3 ngày', n13D7:'Hẹn 1 tuần', n13D14:'Hẹn 2 tuần',
+  n13Stop:'Đã từ chối',
+  n13StopQ:'Đánh dấu người này đã từ chối nhận tin? Họ sẽ bị chặn khỏi cả nhắn tin lẫn gọi điện.',
+  n13LaterTo:d => 'Hẹn liên hệ lại ' + d,
+  n13Today:'Hôm nay',
+  n13CWhen:'Ngày giờ', n13CAct:'Tác vụ', n13CTpl:'Mẫu tin', n13CSt:'Trạng thái',
+  n13CNote:'Ghi chú',
+  n13TplClaim:'Mời đăng bài', n13TplInv:'Mời dùng web',
+  ctS_pending:'Đang chờ duyệt', ctS_later:'Hẹn liên hệ sau',
+  ctF_pending:'Đang chờ duyệt', ctF_later:'Hẹn liên hệ sau',
+  n13ImH:'Dán dữ liệu đã chuẩn hoá',
+  n13ImD1:'1. Bấm Copy prompt → dán vào ChatGPT hoặc Claude kèm tin rao',
+  n13ImD2:'2. Copy kết quả nó trả về → dán vào ô dưới',
+  n13ImD3:'3. Bấm Đọc thử',
+  n13ImBtn:'Copy prompt cho ChatGPT / Claude',
+  n13ImPh:'loai: tiem\nten: 101 Nail Salon\nsodienthoai: 2108542311\n---\nloai: tho\nten: Hương\nsodienthoai: 2103334444',
+  n13ImBad:n => n + ' dòng còn sai. Sửa hoặc xoá hết rồi mới tạo được.',
+  n13ImCopied:'Đã copy prompt. Dán vào ChatGPT hoặc Claude.',
+  n13EL:'không đọc được dòng',
+  n13ENone:'không có khối nào đúng format',
+  n13AddrChk:'Hiện địa chỉ tiệm trên tin',
+  n13MapHint:'Chỉ nhận link Google Maps. Để trống cũng được nếu đã gõ địa chỉ.',
+  n13AddrNeed:'Bật hiện địa chỉ thì phải điền địa chỉ hoặc link Google Maps.',
+  n13MapBad:'Link không phải Google Maps. Chỉ nhận google.com/maps, maps.app.goo.gl, goo.gl/maps.',
+  n13SeeMap:'Xem bản đồ'
+});
+Object.assign(T.en, {
+  n13SendAt:'Send from the Outreach tab',
+  n13Prev:'← Back', n13Next:'Next →',
+  n13More:'Follow up later / Opted out',
+  n13D3:'In 3 days', n13D7:'In 1 week', n13D14:'In 2 weeks',
+  n13Stop:'Opted out',
+  n13StopQ:'Mark this person as opted out? They will be blocked from both texts and calls.',
+  n13LaterTo:d => 'Follow up on ' + d,
+  n13Today:'Today',
+  n13CWhen:'Date & time', n13CAct:'Action', n13CTpl:'Template', n13CSt:'Status',
+  n13CNote:'Note',
+  n13TplClaim:'Post invite', n13TplInv:'Site invite',
+  ctS_pending:'Waiting to publish', ctS_later:'Follow up later',
+  ctF_pending:'Waiting to publish', ctF_later:'Follow up later',
+  n13ImH:'Paste cleaned-up data',
+  n13ImD1:'1. Copy the prompt → paste it into ChatGPT or Claude with the raw ads',
+  n13ImD2:'2. Copy what it returns → paste it below',
+  n13ImD3:'3. Press Preview',
+  n13ImBtn:'Copy prompt for ChatGPT / Claude',
+  n13ImPh:'loai: tiem\nten: 101 Nail Salon\nsodienthoai: 2108542311\n---',
+  n13ImBad:n => n + ' rows still have errors. Fix or drop them first.',
+  n13ImCopied:'Prompt copied. Paste it into ChatGPT or Claude.',
+  n13EL:'cannot read line',
+  n13ENone:'no valid block',
+  n13AddrChk:'Show the salon address on the post',
+  n13MapHint:'Google Maps links only. Leave blank if you typed an address.',
+  n13AddrNeed:'Turn this on and you must fill in the address or a Google Maps link.',
+  n13MapBad:'Not a Google Maps link. Only google.com/maps, maps.app.goo.gl, goo.gl/maps.',
+  n13SeeMap:'See on map'
+});
+
+/* ---------- 6. đổi tên tab Danh bạ → Hồ sơ ---------- */
+T.vi.admT_ct = 'Hồ sơ'; T.en.admT_ct = 'Profiles';
+T.vi.ctTitle = 'Hồ sơ'; T.en.ctTitle = 'Profiles';
+
+/* ---------- 13. phần giải thích từng mục ---------- */
+Object.assign(T.vi, {
+  hw_ct:'Danh sách tiệm và thợ bạn đang chăm, kèm trạng thái và lịch sử từng lần liên hệ.',
+  hw_imp:'Dán dữ liệu đã nhờ ChatGPT hoặc Claude chuẩn hoá, để tạo tin nháp và hồ sơ hàng loạt.',
+  hw_track:'Ai đã mở link, ai chưa trả lời, thợ nào đang cần việc gấp.'
+});
+Object.assign(T.en, {
+  hw_ct:'Every salon and tech you are working, with status and the history of each contact.',
+  hw_imp:'Paste data already cleaned up by ChatGPT or Claude to create drafts and profiles in bulk.',
+  hw_track:'Who opened a link, who has not replied, which techs need work right now.'
+});
+
+/* ---------- 7. gom trạng thái ---------- */
+CT_ST.length = 0;
+['new','contacted','pending','later','posted'].forEach(x => CT_ST.push(x));
+const N13_OLD = {interested:'contacted', not:'contacted', bad:'contacted'};
+const N13_RANK = {new:0, contacted:1, pending:2, posted:3};
+
+ctStat = function(c){
+  const ph = c && c.phone;
+  if (ph && ctPosted(ph)) return 'posted';
+  const s = N13_OLD[c && c.status] || (c && c.status);
+  return CT_ST.indexOf(s) >= 0 ? s : 'new';
+};
+ctFilters = function(){
+  const ks = ['all','tiem','tho','new','contacted','later','pending','posted','no'];
+  return `<nav class="ct-fs chipset">${ks.map(k => `<button type="button" class="choice${state.ct.f === k ? ' on' : ''}" data-act="ctfilter" data-v="${k}">${t('ctF_' + k)}</button>`).join('')}</nav>`;
+};
+
+/* ---------- 8. trạng thái tự chuyển, chỉ tiến không lùi ---------- */
+function n13HasDraft(ph){
+  const p = imDig(ph);
+  if (p.length !== 10) return false;
+  return admAll().some(o => o.mod === 'draft' && (imDig(admContact(o.id)) === p || imDig(o.ownerPhone) === p));
+}
+function n13Cur(ph){ return ctStat(Object.assign({}, ctGet(ph) || {}, {phone:imDig(ph)})); }
+function n13Next(ph, want){
+  const cur = n13Cur(ph);
+  if (cur === 'later' || cur === 'posted') return null;
+  if ((N13_RANK[want] || 0) <= (N13_RANK[cur] || 0)) return null;
+  return want;
+}
+const n13Touch0 = window.ctTouch;
+if (typeof n13Touch0 === 'function'){
+  window.ctTouch = async function(ph, patch){
+    const p = Object.assign({}, patch || {});
+    if (p.callCount != null) p.lastKind = 'call';
+    else if (p.msgCount != null) p.lastKind = 'sms';
+    if (p.status && p.status !== 'later'){
+      const want = N13_OLD[p.status] || p.status;
+      const nx = (want === 'contacted') ? n13Next(ph, n13HasDraft(ph) ? 'pending' : 'contacted') : n13Next(ph, want);
+      if (nx) p.status = nx; else delete p.status;
+    }
+    return n13Touch0(ph, p);
+  };
+}
+
+/* ---------- 1. bỏ hai nút Copy ở tab Nháp ---------- */
+const n13Item0 = admItemCard;
+admItemCard = function(o, draft){
+  let h = n13Item0(o, draft);
+  if (!draft) return h;
+  return h.replace(/<button class="btn btn-ghost" type="button" data-act="clcopy"[\s\S]*?data-l="en">[^<]*<\/button>/,
+    `<span class="hint n13-at">${esc(t('n13SendAt'))}</span>`);
+};
+
+/* ---------- 2. mẫu tin theo từng người ---------- */
+state.sq.tplBy = {};
+sendTpls = function(it){
+  const list = tplFor(sendKind(it), 'sms');
+  const def = it.k === 'd' ? 'moibai' : 'moiweb';
+  const pick = (state.sq.tplBy || {})[it.id];
+  const cur = list.find(x => x.id === pick) || list.find(x => x.id === def) || list[0] || null;
+  return {list, cur};
+};
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (!el || !el.dataset || el.dataset.act2 !== 'sqtpl') return;
+  const list = sendList(), it = list[state.sq.i];
+  if (!it) return;
+  state.sq.tpl = '';
+  state.sq.tplBy = Object.assign({}, state.sq.tplBy, {[it.id]:el.value});
+  render();
+});
+
+/* ---------- 3 + 4. nội dung tiếng Anh, xưng hô ---------- */
+const N13_GEN = ['owner','owners','chu tiem','chủ tiệm','chu','manager','mgr','admin','boss','manager/owner','salon owner','nail salon','n/a','na','none','-','—'];
+function n13Person(v){
+  const s = String(v || '').trim();
+  if (!s) return '';
+  return N13_GEN.indexOf(s.toLowerCase().replace(/\s+/g, ' ')) >= 0 ? '' : s;
+}
+function n13Body(o, lg){
+  if (!o) return '';
+  const old = lang;
+  try { lang = (lg === 'en' ? 'en' : 'vi'); return admText(o); }
+  finally { lang = old; }
+}
+const n13Ctx0 = tplCtx;
+tplCtx = function(c, o, link){
+  const x = n13Ctx0(c, o, link);
+  x._o = o || null;
+  x.nguoi = n13Person(x.nguoi);
+  return x;
+};
+const n13Fill0 = tplFill;
+tplFill = function(tpl, lg, ctx){
+  const c2 = Object.assign({}, ctx);
+  if (c2._o) c2.bai = n13Body(c2._o, lg);
+  return n13Fill0(tpl, lg, c2);
+};
+/* mở đầu tiếng Anh lịch sự hơn "Hi there" */
+TPL_DEF.forEach(x => { x.en = String(x.en || '').replace(/^Hi \{nguoi\}/, 'Hello {nguoi}'); });
+
+/* ---------- 5. nút chuyển qua lại + bấm nhanh ---------- */
+function n13Nav(pfx, i, n){
+  return `<div class="n13-nav">
+    <button class="btn-link" type="button" data-act="${pfx}go" data-v="-1"${i <= 0 ? ' disabled' : ''}>${t('n13Prev')}</button>
+    <button class="btn-link" type="button" data-act="${pfx}go" data-v="1"${i >= n - 1 ? ' disabled' : ''}>${t('n13Next')}</button></div>`;
+}
+function n13Quick(){
+  return `<details class="ct-det n13-q"><summary>${t('n13More')}</summary><div class="n13-qb">
+    ${[3,7,14].map(d => `<button class="btn btn-ghost" type="button" data-act="sdlater" data-v="${d}">${t('n13D' + d)}</button>`).join('')}
+    <button class="btn btn-ghost danger" type="button" data-act="sdstop">${t('n13Stop')}</button></div></details>`;
+}
+const n13Send0 = admSend;
+admSend = function(){
+  let h = n13Send0();
+  if (sqMode() === 'call') return h;
+  const list = sendList(), it = list[state.sq.i];
+  if (!it) return h;
+  h = h.replace(/<p class="sq-n">[\s\S]*?<\/p>/, m => m + n13Nav('sd', state.sq.i, list.length));
+  h = h.replace('<button class="btn-link" type="button" data-act="ctopen"',
+    n13Quick() + '<button class="btn-link" type="button" data-act="ctopen"');
+  return h;
+};
+const n13Call0 = admCall;
+admCall = function(){
+  let h = n13Call0();
+  const list = cqList();
+  if (!list.length || state.cq.i >= list.length) return h;
+  h = h.replace(/<div class="cl-f"><label class="flabel" for="cq-note">[\s\S]*?<\/div>\s*<\/div>/, '');
+  h = h.replace(/<p class="sq-n">[\s\S]*?<\/p>/, m => m + n13Nav('cq', state.cq.i, list.length));
+  return h;
+};
+/* hàng đợi gọi: bỏ lọc theo trạng thái đã xoá */
+cqBuild = function(){
+  const today = new Date().toISOString().slice(0, 10);
+  state.cq.ids = ctAll()
+    .filter(c => c.consent !== 'no')
+    .sort((a, b) => {
+      const da = (a.nextAt && a.nextAt <= today) ? 0 : 1, db2 = (b.nextAt && b.nextAt <= today) ? 0 : 1;
+      if (da !== db2) return da - db2;
+      return (n5Ms(a.lastAt) || 0) - (n5Ms(b.lastAt) || 0);
+    })
+    .map(c => c.phone);
+  state.cq.i = 0;
+};
+
+/* ---------- 9. ngày giờ hai múi ---------- */
+function n13Pair(ms){
+  if (!ms) return null;
+  const d = new Date(ms);
+  const key = x => x.toLocaleDateString('en-CA', {timeZone:'Asia/Ho_Chi_Minh'});
+  const day = key(d) === key(new Date()) ? t('n13Today')
+    : d.toLocaleDateString('en-GB', {timeZone:'Asia/Ho_Chi_Minh', day:'2-digit', month:'2-digit'});
+  return {day,
+    vn:d.toLocaleTimeString('en-GB', {timeZone:'Asia/Ho_Chi_Minh', hour:'2-digit', minute:'2-digit', hour12:false}),
+    sa:d.toLocaleTimeString('en-GB', {timeZone:'America/Chicago', hour:'2-digit', minute:'2-digit', hour12:false})};
+}
+const n13Row0 = ctRow;
+ctRow = function(c){
+  const h = n13Row0(c), p = n13Pair(n5Ms(c.lastAt));
+  if (!p) return h;
+  const ic = c.lastKind === 'call' ? '📞 ' : (c.lastKind === 'sms' ? '💬 ' : '');
+  return h.replace(/<td class="ct-num">[^<]*<\/td><\/tr>$/,
+    `<td class="ct-num n13-when">${esc(ic + p.day + ' ' + p.vn)}<span>SA ${esc(p.sa)}</span></td></tr>`);
+};
+function n13LogTbl(log){
+  return `<div class="im-wrap"><table class="im-tbl ct-tbl">
+    <thead><tr><th>${t('n13CWhen')}</th><th>${t('n13CAct')}</th><th>${t('n13CTpl')}</th><th>${t('n13CSt')}</th></tr></thead>
+    <tbody>${log.map(x => {
+      const p = n13Pair(n5Ms(x.at)) || {day:'—', vn:'', sa:'—'};
+      const claim = /#claim-/.test(String(x.text || ''));
+      const call = x.kind === 'call', note = x.kind === 'note';
+      const act = note ? '✏️ ' + t('n13CNote') : (call ? '📞 ' + t('sqCall') : '💬 ' + t('sqSms'));
+      const tpl = (call || note) ? '—' : (claim ? t('n13TplClaim') : t('n13TplInv'));
+      const st = x.outcome || t('ctS_' + (!call && claim ? 'pending' : 'contacted'));
+      return `<tr><td>${esc(p.day + ' ' + p.vn)}<span class="ct-p">SA ${esc(p.sa)}</span></td>
+        <td>${esc(act)}</td><td>${esc(tpl)}</td><td>${esc(st)}</td></tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+const n13Ct0 = ctCard;
+ctCard = function(phone){
+  const h = n13Ct0(phone);
+  const log = (state.ct.log || {})[imDig(phone)];
+  return (log && log.length) ? h.replace(/<ul class="lg-list">[\s\S]*?<\/ul>/, n13LogTbl(log)) : h;
+};
+
+/* ---------- 10. bỏ ô đánh dấu từ chối hàng loạt ---------- */
+const n13Ct2 = admCt;
+admCt = function(){ return n13Ct2().replace(/<div class="card adm-card ct-stop">[\s\S]*?<\/div>/, ''); };
+
+/* ---------- 11. tab Nhập: một ô, format cố định ---------- */
+const N13_SVC = ['acrylic_fill','acrylic_full','dip','gelx','hard_gel','gel_polish','manicure','pedicure','ombre_french','art_basic','art_advanced','waxing','lashes'];
+const N13_JOB = ['full_time','part_time','weekends'];
+const N13_PAY = ['commission','commission_guarantee','commission_week','per_hour','per_day','per_week'];
+function n13Prompt(){
+  return [
+'Bạn là bộ chuẩn hoá dữ liệu. Tôi sẽ dán vào các tin rao tuyển thợ',
+'nail và tin thợ tìm việc, viết tự do bằng tiếng Việt lẫn tiếng Anh.',
+'',
+'Nhiệm vụ: chuyển mỗi tin thành MỘT khối theo đúng format dưới đây.',
+'Không viết thêm lời giải thích, không viết mở đầu hay kết luận.',
+'Chỉ xuất các khối.',
+'',
+'FORMAT:',
+'loai: <tiem hoặc tho>',
+'ten: <tên tiệm, hoặc tên thợ>',
+'sodienthoai: <10 chữ số, không dấu cách, không dấu ngoặc>',
+'thanhpho: <tên thành phố, để trống nếu tin không nói>',
+'dichvu: <các mã dịch vụ, cách nhau bằng dấu phẩy>',
+'loaiviec: <full_time hoặc part_time hoặc weekends>',
+'tracong: <một mã trả công>',
+'phantram: <số, chỉ khi tracong bắt đầu bằng commission>',
+'sotien: <số, chỉ khi tracong bắt đầu bằng per_>',
+'ghichu: <giữ nguyên các yêu cầu, quyền lợi, giờ làm — một dòng>',
+'',
+'Giữa hai khối đặt một dòng chỉ có ba dấu gạch:',
+'---',
+'',
+'GIÁ TRỊ ĐƯỢC PHÉP, tuyệt đối không bịa mã mới:',
+'',
+'loai:',
+'  tiem = tiệm đang tìm thợ',
+'  tho  = thợ đang tìm việc',
+'',
+'loaiviec:',
+'  full_time, part_time, weekends',
+'',
+'tracong:',
+'  commission            = ăn chia theo phần trăm',
+'  commission_guarantee  = ăn chia có bao lương',
+'  commission_week       = ăn chia bao lương theo tuần',
+'  per_hour              = trả theo giờ',
+'  per_day               = trả theo ngày',
+'  per_week              = trả theo tuần',
+'',
+'dichvu:',
+'  acrylic_fill  = fill bột, dặm bột',
+'  acrylic_full  = bột, full set, acrylic',
+'  dip           = dip, SNS, nhúng',
+'  gelx          = Gel-X, soft gel',
+'  hard_gel      = gel cứng, builder gel',
+'  gel_polish    = sơn gel, shellac',
+'  manicure      = tay nước',
+'  pedicure      = chân nước, pedi',
+'  ombre_french  = ombre, French, pink and white',
+'  art_basic     = vẽ cơ bản, nail art',
+'  art_advanced  = vẽ nâng cao, 3D',
+'  waxing        = wax',
+'  lashes        = nối mi',
+'',
+'QUY TẮC:',
+'1. Chỉ dùng thông tin có trong tin. Không suy đoán, không thêm thắt.',
+'2. Tin không nói thì bỏ trống dòng đó. Không ghi "không rõ", "N/A".',
+'3. Ăn chia 6/4 nghĩa là thợ 60 phần trăm: tracong: commission,',
+'   phantram: 60.',
+'4. "$160 một ngày" là tracong: per_day, sotien: 160.',
+'5. Tin không có số điện thoại thì vẫn xuất khối đó, dòng',
+'   sodienthoai để trống.',
+'6. Một tin rao đăng cho nhiều tiệm thì tách thành nhiều khối.',
+'7. ghichu viết gọn trên một dòng, ngăn nhau bằng dấu phẩy.',
+'   Không xuống dòng trong ghichu.',
+'',
+'VÍ DỤ',
+'Tin rao:',
+'  101 Nail Salon cần thợ bột full time, ăn chia 6/4, có bằng Texas,',
+'  nhận thợ mới, làm T2-T7 9:30am-7pm. (210) 854-2311',
+'',
+'Kết quả:',
+'loai: tiem',
+'ten: 101 Nail Salon',
+'sodienthoai: 2108542311',
+'thanhpho:',
+'dichvu: acrylic_full',
+'loaiviec: full_time',
+'tracong: commission',
+'phantram: 60',
+'ghichu: Có bằng Texas, nhận thợ mới, T2-T7 9:30-19:00',
+'',
+'Dưới đây là các tin cần chuyển:',
+'',
+''].join('\n');
+}
+function n13Parse(txt){
+  const blocks = String(txt || '').split(/^[ \t]*-{3,}[ \t]*$/m).map(b => b.trim()).filter(Boolean);
+  return blocks.map(b => {
+    const o = {}, err = [];
+    b.split(/\r?\n/).forEach(l => {
+      if (!l.trim()) return;
+      const m = l.match(/^\s*([A-Za-z_]+)\s*:\s*(.*)$/);
+      if (!m){ err.push(t('n13EL') + ' "' + l.trim().slice(0, 24) + '"'); return; }
+      o[m[1].toLowerCase()] = m[2].trim();
+    });
+    const kind = /^tho$/i.test(o.loai || '') ? 'tho' : (/^tiem$/i.test(o.loai || '') ? 'tiem' : '');
+    if (!kind) err.push('loai');
+    if (!String(o.ten || '').trim()) err.push('ten');
+    const phone = imDig(o.sodienthoai);
+    if (phone.length !== 10) err.push('sodienthoai');
+    const svc = String(o.dichvu || '').split(/[,;|]/).map(x => x.trim()).filter(Boolean);
+    const badSvc = svc.filter(x => N13_SVC.indexOf(x) < 0);
+    if (badSvc.length) err.push('dichvu: ' + badSvc.join(', '));
+    const job = String(o.loaiviec || 'full_time').trim();
+    if (N13_JOB.indexOf(job) < 0) err.push('loaiviec: ' + job);
+    const pay = String(o.tracong || 'commission').trim();
+    if (N13_PAY.indexOf(pay) < 0) err.push('tracong: ' + pay);
+    return {kind:kind || 'tiem', name:o.ten || '', phone,
+      city:String(o.thanhpho || '').trim() || 'San Antonio',
+      svc:svc.length && !badSvc.length ? svc : ['acrylic_full'],
+      jobType:N13_JOB.indexOf(job) >= 0 ? job : 'full_time',
+      payType:N13_PAY.indexOf(pay) >= 0 ? pay : 'commission',
+      amount:Number(String(o.sotien || '').replace(/[^\d.]/g, '')) || 0,
+      pct:Number(String(o.phantram || '').replace(/[^\d.]/g, '')) || 0,
+      note:o.ghichu || '', src:o.nguon || '',
+      lang:/en/i.test(o.ngonngu || '') ? 'en' : 'vi', err};
+  });
+}
+function n13ImRow(r, i){
+  const h = imRow(r, i);
+  if (!(r.err || []).length) return h;
+  return h.replace('<tr class="', '<tr class="im-bad ')
+    .replace('<button class="btn-link danger" type="button" data-act="imdrop"',
+      `<span class="im-x">${esc(r.err.join(' · '))}</span><button class="btn-link danger" type="button" data-act="imdrop"`);
+}
+admImp = function(){
+  const rows = state.im.rows || [];
+  const bad = rows.filter(r => (r.err || []).length || r.phone.length !== 10 || imTaken(r.phone));
+  const ok = rows.filter(r => !(r.err || []).length && r.phone.length === 10 && !imTaken(r.phone));
+  return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('n13ImH')}</h2>
+      <p class="hint">${esc(t('n13ImD1'))}<br>${esc(t('n13ImD2'))}<br>${esc(t('n13ImD3'))}</p>
+      <button class="btn btn-ghost" type="button" data-act="n13prompt">${t('n13ImBtn')}</button>
+      <textarea id="im-raw" rows="10" placeholder="${esc(t('n13ImPh'))}"></textarea>
+      <button class="btn btn-ghost" type="button" data-act="n13read">${t('imRead')}</button></div>
+    ${rows.length ? `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('imFound', rows.length)}</h2>
+      ${bad.length ? `<p class="ct-warn">${esc(t('n13ImBad', bad.length))}</p>` : `<p class="hint">${esc(t('imCheck'))}</p>`}
+      <div class="im-wrap"><table class="im-tbl"><thead><tr><th>${t('imKind')}</th><th>${t('imName')}</th><th>${t('imPhone')}</th><th>${t('imCity')}</th><th>${t('imPay')}</th><th>${t('imNote')}</th><th></th></tr></thead>
+        <tbody>${rows.map(n13ImRow).join('')}</tbody></table></div>
+      <div class="adm-two"><button class="btn btn-primary" type="button" data-act="immake"${ok.length && !bad.length && !state.im.busy ? '' : ' disabled'}>${t('imMake', ok.length)}</button>
+        <button class="btn btn-ghost" type="button" data-act="imclear">${t('imClear')}</button></div></div>` : ''}`;
+};
+
+/* ---------- 12. địa chỉ tiệm trên tin ---------- */
+(() => {
+  const F = FORMS.hiring, fl = F && F.steps[0].fields;
+  if (!fl || fl.some(f => f.k === 'addrShow')) return;
+  const at = fl.findIndex(f => f.k === 'reqs');
+  fl.splice(at < 0 ? fl.length : at + 1, 0,
+    {k:'addrShow', type:'check', textKey:'n13AddrChk'},
+    {k:'addrPub', type:'text', show:d => !!d.addrShow,
+      label:{vi:'Địa chỉ tiệm (hiện trên tin)', en:'Salon address (shown on the post)'},
+      ph:{vi:'VD: 123 Bandera Rd, San Antonio, TX 78228', en:'e.g. 123 Bandera Rd, San Antonio, TX 78228'}},
+    {k:'mapUrl', type:'text', show:d => !!d.addrShow, hintKey:'n13MapHint',
+      label:{vi:'Link Google Maps', en:'Google Maps link'},
+      ph:{vi:'https://maps.app.goo.gl/…', en:'https://maps.app.goo.gl/…'}});
+  Object.assign(DEFAULTS.hiring, {addrShow:false, addrPub:'', mapUrl:''});
+})();
+/* bật/tắt công tắc phải vẽ lại để hiện hai khung */
+if (ACT && typeof ACT.fcheck === 'function'){
+  const n13Chk0 = ACT.fcheck;
+  ACT.fcheck = function(el){
+    n13Chk0(el);
+    if (el.dataset && el.dataset.fk === 'addrShow') render();
+  };
+}
+const N13_MAP = /^https:\/\/(?:[a-z0-9-]+\.)*(?:google\.[a-z.]{2,8}\/maps|maps\.google\.[a-z.]{2,8}|maps\.app\.goo\.gl|goo\.gl\/maps)/i;
+function n13AddrBad(d){
+  if (!d || !d.addrShow) return '';
+  const a = String(d.addrPub || '').trim(), u = String(d.mapUrl || '').trim();
+  if (!a && !u) return t('n13AddrNeed');
+  if (u && !N13_MAP.test(u)) return t('n13MapBad');
+  return '';
+}
+/* giữ địa chỉ công khai trong bản tin đăng lên */
+const n13Prev0 = previewObject;
+previewObject = function(type, fs){
+  const o = n13Prev0(type, fs);
+  if (type === 'hiring' && o && o.hiring){
+    const d = (fs && fs.data) || {};
+    o.hiring.addrShow = !!d.addrShow;
+    o.hiring.addrPub = String(d.addrPub || '').trim();
+    o.hiring.mapUrl = String(d.mapUrl || '').trim();
+  }
+  return o;
+};
+const n13Ad0 = viewAd;
+viewAd = function(id){
+  const h = n13Ad0(id), ad = ADS.find(a => a.id === id);
+  if (!ad || ad.type !== 'hiring') return h;
+  const d = ad.hiring || {};
+  if (!d.addrShow) return h;
+  const a = String(d.addrPub || '').trim(), u = String(d.mapUrl || '').trim();
+  if (!a && !u) return h;
+  const label = a || t('n13SeeMap');
+  const line = (u && N13_MAP.test(u))
+    ? `<p class="n13-addr"><a href="${esc(u)}" target="_blank" rel="noopener noreferrer">📍 ${esc(label)} →</a></p>`
+    : `<p class="n13-addr">📍 ${esc(label)}</p>`;
+  return h.replace(/(<span class="loc">[\s\S]*?<\/span>)/, '$1' + line);
+};
+
+/* ---------- css ---------- */
+(() => {
+  const s = document.createElement('style');
+  s.textContent = `
+.n13-nav{display:flex;justify-content:space-between;gap:8px;margin:-4px 0 10px}
+.n13-nav button[disabled]{opacity:.35;pointer-events:none}
+.n13-q{margin-top:10px}
+.n13-qb{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.n13-qb .btn{flex:1 1 40%;font-size:.92rem;padding:8px 10px}
+.n13-at{display:block;margin:6px 0 2px;opacity:.75}
+.n13-when span{display:block;font-size:.8rem;opacity:.6}
+.n13-addr{margin:6px 0 0}
+.n13-addr a{color:inherit}`;
+  document.head.appendChild(s);
+})();
+
+/* ---------- live ---------- */
+function n13Live(c){
+  const {db, TS, errText} = c;
+  const me = () => (state.user || {});
+  async function log(ph, rec){
+    try { await db.collection('contacts').doc(imDig(ph)).collection('log').add(Object.assign({at:TS(), by:me().uid || '', byName:me().name || ''}, rec)); }
+    catch (e) { console.warn('n13log', e); }
+  }
+  ACT.sdgo = function(el){
+    const n = sendList().length;
+    state.sq.i = Math.max(0, Math.min(n - 1, state.sq.i + (Number(el.dataset.v) || 0)));
+    render();
+  };
+  ACT.cqgo = function(el){
+    const n = cqList().length;
+    state.cq.i = Math.max(0, Math.min(n - 1, state.cq.i + (Number(el.dataset.v) || 0)));
+    render();
+  };
+  ACT.sdlater = async function(el){
+    const list = sendList(), it = list[state.sq.i];
+    if (!it || !it.ph) return;
+    const d = Number(el.dataset.v) || 7;
+    const when = new Date(Date.now() + d * 86400000).toISOString().slice(0, 10);
+    el.disabled = true;
+    try {
+      await window.ctTouch(it.ph, {status:'later', nextAt:when, lastAt:TS()});
+      await log(it.ph, {kind:'note', outcome:t('n13LaterTo', when)});
+      state.sq.i = state.sq.i + 1;
+      toast(t('cqSaved'));
+    } catch (er) { console.warn('sdlater', er); toast(errText(er)); }
+    el.disabled = false;
+    render();
+  };
+  ACT.sdstop = async function(el){
+    const list = sendList(), it = list[state.sq.i];
+    if (!it || !it.ph) return;
+    if (!confirm(t('n13StopQ'))) return;
+    el.disabled = true;
+    try {
+      await window.ctTouch(it.ph, {consent:'no', consentAt:TS(), cnote:t('n13Stop')});
+      await log(it.ph, {kind:'note', outcome:t('n13Stop')});
+      state.sq.ids = null;
+      toast(t('cqSaved'));
+    } catch (er) { console.warn('sdstop', er); toast(errText(er)); }
+    el.disabled = false;
+    render();
+  };
+  /* gọi điện: trạng thái mới */
+  ACT.cqlog = async function(el){
+    const list = cqList(), c = list[state.cq.i];
+    if (!c) return;
+    const v = el.dataset.v;
+    const lab = {no:t('cqNo'), later:t('cqLater'), yes:t('cqYes'), not:t('cqNot'), stop:t('cqStop')}[v] || '';
+    const patch = {lastAt:TS(), callCount:(c.callCount || 0) + 1};
+    if (v === 'stop'){ patch.consent = 'no'; patch.consentAt = TS(); patch.cnote = t('cqStop'); }
+    else if (v === 'later'){
+      const when = prompt(t('cqWhen'), new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10));
+      if (when) { patch.nextAt = when; patch.status = 'later'; }
+    } else patch.status = 'contacted';
+    el.disabled = true;
+    try {
+      await window.ctTouch(c.phone, patch);
+      await log(c.phone, {kind:'call', outcome:lab});
+      state.cq.i = state.cq.i + 1;
+      toast(t('cqSaved'));
+    } catch (er) { console.warn('cqlog', er); toast(errText(er)); }
+    el.disabled = false;
+    render();
+  };
+  /* tab Nhập */
+  ACT.n13prompt = async function(el){
+    el.disabled = true;
+    try { await admCopy(n13Prompt()); toast(t('n13ImCopied')); }
+    catch (e) { console.warn('n13prompt', e); toast(errText(e)); }
+    el.disabled = false;
+  };
+  ACT.n13read = function(){
+    const box = document.getElementById('im-raw');
+    const rows = n13Parse(box ? box.value : '');
+    if (!rows.length){ toast(t('n13ENone')); return; }
+    state.im.rows = rows;
+    render();
+  };
+  /* địa chỉ: chặn link không phải Google Maps */
+  ['fpublish','n1pub'].forEach(k => {
+    const prev = ACT[k];
+    if (typeof prev !== 'function') return;
+    ACT[k] = async function(el){
+      const type = el.dataset.ft;
+      if (type === 'hiring'){
+        const fs = getForm(type), msg = n13AddrBad(fs && fs.data);
+        if (msg){ toast(msg); return; }
+      }
+      return prev(el);
+    };
+  });
+}
+if (state.n1ctx) n13Live(state.n1ctx);
+
+/* ============================================================
+   n114 — mục tự thêm (+) và nút xoá tin
+   ============================================================ */
+Object.assign(T.vi, {
+  n14Add:'Thêm mục khác',
+  n14Ask:'Viết mục bạn muốn thêm (tối đa 60 ký tự):',
+  n14Full:'Mỗi mục chỉ thêm được tối đa 6 dòng.',
+  n14Long:'Dài quá, viết ngắn lại giúp em.',
+  n14Dup:'Mục này đã có rồi.',
+  n14Del:'🗑 Xoá tin',
+  n14DelProf:'🗑 Xoá hồ sơ',
+  n14DelQ:'Xoá hẳn tin này? Không lấy lại được.',
+  n14DelProfQ:'Xoá hẳn hồ sơ này? Không lấy lại được.'
+});
+Object.assign(T.en, {
+  n14Add:'Add your own',
+  n14Ask:'Type what you want to add (60 characters max):',
+  n14Full:'Up to 6 of your own per list.',
+  n14Long:'Too long — please shorten it.',
+  n14Dup:'That one is already there.',
+  n14Del:'🗑 Delete post',
+  n14DelProf:'🗑 Delete profile',
+  n14DelQ:'Delete this post for good? This cannot be undone.',
+  n14DelProfQ:'Delete this profile for good? This cannot be undone.'
+});
+
+/* ---------- mục tự viết: lưu dạng "x:<chữ>" ---------- */
+const N14_FREE = ['wants', 'perks', 'reqs'];
+const N14_MAX = 6, N14_LEN = 60;
+function n14Is(v){ return String(v == null ? '' : v).indexOf('x:') === 0; }
+function n14Txt(v){ return String(v).slice(2); }
+
+/* mọi chỗ gọi opt() — thẻ chọn, tin đăng, bản copy Việt và Anh — đều hiểu mục tự viết */
+const n14Opt0 = opt;
+opt = function(group, v){
+  return n14Is(v) ? n14Txt(v) : n14Opt0(group, v);
+};
+
+const n14Field0 = renderField;
+renderField = function(type, f, fs){
+  const h = n14Field0(type, f, fs);
+  if (f.type !== 'multi' || N14_FREE.indexOf(f.opt) < 0) return h;
+  const id = fid(type, f.k), arr = fs.data[f.k] || [];
+  const mine = arr.filter(n14Is).map(v =>
+    `<button type="button" class="choice on n14-x" data-act="fmulti" data-ft="${type}" data-fk="${f.k}" data-v="${esc(v)}">${esc(n14Txt(v))}<i>×</i></button>`).join('');
+  const add = `<button type="button" class="choice n14-add" data-act="n14add" data-ft="${type}" data-fk="${f.k}">+ ${esc(t('n14Add'))}</button>`;
+  const re = new RegExp('(<div class="chipset" role="group" aria-labelledby="' + id + '-l">)([\\s\\S]*?)(</div>)');
+  return re.test(h) ? h.replace(re, (m, a, b, c) => a + b + mine + add + c) : h;
+};
+
+ACT.n14add = function(el){
+  const fs = getForm(el.dataset.ft), k = el.dataset.fk;
+  const arr = fs.data[k] || (fs.data[k] = []);
+  if (arr.filter(n14Is).length >= N14_MAX){ toast(t('n14Full')); return; }
+  const raw = prompt(t('n14Ask'), '');
+  if (raw == null) return;
+  const s = String(raw).replace(/\s+/g, ' ').trim();
+  if (!s) return;
+  if (s.length > N14_LEN){ toast(t('n14Long')); return; }
+  const v = 'x:' + s;
+  if (arr.some(x => String(x).toLowerCase() === v.toLowerCase())){ toast(t('n14Dup')); return; }
+  fs.data[k] = arr.concat(v);
+  delete fs.errors[k];
+  render();
+};
+
+/* ---------- nút xoá tin cho chính chủ ---------- */
+const n14Act0 = n1Action;
+n1Action = function(it, o){
+  const h = n14Act0(it, o);
+  if (h.indexOf('data-act="liveedit"') < 0) return h;
+  const tech = TECHS.includes(it);
+  return h + `<button class="btn btn-ghost danger n14-del" type="button" data-act="n14del"
+    data-k="${tech ? 'techs' : 'ads'}" data-v="${esc(it.id)}" data-t="${tech ? '1' : '0'}">${t(tech ? 'n14DelProf' : 'n14Del')}</button>`;
+};
+
+/* ---------- css ---------- */
+(() => {
+  const s = document.createElement('style');
+  s.textContent = `
+.n14-add{border-style:dashed;opacity:.85}
+.n14-x i{font-style:normal;margin-left:6px;opacity:.7}
+.n14-del{margin-top:8px}
+.btn.danger{color:var(--danger,#b3261e);border-color:currentColor}`;
+  document.head.appendChild(s);
+})();
+
+/* ---------- live ---------- */
+function n14Live(c){
+  const {db, errText} = c;
+  ACT.n14del = async function(el){
+    const tech = el.dataset.t === '1';
+    if (!confirm(t(tech ? 'n14DelProfQ' : 'n14DelQ'))) return;
+    el.disabled = true;
+    try {
+      await db.collection(el.dataset.k).doc(el.dataset.v).delete();
+      toast(t('deleted'));
+      location.hash = tech ? '#job-seekers' : '#jobs';
+    } catch (e) { console.warn('n14del', e); toast(errText(e)); el.disabled = false; }
+  };
+}
+if (state.n1ctx) n14Live(state.n1ctx);
+
 render();
 })();
 </script>
