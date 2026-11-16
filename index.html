@@ -6227,8 +6227,7 @@ function sqList(){
   if (!state.sq.ids) sqBuild();
   return state.sq.ids.map(id => admAll().find(o => o.id === id)).filter(o => o && o.mod === 'draft');
 }
-/* a fresh visit to the tab rebuilds the queue; working through it does not */
-window.addEventListener('hashchange', () => { if (location.hash.indexOf('admin-send') >= 0) state.sq.ids = null; });
+/* a fresh visit to the tab rebuilds the queue (see n106); working through it does not */
 function admSend(){
   const list = sqList();
   if (!list.length || state.sq.i >= list.length) return `<p class="empty-s">${list.length ? t('sqDone') : t('sqNone')}</p>
@@ -6423,6 +6422,420 @@ tr.tr-late td{background:#FFF9EC}
 .sq-ph span{display:block;font-size:12px;font-weight:600;color:#8A6A72;letter-spacing:0;margin-top:4px}
 .sq-ph:hover{border-color:var(--primary)}
 .adm-card textarea{width:100%;font-size:14px}
+`; document.head.appendChild(st); })();
+
+/* ===========================================================
+   n106 – Danh bạ: một dòng cho mỗi số điện thoại, trạng thái nhận tin,
+   đánh dấu đã từ chối, chặn khỏi hàng đợi và tab Nhập
+   loads after n105
+   =========================================================== */
+Object.assign(T.vi, {
+  admT_ct:'Danh bạ',
+  ctTitle:'Danh bạ', ctAdd:'Thêm người', ctNone:'Chưa có ai trong danh bạ.',
+  ctNoneF:'Không có ai hợp bộ lọc này.',
+  ctSearch:'Tìm theo tên hoặc số…', ctCount:n => `${n} người`,
+  ctName:'Tên', ctPhone:'Số điện thoại', ctCity:'Thành phố', ctStat:'Trạng thái', ctLast:'Liên hệ cuối',
+  ctPerson:'Người liên hệ', ctKind:'Loại', ctEmail:'Email', ctSrc:'Nguồn',
+  ctNext:'Ngày liên hệ lại', ctNote:'Ghi chú chung',
+  ctMore:'Thêm chi tiết', ctSalon:'Tiệm', ctTech:'Thợ',
+  ctF_all:'Tất cả', ctF_new:'Chưa liên hệ', ctF_contacted:'Đã liên hệ', ctF_interested:'Quan tâm',
+  ctF_not:'Không quan tâm', ctF_posted:'Đã đăng tin', ctF_bad:'Số sai', ctF_no:'Đã từ chối',
+  ctS_new:'Chưa liên hệ', ctS_contacted:'Đã liên hệ', ctS_interested:'Quan tâm',
+  ctS_not:'Không quan tâm', ctS_posted:'Đã đăng tin', ctS_bad:'Số sai',
+  ctMsg:'Nhận tin', ctM_unknown:'Chưa rõ', ctM_yes:'Đồng ý nhận tin', ctM_no:'Đã từ chối',
+  ctNoBadge:'Đã từ chối – không liên hệ', ctWhy:'Họ từ chối thế nào?',
+  ctWhyPh:'nhắn STOP / gọi nói đừng nhắn nữa…',
+  ctWhyL:'Lý do từ chối', ctYesL:'Ghi chú nhận tin',
+  ctSave:'Lưu', ctDel:'Xoá khỏi danh bạ', ctDelQ:'Xoá người này khỏi danh bạ?',
+  ctSaved:'Đã lưu.', ctBack:'← Danh bạ',
+  ctDup:'Số này đã có trong danh bạ.', ctNeedPh:'Cần số điện thoại đủ 10 số.',
+  ctStopH:'Đánh dấu đã từ chối', ctStopD:'Dán số điện thoại, mỗi số một dòng. Những người này sẽ bị chặn khỏi cả nhắn tin lẫn gọi điện.',
+  ctStopGo:'Đánh dấu đã từ chối', ctStopOk:n => `Đã đánh dấu ${n} số là từ chối.`,
+  ctUndo:'Bỏ đánh dấu từ chối', ctUndoQ1:'Bỏ đánh dấu từ chối cho người này?',
+  ctUndoQ2:'Chắc chắn? Chỉ bỏ khi họ tự nói muốn nhận tin lại. Lịch sử vẫn được giữ.',
+  ctImp:'Nhập CSV', ctExp:'Xuất CSV', ctImpOk:n => `Đã thêm ${n} người vào danh bạ.`,
+  ctHist:'Lịch sử', ctMsgs:n => `${n} lần nhắn`, ctCalls:n => `${n} lần gọi`,
+  ctNever:'Chưa liên hệ lần nào',
+  ctBlocked:n => `${n} người đã từ chối, không hiện trong hàng đợi.`,
+  ctSkipNo:'Đã từ chối – không nhập'
+});
+Object.assign(T.en, {
+  admT_ct:'Contacts',
+  ctTitle:'Contacts', ctAdd:'Add a contact', ctNone:'No contacts yet.',
+  ctNoneF:'Nobody matches this filter.',
+  ctSearch:'Search by name or number…', ctCount:n => `${n} contacts`,
+  ctName:'Name', ctPhone:'Phone', ctCity:'City', ctStat:'Status', ctLast:'Last contact',
+  ctPerson:'Contact person', ctKind:'Type', ctEmail:'Email', ctSrc:'Source',
+  ctNext:'Follow up on', ctNote:'Notes',
+  ctMore:'More details', ctSalon:'Salon', ctTech:'Tech',
+  ctF_all:'All', ctF_new:'Not contacted', ctF_contacted:'Contacted', ctF_interested:'Interested',
+  ctF_not:'Not interested', ctF_posted:'Published', ctF_bad:'Bad number', ctF_no:'Opted out',
+  ctS_new:'Not contacted', ctS_contacted:'Contacted', ctS_interested:'Interested',
+  ctS_not:'Not interested', ctS_posted:'Published', ctS_bad:'Bad number',
+  ctMsg:'Texts', ctM_unknown:'Unknown', ctM_yes:'Agreed to texts', ctM_no:'Opted out',
+  ctNoBadge:'Opted out – do not contact', ctWhy:'How did they opt out?',
+  ctWhyPh:'replied STOP / said so on the phone…',
+  ctWhyL:'Opt-out reason', ctYesL:'Consent note',
+  ctSave:'Save', ctDel:'Remove from contacts', ctDelQ:'Remove this contact?',
+  ctSaved:'Saved.', ctBack:'← Contacts',
+  ctDup:'That number is already in your contacts.', ctNeedPh:'A 10-digit phone number is required.',
+  ctStopH:'Mark as opted out', ctStopD:'Paste phone numbers, one per line. They will be blocked from both texts and calls.',
+  ctStopGo:'Mark as opted out', ctStopOk:n => `${n} numbers marked as opted out.`,
+  ctUndo:'Undo opt-out', ctUndoQ1:'Undo the opt-out for this contact?',
+  ctUndoQ2:'Are you sure? Only undo this if they asked to hear from you again. The history is kept.',
+  ctImp:'Import CSV', ctExp:'Export CSV', ctImpOk:n => `${n} contacts added.`,
+  ctHist:'History', ctMsgs:n => `${n} texts`, ctCalls:n => `${n} calls`,
+  ctNever:'Never contacted',
+  ctBlocked:n => `${n} opted out and are hidden from the queue.`,
+  ctSkipNo:'Opted out – not imported'
+});
+
+const CT_ST = ['new','contacted','interested','not','posted','bad'];
+state.ct = {map:{}, q:'', f:'all', open:null, edit:null, stop:'', busy:false};
+
+function ctKey(p){ return imDig(p); }
+function ctAll(){ const m = state.ct.map || {}; return Object.keys(m).map(k => m[k]); }
+function ctGet(p){ return (state.ct.map || {})[ctKey(p)] || null; }
+function ctNo(p){ const c = ctGet(p); return !!(c && c.consent === 'no'); }
+/* "đã đăng tin" is worked out from the posts, not typed in */
+function ctPosted(ph){
+  const p = ctKey(ph);
+  return admAll().some(o => o.mod === 'ok' && (imDig(o.ownerPhone) === p || imDig(admContact(o.id)) === p));
+}
+function ctStat(c){ return ctPosted(c.phone) ? 'posted' : (CT_ST.indexOf(c.status) >= 0 ? c.status : 'new'); }
+function ctDays(c){
+  const ms = n5Ms(c.lastAt);
+  if (!ms) return t('ctNever');
+  const d = Math.floor((Date.now() - ms) / 86400000);
+  return d <= 0 ? t('trDays', 0) : t('trDays', d);
+}
+function ctMatch(c){
+  const q = state.ct.q.trim().toLowerCase();
+  if (q && !(String(c.name || '').toLowerCase().indexOf(q) >= 0
+      || String(c.person || '').toLowerCase().indexOf(q) >= 0
+      || c.phone.indexOf(imDig(q)) >= 0 && imDig(q))) return false;
+  const f = state.ct.f;
+  if (f === 'all') return true;
+  if (f === 'no') return c.consent === 'no';
+  return ctStat(c) === f;
+}
+function ctList(){
+  return ctAll().filter(ctMatch).sort((a, b) => (n5Ms(b.upAt) || 0) - (n5Ms(a.upAt) || 0));
+}
+
+/* ---------- list ---------- */
+function ctRow(c){
+  const st = ctStat(c), no = c.consent === 'no';
+  return `<tr data-act="ctopen" data-v="${esc(c.phone)}" class="ct-row${no ? ' ct-no' : ''}">
+    <td><b>${esc(c.name || '—')}</b>${c.person ? `<span class="ct-p">${esc(c.person)}</span>` : ''}</td>
+    <td class="ct-num">${esc(admPretty(c.phone))}</td>
+    <td>${esc(c.city || '')}</td>
+    <td><span class="ct-tag ct-${st}">${t('ctS_' + st)}</span>${no ? `<span class="ct-tag ct-off">${t('ctM_no')}</span>` : ''}</td>
+    <td class="ct-num">${esc(ctDays(c))}</td></tr>`;
+}
+function ctFilters(){
+  const ks = ['all','new','contacted','interested','not','posted','bad','no'];
+  return `<nav class="ct-fs">${ks.map(k => `<button type="button" class="chip${state.ct.f === k ? ' on' : ''}" data-act="ctfilter" data-v="${k}">${t('ctF_' + k)}</button>`).join('')}</nav>`;
+}
+function admCt(){
+  if (state.ct.open) return ctCard(state.ct.open);
+  const list = ctList(), all = ctAll(), off = all.filter(c => c.consent === 'no').length;
+  return `<div class="adm-two"><button class="btn btn-primary" type="button" data-act="ctnew">${t('ctAdd')}</button>
+      <button class="btn btn-ghost" type="button" data-act="ctexp">${t('ctExp')}</button></div>
+    <div class="card adm-card ct-stop"><h2 class="sec" style="margin-top:0">${t('ctStopH')}</h2>
+      <p class="hint">${esc(t('ctStopD'))}</p>
+      <textarea id="ct-stop" rows="3" placeholder="(210) 555-0177&#10;210-555-0188"></textarea>
+      <button class="btn btn-danger" type="button" data-act="ctstop">${t('ctStopGo')}</button></div>
+    <div class="card adm-card">
+      <input id="ct-q" class="ct-q" type="search" placeholder="${esc(t('ctSearch'))}" value="${esc(state.ct.q)}">
+      ${ctFilters()}
+      <p class="hint">${esc(t('ctCount', all.length))}${off ? ' · ' + esc(t('ctBlocked', off)) : ''}</p>
+      ${list.length ? `<div class="im-wrap"><table class="im-tbl ct-tbl"><thead><tr><th>${t('ctName')}</th><th>${t('ctPhone')}</th><th>${t('ctCity')}</th><th>${t('ctStat')}</th><th>${t('ctLast')}</th></tr></thead>
+        <tbody>${list.map(ctRow).join('')}</tbody></table></div>` : `<p class="empty-s">${all.length ? t('ctNoneF') : t('ctNone')}</p>`}
+      <label class="btn btn-ghost" style="text-align:center;margin-top:12px">${t('ctImp')}<input type="file" accept=".csv,text/csv" data-ctcsv="1" hidden></label>
+    </div>`;
+}
+
+/* ---------- one contact ---------- */
+function ctF(k, label, inner, hint){
+  return `<div class="cl-f"><label class="flabel" for="ct-${k}">${esc(label)}</label>${inner}${hint ? `<p class="hint">${esc(hint)}</p>` : ''}</div>`;
+}
+function ctIn(k, v, type){ return `<input id="ct-${k}" type="${type || 'text'}" data-ct="${k}" value="${esc(v == null ? '' : v)}">`; }
+function ctCard(phone){
+  const e = state.ct.edit || {}, isNew = !ctGet(phone), st = ctStat(e), no = e.consent === 'no';
+  const sel = (k, list) => `<select id="ct-${k}" data-ct="${k}">${list.map(x => `<option value="${x}"${e[k] === x ? ' selected' : ''}>${t((k === 'kind' ? (x === 'tiem' ? 'ctSalon' : 'ctTech') : 'ctS_' + x))}</option>`).join('')}</select>`;
+  return `<button class="btn-link" type="button" data-act="ctclose">${t('ctBack')}</button>
+    ${no ? `<p class="ct-warn">${t('ctNoBadge')}</p>` : ''}
+    <div class="card adm-card cl-form">
+      ${ctF('name', t('ctName'), ctIn('name', e.name))}
+      ${ctF('person', t('ctPerson'), ctIn('person', e.person))}
+      ${ctF('phone', t('ctPhone'), ctIn('phone', admPretty(e.phone) || e.phone, 'tel'))}
+      ${ctF('kind', t('ctKind'), sel('kind', ['tiem','tho']))}
+      ${ctF('city', t('ctCity'), ctIn('city', e.city))}
+      ${ctF('status', t('ctStat'), `<select id="ct-status" data-ct="status">${CT_ST.map(x => `<option value="${x}"${st === x ? ' selected' : ''}>${t('ctS_' + x)}</option>`).join('')}</select>`)}
+      ${ctF('nextAt', t('ctNext'), ctIn('nextAt', e.nextAt, 'date'))}
+      ${ctF('note', t('ctNote'), `<textarea id="ct-note" rows="2" data-ct="note">${esc(e.note || '')}</textarea>`)}
+      <details class="ct-det"${e.email || e.src ? ' open' : ''}><summary>${t('ctMore')}</summary>
+        ${ctF('email', t('ctEmail'), ctIn('email', e.email, 'email'))}
+        ${ctF('src', t('ctSrc'), ctIn('src', e.src))}</details>
+    </div>
+    <div class="card adm-card cl-form">
+      <h2 class="sec" style="margin-top:0">${t('ctMsg')}</h2>
+      <div class="ct-ms">${['unknown','yes','no'].map(v => `<button type="button" class="chip${(e.consent || 'unknown') === v ? ' on' : ''}${v === 'no' ? ' ct-mno' : ''}" data-act="ctconsent" data-v="${v}">${t('ctM_' + v)}</button>`).join('')}</div>
+      ${e.consent === 'no' || e.consent === 'yes'
+        ? ctF('cnote', t(e.consent === 'no' ? 'ctWhyL' : 'ctYesL'), `<textarea id="ct-cnote" rows="2" data-ct="cnote" placeholder="${esc(t('ctWhyPh'))}">${esc(e.cnote || '')}</textarea>`,
+            e.consentAt ? admFmt(n5Ms(e.consentAt)) : '')
+        : ''}
+      ${no ? `<button class="btn btn-ghost" type="button" data-act="ctundo">${t('ctUndo')}</button>` : ''}
+    </div>
+    <p class="hint">${esc(t('ctMsgs', e.msgCount || 0))} · ${esc(t('ctCalls', e.callCount || 0))} · ${esc(ctDays(e))}</p>
+    <div class="adm-two"><button class="btn btn-primary" type="button" data-act="ctsave"${state.ct.busy ? ' disabled' : ''}>${t('ctSave')}</button>
+      ${isNew ? '' : `<button class="btn btn-ghost danger" type="button" data-act="ctdel">${t('ctDel')}</button>`}</div>`;
+}
+
+/* ---------- tabs ---------- */
+const CT_TABS = ['over','ct','imp','send','draft','track','mod','ad','tech','rep','set'];
+const n6Admin0 = viewAdmin;
+viewAdmin = function(tab){
+  /* entering the send tab rebuilds the queue; moving inside it does not */
+  if (tab === 'send' && state.sq.tab !== 'send') state.sq.ids = null;
+  state.sq.tab = tab;
+  if (tab === 'ct'){
+    if (!state.user) return loginGate();
+    if (!state.adm.on) return notFound();
+    state.adm.tab = tab;
+    const nav = `<nav class="adm-tabs">${CT_TABS.map(k => `<a href="#admin-${k}"${k === tab ? ' class="on" aria-current="page"' : ''}>${t('admT_' + k)}</a>`).join('')}</nav>`;
+    return `<div class="wrap page adm"><h1 class="pg-title">${t('ctTitle')}</h1>${nav}<div class="adm-body">${admCt()}</div></div>`;
+  }
+  const h = n6Admin0(tab);
+  if (h.indexOf('class="adm-tabs"') < 0) return h;
+  const nav = `<nav class="adm-tabs">${CT_TABS.map(k => `<a href="#admin-${k}"${k === tab ? ' class="on" aria-current="page"' : ''}>${t('admT_' + k)}</a>`).join('')}</nav>`;
+  return h.replace(/<nav class="adm-tabs">[\s\S]*?<\/nav>/, nav);
+};
+
+/* ---------- people who opted out never reach the queue ---------- */
+const n6Sq0 = sqBuild;
+sqBuild = function(){
+  n6Sq0();
+  state.sq.ids = (state.sq.ids || []).filter(id => {
+    const o = admAll().find(x => x.id === id);
+    return o && !ctNo(admContact(o.id));
+  });
+};
+/* nor the import */
+const n6Taken0 = imTaken;
+imTaken = function(ph){ return ctNo(ph) || n6Taken0(ph); };
+const n6Row0 = imRow;
+imRow = function(r, i){
+  const h = n6Row0(r, i);
+  return ctNo(r.phone) ? h.replace(t('imDup'), t('ctSkipNo')) : h;
+};
+
+/* ---------- live wiring ---------- */
+function n6Live(c){
+  const {db, TS, errText} = c;
+  const me = () => (state.user || {});
+  let watching = false;
+  setInterval(() => {
+    if (watching || !(state.adm && state.adm.on)) return;
+    watching = true;
+    db.collection('contacts').limit(2000).onSnapshot(s => {
+      const m = {};
+      s.docs.forEach(d => { m[d.id] = Object.assign({phone:d.id}, d.data()); });
+      state.ct.map = m;
+      if (typeof softRender === 'function') softRender();
+    }, e => { console.warn('contacts', e); watching = false; });
+  }, 800);
+
+  function blank(){ return {phone:'', name:'', person:'', kind:'tiem', city:'San Antonio', status:'new',
+    consent:'unknown', cnote:'', note:'', email:'', src:'', nextAt:'', msgCount:0, callCount:0}; }
+
+  ACT.ctnew = function(){ state.ct.open = '__new'; state.ct.edit = blank(); render(); };
+  ACT.ctopen = function(el){
+    const c = ctGet(el.dataset.v);
+    state.ct.open = el.dataset.v;
+    state.ct.edit = Object.assign(blank(), c || {phone:imDig(el.dataset.v)});
+    render(); window.scrollTo(0, 0);
+  };
+  ACT.ctclose = function(){ state.ct.open = null; state.ct.edit = null; render(); };
+  ACT.ctfilter = function(el){ state.ct.f = el.dataset.v; render(); };
+  ACT.ctconsent = function(el){
+    const e = state.ct.edit; if (!e) return;
+    e.consent = el.dataset.v;
+    if (el.dataset.v === 'unknown') e.cnote = '';
+    render();
+    const box = document.getElementById('ct-cnote'); if (box) box.focus();
+  };
+  ACT.ctundo = function(){
+    if (!confirm(t('ctUndoQ1'))) return;
+    if (!confirm(t('ctUndoQ2'))) return;
+    const e = state.ct.edit; if (!e) return;
+    e.consent = 'unknown';
+    e.note = [e.note, `[${new Date().toISOString().slice(0, 10)}] bỏ đánh dấu từ chối (trước đó: ${e.cnote || '—'})`].filter(Boolean).join('\n');
+    e.cnote = '';
+    render();
+  };
+  ACT.ctsave = async function(el){
+    const e = state.ct.edit; if (!e || state.ct.busy) return;
+    const ph = imDig(e.phone);
+    if (ph.length !== 10){ toast(t('ctNeedPh')); return; }
+    if (state.ct.open === '__new' && ctGet(ph)){ toast(t('ctDup')); return; }
+    state.ct.busy = true; el.disabled = true;
+    try {
+      const old = ctGet(ph) || {};
+      const rec = {name:e.name || '', person:e.person || '', kind:e.kind === 'tho' ? 'tho' : 'tiem',
+        city:e.city || '', status:CT_ST.indexOf(e.status) >= 0 ? e.status : 'new',
+        consent:['unknown','yes','no'].indexOf(e.consent) >= 0 ? e.consent : 'unknown',
+        cnote:e.cnote || '', note:e.note || '', email:e.email || '', src:e.src || '',
+        nextAt:e.nextAt || '', upAt:TS(), byName:me().name || ''};
+      if (rec.consent !== (old.consent || 'unknown') || (rec.consent !== 'unknown' && !old.consentAt)) rec.consentAt = TS();
+      if (!old.at) { rec.at = TS(); rec.msgCount = 0; rec.callCount = 0; }
+      await db.collection('contacts').doc(ph).set(rec, {merge:true});
+      state.ct.open = null; state.ct.edit = null;
+      toast(t('ctSaved'));
+    } catch (er) { console.warn('ctsave', er); toast(errText(er)); }
+    state.ct.busy = false; render();
+  };
+  ACT.ctdel = async function(){
+    if (!confirm(t('ctDelQ'))) return;
+    try { await db.collection('contacts').doc(ctKey(state.ct.open)).delete(); state.ct.open = null; state.ct.edit = null; render(); }
+    catch (e) { console.warn(e); toast(errText(e)); }
+  };
+  ACT.ctstop = async function(el){
+    const box = document.getElementById('ct-stop'), raw = box ? box.value : '';
+    const nums = raw.split(/[\n,;]+/).map(imDig).filter(x => x.length === 10);
+    if (!nums.length){ toast(t('ctNeedPh')); return; }
+    el.disabled = true;
+    let n = 0;
+    const when = new Date().toISOString().slice(0, 10);
+    for (const ph of nums){
+      try {
+        const old = ctGet(ph) || {};
+        await db.collection('contacts').doc(ph).set(Object.assign({
+          consent:'no', cnote:old.cnote || `nhắn STOP ${when}`, consentAt:TS(), upAt:TS(), byName:me().name || ''
+        }, old.at ? {} : {name:'', person:'', kind:'tiem', city:'', status:'contacted', note:'', email:'', src:'', nextAt:'', msgCount:0, callCount:0, at:TS()}), {merge:true});
+        n++;
+      } catch (e) { console.warn('ctstop', e); }
+    }
+    if (box) box.value = '';
+    el.disabled = false;
+    toast(t('ctStopOk', n));
+    render();
+  };
+  ACT.ctexp = function(){
+    const rows = [['sodienthoai','ten','nguoilienhe','loai','thanhpho','trangthai','nhantin','ghichunhantin','ngaylienhelai','ghichu','email','nguon','solannhan','solangoi']];
+    ctAll().forEach(c => rows.push([c.phone, c.name || '', c.person || '', c.kind || '', c.city || '',
+      t('ctS_' + ctStat(c)), t('ctM_' + (c.consent || 'unknown')), c.cnote || '', c.nextAt || '',
+      (c.note || '').replace(/\n/g, ' '), c.email || '', c.src || '', c.msgCount || 0, c.callCount || 0]));
+    const csv = rows.map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8'}));
+    a.download = 'nail101-danhba.csv'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  };
+
+  /* keep a contact in step whenever a draft is made or a text goes out */
+  window.ctTouch = async function(ph, patch){
+    const p = imDig(ph); if (p.length !== 10) return;
+    try {
+      const old = ctGet(p) || {};
+      await db.collection('contacts').doc(p).set(Object.assign({upAt:TS(), byName:me().name || ''},
+        old.at ? {} : {name:'', person:'', kind:'tiem', city:'', status:'new', consent:'unknown',
+          cnote:'', note:'', email:'', src:'', nextAt:'', msgCount:0, callCount:0, at:TS()},
+        patch || {}), {merge:true});
+    } catch (e) { console.warn('ctTouch', e); }
+  };
+
+  /* import also fills the contact book */
+  const n6Make0 = ACT.immake;
+  ACT.immake = async function(el){
+    const rows = state.im.rows.slice();
+    await n6Make0(el);
+    for (const r of rows){
+      const p = imDig(r.phone);
+      if (p.length !== 10 || ctNo(p)) continue;
+      await window.ctTouch(p, {name:r.name || '', kind:r.kind === 'tho' ? 'tho' : 'tiem', city:r.city || '', src:r.src || ''});
+    }
+  };
+  /* CSV straight into the contact book */
+  document.addEventListener('change', e => {
+    const el = e.target;
+    if (!el || !el.dataset || !el.dataset.ctcsv || !el.files || !el.files[0]) return;
+    const rd = new FileReader();
+    rd.onload = async () => {
+      const rows = imReadTable(String(rd.result || ''));
+      let n = 0;
+      for (const r of rows){
+        const p = imDig(r.phone);
+        if (p.length !== 10 || ctNo(p)) continue;
+        await window.ctTouch(p, {name:r.name || '', kind:r.kind === 'tho' ? 'tho' : 'tiem', city:r.city || '', src:r.src || ''});
+        n++;
+      }
+      toast(t('ctImpOk', n)); render();
+    };
+    rd.readAsText(el.files[0]);
+  });
+
+  /* copying no longer counts as sending; only the Sent button does */
+  const n6Copy0 = ACT.clcopy;
+  ACT.clcopy = async function(el){
+    const was = clFor(el.dataset.v);
+    await n6Copy0(el);
+    const now = clFor(el.dataset.v);
+    if (now && !(was && was.sent)){
+      try { await db.collection('claims').doc(now.tok).set({sent:false}, {merge:true});
+        state.cl.map = Object.assign({}, state.cl.map, {[now.tok]:Object.assign({}, now, {sent:false})}); }
+      catch (e) { console.warn('unsend', e); }
+      render();
+    }
+  };
+  const n6Next0 = ACT.sqnext;
+  ACT.sqnext = async function(el){
+    const list = sqList(), o = list[state.sq.i];
+    await n6Next0(el);
+    if (o && el.dataset.v === '1'){
+      const ph = admContact(o.id), old = ctGet(ph);
+      await window.ctTouch(ph, {lastAt:TS(), msgCount:((old && old.msgCount) || 0) + 1,
+        status:(old && ['interested','not','bad'].indexOf(old.status) >= 0) ? old.status : 'contacted',
+        name:(old && old.name) || admName(o) || '', kind:admKind(o) === 'techs' ? 'tho' : 'tiem'});
+    }
+  };
+}
+if (state.n1ctx) n6Live(state.n1ctx);
+
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (el && el.id === 'ct-q'){ state.ct.q = el.value; const at = el.selectionStart; render();
+    const box = document.getElementById('ct-q'); if (box){ box.focus(); box.setSelectionRange(at, at); } return; }
+  if (el && el.dataset && el.dataset.ct && state.ct.edit) state.ct.edit[el.dataset.ct] = el.value;
+});
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el && el.dataset && el.dataset.ct && state.ct.edit && el.tagName === 'SELECT') state.ct.edit[el.dataset.ct] = el.value;
+});
+
+/* ---------- styles ---------- */
+(() => { const st = document.createElement('style'); st.textContent = `
+.ct-q{width:100%;margin-bottom:10px}
+.ct-fs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.ct-fs .chip{font-size:13px;padding:6px 12px}
+.ct-tbl tbody tr{cursor:pointer}
+.ct-tbl tbody tr:hover td{background:var(--page)}
+.ct-row .ct-p{display:block;font-weight:500;color:#6b5a62;font-size:12px}
+.ct-num{white-space:nowrap}
+.ct-tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700;background:#F0E8EC;color:#6b5a62;white-space:nowrap}
+.ct-tag.ct-interested{background:#E6F2EE;color:#1F6B59}
+.ct-tag.ct-posted{background:#F3E3EA;color:var(--primary)}
+.ct-tag.ct-bad,.ct-tag.ct-off{background:#FBE4E2;color:#B3261E;margin-left:4px}
+tr.ct-no td{background:#FFF6F5}
+.ct-warn{margin:0 0 12px;padding:10px 14px;border-radius:12px;background:#FBE4E2;color:#B3261E;font-weight:700}
+.ct-ms{display:flex;gap:8px;flex-wrap:wrap}
+.ct-ms .chip.on.ct-mno{background:#B3261E;border-color:#B3261E;color:#fff}
+.ct-det{margin-top:4px}
+.ct-det summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--primary);padding:6px 0}
+.ct-det .cl-f{margin-top:10px}
+.ct-stop textarea{width:100%}
+.btn-danger{background:#B3261E;border-color:#B3261E;color:#fff}
 `; document.head.appendChild(st); })();
 
 render();
