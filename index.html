@@ -3141,7 +3141,7 @@ function initLive(){
   function fromDoc(doc){
     try {
       const d = doc.data(EST), o = d.ad || {};
-      return Object.assign({}, o, {id:doc.id, live:true, ownerUid:d.ownerUid, ownerName:d.ownerName || '', daysAgo:daysSince(d.createdAt), _form:d.form || null, _kind:d.kind || '', avatar:d.avatar || '', filled:!!d.filled, hired:!!d.hired, expMs:d.expMs || 0, views:d.views || 0, mod:d.mod || '', claim:d.claim || null, licOk2:!!d.licOk2, ready:d.ready ? Object.assign({}, d.ready, {atMs:ms(d.ready.at) || Date.now()}) : null});
+      return Object.assign({}, o, {id:doc.id, live:true, ownerUid:d.ownerUid, ownerPhone:d.ownerPhone || '', ownerName:d.ownerName || '', daysAgo:daysSince(d.createdAt), _form:d.form || null, _kind:d.kind || '', avatar:d.avatar || '', filled:!!d.filled, hired:!!d.hired, expMs:d.expMs || 0, views:d.views || 0, mod:d.mod || '', claim:d.claim || null, licOk2:!!d.licOk2, ready:d.ready ? Object.assign({}, d.ready, {atMs:ms(d.ready.at) || Date.now()}) : null});
     } catch (e) { return null; }
   }
   function replaceLive(arr, list){ for (let i = arr.length - 1; i >= 0; i--) if (arr[i].live) arr.splice(i, 1); arr.unshift(...list); }
@@ -5602,6 +5602,356 @@ a.n3chiprole:hover{background:var(--primary);color:#fff}
 .n3a2h p{margin:8px 0 0;color:#5b4a53}`;
   document.head.appendChild(st);
 })();
+
+/* ===========================================================
+   n104 – link bài nháp: gửi link, người nhận sửa và đăng (không cần đăng nhập)
+   + trạng thái bài nháp + 2 nút copy Việt/English
+   loads after n103
+   =========================================================== */
+Object.assign(T.vi, {
+  clCopyVi:'Copy (Việt)', clCopyEn:'Copy (English)',
+  clAsk:'Anh/chị xem giúp em đúng chưa ạ?',
+  clLink:'👉 Bấm vào link này để xem, sửa lại nếu cần, rồi bấm Đăng tin (không cần đăng nhập):',
+  clStOff:'Link: chưa tạo', clStNew:n => `Link đã tạo · còn ${n} ngày`,
+  clStSent:n => `Đã gửi · chưa mở · còn ${n} ngày`,
+  clStOpen:n => `Đã mở · chưa đăng · còn ${n} ngày`,
+  clStUsed:'Đã đăng qua link', clStExp:'Link hết hạn – bấm Copy để tạo link mới',
+  clKill:'Huỷ link', clKillQ:'Huỷ link này? Người nhận sẽ không mở được nữa.', clKilled:'Đã huỷ link.',
+  clOpen:'Mở thử', clNewLink:'Link mới',
+  clTitle:'Tin của anh/chị trên Nail101',
+  clLead:'Xem lại giúp em. Cần sửa gì thì sửa ngay bên dưới, xong bấm Đăng tin.',
+  clEditH:'Sửa nhanh', clPub:'Đăng tin', clPubQ:'Đăng tin này lên Nail101?',
+  clPubOk:'Đã đăng. Cảm ơn anh/chị!',
+  clDoneT:'Tin đã lên web', clDoneD:'Thợ có thể thấy và gửi yêu cầu ngay bây giờ.',
+  clView:'Xem tin trên web',
+  clGone:'Link không dùng được nữa',
+  clGoneD:'Link này đã hết hạn hoặc đã được dùng. Nhắn cho em để em gửi link mới.',
+  clUsedT:'Tin này đã được đăng rồi',
+  clLoading:'Đang mở…',
+  clMore:'Cần sửa nhiều hơn? Nhắn cho em, em sửa giúp.',
+  clFBiz:'Tên tiệm', clFName:'Tên của anh/chị', clFCity:'Thành phố', clFPay:'Cách trả công',
+  clFAmt:'Số tiền ($)', clFPct:'Phần trăm (%)', clFJob:'Loại việc', clFYears:'Kinh nghiệm',
+  clFNote:'Ghi chú thêm', clFPhone:'Số điện thoại của anh/chị',
+  clFPhoneH:'Số này không hiện công khai. Sau này đăng nhập bằng số này là thấy tin của mình.',
+  clBadPhone:'Số điện thoại cần đủ 10 số.',
+  clMyNote:'Tin này của anh/chị. Đăng nhập bằng số điện thoại trong tin là quản lý được.'
+});
+Object.assign(T.en, {
+  clCopyVi:'Copy (Vietnamese)', clCopyEn:'Copy (English)',
+  clAsk:'Does this look right?',
+  clLink:'👉 Open this link to review, edit if needed, then tap Publish (no login needed):',
+  clStOff:'Link: not created', clStNew:n => `Link created · ${n} days left`,
+  clStSent:n => `Sent · not opened · ${n} days left`,
+  clStOpen:n => `Opened · not published · ${n} days left`,
+  clStUsed:'Published through the link', clStExp:'Link expired – tap Copy for a new one',
+  clKill:'Revoke link', clKillQ:'Revoke this link? They will no longer be able to open it.', clKilled:'Link revoked.',
+  clOpen:'Open it', clNewLink:'New link',
+  clTitle:'Your post on Nail101',
+  clLead:'Please take a look. Edit anything below, then tap Publish.',
+  clEditH:'Quick edits', clPub:'Publish', clPubQ:'Publish this to Nail101?',
+  clPubOk:'Published. Thank you!',
+  clDoneT:'Your post is live', clDoneD:'Techs can see it and send requests right now.',
+  clView:'View the post',
+  clGone:'This link no longer works',
+  clGoneD:'It has expired or was already used. Text me and I will send a new one.',
+  clUsedT:'This post is already published',
+  clLoading:'Opening…',
+  clMore:'Need bigger changes? Just text me and I will do it for you.',
+  clFBiz:'Salon name', clFName:'Your name', clFCity:'City', clFPay:'Pay type',
+  clFAmt:'Amount ($)', clFPct:'Percent (%)', clFJob:'Job type', clFYears:'Experience',
+  clFNote:'Anything to add', clFPhone:'Your phone number',
+  clFPhoneH:'Not shown publicly. Later, sign in with this number to manage the post.',
+  clBadPhone:'Phone number needs 10 digits.',
+  clMyNote:'This post is yours. Sign in with the phone number on it to manage it.'
+});
+
+const CL_DAY = 86400000, CL_LIFE = 7 * CL_DAY;
+state.cl = {map:{}, page:null, edit:null, busy:false, on:false};
+
+function clDig(v){ return String(v || '').replace(/\D/g, '').slice(-10); }
+function clE164(v){ const d = clDig(v); return d.length === 10 ? '+1' + d : ''; }
+function clTok(){
+  const a = new Uint8Array(16);
+  (window.crypto || {}).getRandomValues ? crypto.getRandomValues(a) : a.forEach((x, i) => a[i] = Math.floor(Math.random() * 256));
+  return Array.from(a).map(x => x.toString(36)).join('').replace(/[^a-z0-9]/g, '').slice(0, 22);
+}
+function clUrl(tok){ return location.origin + location.pathname + '#claim-' + tok; }
+function clFor(id){ const m = state.cl.map || {}; return Object.keys(m).map(k => m[k]).find(c => c.docId === id) || null; }
+function clOk(c){ return !!(c && !c.used && (c.expMs || 0) > Date.now()); }
+function clDays(c){ return Math.max(0, Math.ceil(((c.expMs || 0) - Date.now()) / CL_DAY)); }
+function clStat(c){
+  if (!c) return t('clStOff');
+  if (c.used) return t('clStUsed');
+  if (!clOk(c)) return t('clStExp');
+  if (c.openedAt) return t('clStOpen', clDays(c));
+  if (c.sent) return t('clStSent', clDays(c));
+  return t('clStNew', clDays(c));
+}
+/* text to send, in a chosen language */
+function clText(o, lg, url){
+  const old = lang;
+  try {
+    lang = lg === 'en' ? 'en' : 'vi';
+    return admText(o).replace(t('cpAsk'), t('clAsk')) + '\n\n' + t('clLink') + '\n' + url;
+  } finally { lang = old; }
+}
+
+/* ---------- admin: status + copy buttons on every draft card ---------- */
+const clCard0 = admItemCard;
+admItemCard = function(o, draft){
+  let h = clCard0(o, draft);
+  if (!draft) return h;
+  const k = admKind(o), id = esc(o.id), c = clFor(o.id);
+  const two = `<button class="btn btn-ghost" type="button" data-act="clcopy" data-k="${k}" data-v="${id}" data-l="vi">${t('clCopyVi')}</button>
+    <button class="btn btn-ghost" type="button" data-act="clcopy" data-k="${k}" data-v="${id}" data-l="en">${t('clCopyEn')}</button>`;
+  h = h.replace(/<button class="btn btn-ghost" type="button" data-act="admcopytxt"[\s\S]*?<\/button>/, two);
+  const row = `<div class="cl-st"><span class="cl-dot${clOk(c) ? (c.openedAt ? ' op' : ' se') : (c && c.used ? ' ok' : '')}"></span>${esc(clStat(c))}
+    ${clOk(c) ? `<a class="btn-link" href="${esc(clUrl(c.tok))}" target="_blank" rel="noopener">${t('clOpen')}</a>
+      <button class="btn-link danger" type="button" data-act="clkill" data-v="${esc(c.tok)}">${t('clKill')}</button>` : ''}</div>`;
+  return h.replace('<div class="adm-acts">', row + '<div class="adm-acts">');
+};
+
+/* ---------- the claim page ---------- */
+function clItem(p){ return (p.coll === 'techs' ? TECHS : ADS).find(x => x.live && x.id === p.docId) || null; }
+function clEdit(o, p){
+  const tech = p.coll === 'techs', h = (o.hiring || {});
+  return tech
+    ? {name:o.name || '', city:o.city || '', years:o.years || '', payType:(o.payWanted || {}).type || '',
+       amount:(o.payWanted || {}).amount || '', pct:(o.payWanted || {}).pct || '',
+       note:(o.about && (o.about.vi || o.about.en)) || '', phone:admPretty(p.phone)}
+    : {name:o.businessName || '', city:o.city || '', jobType:h.jobType || '', payType:h.payType || '',
+       amount:h.amount || '', pct:h.commissionPct || '',
+       note:(o.extras && (o.extras.vi || o.extras.en)) || '', phone:admPretty(p.phone)};
+}
+function clMerge(o, p){
+  const e = state.cl.edit || {}, n = Math.max(0, Number(String(e.amount).replace(/[^\d.]/g, '')) || 0), pc = Math.max(0, Number(e.pct) || 0);
+  const txt = String(e.note || '').trim();
+  if (p.coll === 'techs')
+    return Object.assign({}, o, {name:String(e.name || '').trim() || o.name, city:e.city || o.city,
+      years:e.years || o.years, payWanted:e.payType ? {type:e.payType, amount:n, pct:pc} : o.payWanted,
+      about:txt ? {vi:txt, en:txt} : null});
+  return Object.assign({}, o, {businessName:String(e.name || '').trim() || o.businessName, city:e.city || o.city,
+    extras:txt ? {vi:txt, en:txt} : null,
+    hiring:Object.assign({}, o.hiring, {jobType:e.jobType || o.hiring.jobType, payType:e.payType || o.hiring.payType, amount:n, commissionPct:pc})});
+}
+function clF(k, label, inner, hint){
+  return `<div class="cl-f"><label class="flabel" for="cl-${k}">${esc(label)}</label>${inner}${hint ? `<p class="hint">${esc(hint)}</p>` : ''}</div>`;
+}
+function clSel(k, list, v){
+  return `<select id="cl-${k}" data-cl="${k}">${list.map(x => `<option value="${esc(x.v)}"${x.v === v ? ' selected' : ''}>${esc(lang === 'vi' ? x.vi : x.en)}</option>`).join('')}</select>`;
+}
+function clTxt(k, v, type){ return `<input id="cl-${k}" type="${type || 'text'}" data-cl="${k}" value="${esc(v == null ? '' : v)}">`; }
+function clForm(p){
+  const e = state.cl.edit || {}, tech = p.coll === 'techs';
+  const cities = (typeof CITY_OPTS !== 'undefined' ? CITY_OPTS : []).slice();
+  if (e.city && !cities.some(c => c.v === e.city)) cities.unshift({v:e.city, vi:e.city, en:e.city});
+  const comm = /commission/.test(e.payType || '');
+  return `<div class="card cl-form" id="cl-form"><h2 class="sec" style="margin-top:0">${t('clEditH')}</h2>
+    ${clF('name', t(tech ? 'clFName' : 'clFBiz'), clTxt('name', e.name))}
+    ${clF('city', t('clFCity'), clSel('city', cities, e.city))}
+    ${tech ? clF('years', t('clFYears'), clSel('years', OPTS.years || [], e.years))
+           : clF('jobType', t('clFJob'), clSel('jobType', OPTS.jobType || [], e.jobType))}
+    ${clF('payType', t('clFPay'), clSel('payType', OPTS.payType || [], e.payType))}
+    ${comm ? clF('pct', t('clFPct'), clTxt('pct', e.pct, 'number')) : ''}
+    ${clF('amount', t('clFAmt'), clTxt('amount', e.amount, 'number'))}
+    ${clF('note', t('clFNote'), `<textarea id="cl-note" rows="3" data-cl="note">${esc(e.note || '')}</textarea>`)}
+    ${clF('phone', t('clFPhone'), clTxt('phone', e.phone, 'tel'), t('clFPhoneH'))}
+    <p class="hint">${esc(t('clMore'))} ${supLine ? supLine() : ''}</p></div>`;
+}
+function clCard(o, p){
+  const prev = clMerge(o, p);
+  try { return (p.coll === 'techs' ? n1TechCard(prev) : n1JobCard(prev)).replace(/<div class="n1act">[\s\S]*?<\/div>\s*<\/div>\s*$/, '</div>'); }
+  catch (e) { console.warn('clcard', e); return ''; }
+}
+/* repaint pieces in place: a full render() here would eat the next click */
+function clPaint(form){
+  const p = state.cl.page;
+  if (!p || p.state !== 'ok') return;
+  const o = clItem(p); if (!o) return;
+  const c = document.getElementById('cl-card'); if (c) c.innerHTML = clCard(o, p);
+  if (form){ const f = document.getElementById('cl-form'); if (f) f.outerHTML = clForm(p); }
+}
+function clShell(inner){ return `<div class="wrap page cl-pg">${inner}</div>`; }
+function viewClaim(tok){
+  const p = state.cl.page;
+  if (!p || p.tok !== tok) return clShell(`<p class="empty-s">${t('clLoading')}</p>`);
+  if (p.state === 'done'){
+    const href = (p.coll === 'techs' ? '#tech-' : '#ad-') + p.docId;
+    return clShell(`<div class="card done"><div class="ok">${typeof ICON !== 'undefined' ? ICON.check : '✓'}</div>
+      <h2>${t('clDoneT')}</h2><p>${t('clDoneD')}</p></div>
+      <div class="stack" style="margin-top:14px"><a class="btn btn-primary" href="${href}">${t('clView')}</a>
+      <a class="btn btn-ghost" href="#home">${t('goHome')}</a></div>
+      <p class="hint" style="margin-top:14px">${esc(t('clMyNote'))}</p>`);
+  }
+  if (p.state === 'used') return clShell(`<h1 class="pg-title">${t('clUsedT')}</h1>
+    <div class="stack"><a class="btn btn-primary" href="${(p.coll === 'techs' ? '#tech-' : '#ad-') + p.docId}">${t('clView')}</a>
+    <a class="btn btn-ghost" href="#home">${t('goHome')}</a></div><p class="hint">${supLine ? supLine() : ''}</p>`);
+  if (p.state !== 'ok') return clShell(`<h1 class="pg-title">${t('clGone')}</h1><p class="empty-s">${t('clGoneD')}</p>
+    <p class="hint">${supLine ? supLine() : ''}</p><div class="stack"><a class="btn btn-ghost" href="#home">${t('goHome')}</a></div>`);
+  const o = clItem(p);
+  if (!o) return clShell(`<p class="empty-s">${t('clLoading')}</p>`);
+  return clShell(`<h1 class="pg-title">${t('clTitle')}</h1><p class="hint" style="margin:-6px 0 14px">${esc(t('clLead'))}</p>
+    <div id="cl-card">${clCard(o, p)}</div>${clForm(p)}
+    <div class="stack" style="margin-top:14px">
+      <button class="btn btn-primary btn-block" type="button" data-act="clpub"${state.cl.busy ? ' disabled' : ''}>${t('clPub')}</button></div>`);
+}
+
+/* ---------- routing ---------- */
+const clRoute0 = route;
+route = function(){
+  const h = (location.hash || '').replace(/^#/, '');
+  if (h.startsWith('claim-')) return {view:'claim', id:h.slice(6)};
+  return clRoute0();
+};
+const clRender0 = render;
+render = function(){
+  const r = route();
+  if (r.view !== 'claim') return clRender0();
+  document.documentElement.lang = lang;
+  document.getElementById('app').innerHTML = header(r) + `<main id="main">${viewClaim(r.id)}</main>
+    <footer class="site-footer"><div class="wrap"><span>${t('footS')}</span>${typeof LEGAL_LINKS === 'function' ? `<span class="foot-legal">${LEGAL_LINKS()}</span>` : ''}<span>${supLine ? supLine() : ''}</span></div></footer>`;
+  document.body.classList.toggle('has-mbar', false);
+  if (typeof renderModal === 'function') renderModal();
+};
+
+function clSet(el){
+  if (!el || !el.dataset || !el.dataset.cl || !state.cl.edit) return false;
+  state.cl.edit[el.dataset.cl] = el.value;
+  return true;
+}
+document.addEventListener('input', e => { if (clSet(e.target)) clPaint(false); });
+document.addEventListener('change', e => { if (clSet(e.target)) clPaint(e.target.dataset.cl === 'payType'); });
+
+/* ---------- live wiring ---------- */
+function clLive(c){
+  const {db, TS, errText} = c;
+  let loading = '';
+
+  /* admin sees every claim */
+  let watching = false;
+  setInterval(() => {
+    if (watching || !(state.adm && state.adm.on)) return;
+    watching = true;
+    db.collection('claims').limit(300).onSnapshot(s => {
+      const m = {};
+      s.docs.forEach(d => { m[d.id] = Object.assign({tok:d.id}, d.data()); });
+      state.cl.map = m; if (typeof softRender === 'function') softRender(); else render();
+    }, e => { console.warn('claims', e); watching = false; });
+  }, 700);
+
+  async function load(tok){
+    if (loading === tok) return; loading = tok;
+    let p = {tok, state:'gone'};
+    try {
+      const d = await db.collection('claims').doc(tok).get();
+      if (d && d.exists){
+        const v = d.data() || {};
+        p = {tok, coll:v.coll === 'techs' ? 'techs' : 'ads', docId:v.docId || '', phone:v.phone || '', expMs:v.expMs || 0,
+             state:v.used ? 'used' : ((v.expMs || 0) > Date.now() ? 'ok' : 'gone')};
+        if (p.state === 'ok' && !v.openedAt)
+          db.collection('claims').doc(tok).set({openedAt:TS()}, {merge:true}).catch(e => console.warn('open', e));
+      }
+    } catch (e) { console.warn('claim', e); }
+    state.cl.page = p; state.cl.edit = null;
+    if (p.state === 'ok'){ const o = clItem(p); if (o) state.cl.edit = clEdit(o, p); }
+    render();
+  }
+  /* fill the edit form once the post itself has loaded */
+  setInterval(() => {
+    const p = state.cl.page;
+    if (p && p.state === 'ok' && !state.cl.edit){ const o = clItem(p); if (o){ state.cl.edit = clEdit(o, p); render(); } }
+  }, 600);
+
+  const clRender1 = render;
+  render = function(){
+    const r = route();
+    if (r.view === 'claim' && (!state.cl.page || state.cl.page.tok !== r.id)) load(r.id);
+    return clRender1();
+  };
+
+  ACT.clcopy = async function(el){
+    const k = el.dataset.k, id = el.dataset.v, lg = el.dataset.l;
+    const o = admAll().find(x => x.id === id);
+    if (!o) return;
+    el.disabled = true;
+    try {
+      let c = clFor(id);
+      if (!clOk(c)){
+        const tok = clTok(), rec = {coll:k, docId:id, phone:clDig(admContact(id)), expMs:Date.now() + CL_LIFE,
+          used:false, sent:true, by:(state.user || {}).uid || '', at:TS(), sentAt:TS()};
+        await db.collection('claims').doc(tok).set(rec);
+        c = Object.assign({tok}, rec);
+        state.cl.map = Object.assign({}, state.cl.map, {[tok]:c});
+      } else if (!c.sent){
+        await db.collection('claims').doc(c.tok).set({sent:true, sentAt:TS()}, {merge:true});
+      }
+      await admCopy(clText(o, lg, clUrl(c.tok)));
+      render();
+    } catch (e) { console.warn('clcopy', e); toast(errText(e)); }
+    el.disabled = false;
+  };
+  ACT.clkill = async function(el){
+    if (!confirm(t('clKillQ'))) return;
+    try { await db.collection('claims').doc(el.dataset.v).delete();
+      const m = Object.assign({}, state.cl.map); delete m[el.dataset.v]; state.cl.map = m;
+      toast(t('clKilled')); render(); }
+    catch (e) { console.warn(e); toast(errText(e)); }
+  };
+  ACT.clpub = async function(el){
+    const p = state.cl.page, o = p && clItem(p);
+    if (!p || !o || state.cl.busy) return;
+    const e0 = state.cl.edit || {}, ph = clDig(e0.phone);
+    if (ph.length !== 10){ toast(t('clBadPhone')); const i = document.getElementById('cl-phone'); if (i) i.focus(); return; }
+    if (!confirm(t('clPubQ'))) return;
+    state.cl.busy = true; el.disabled = true;
+    try {
+      const merged = clMerge(o, p);
+      const ad = JSON.parse(JSON.stringify(Object.assign({}, merged, {id:undefined, live:undefined, mod:undefined,
+        ownerUid:undefined, ownerName:undefined, daysAgo:undefined, _form:undefined, _kind:undefined,
+        expMs:undefined, views:undefined, claim:undefined, ready:undefined, licOk2:undefined, filled:undefined, hired:undefined})));
+      Object.keys(ad).forEach(k => { if (ad[k] === undefined) delete ad[k]; });
+      ad.hasPhone = true;
+      await db.collection(p.coll).doc(p.docId).update({ad, mod:'ok', ownerPhone:'+1' + ph,
+        ownerName:(p.coll === 'techs' ? ad.name : ad.businessName) || '', claimTok:p.tok,
+        expMs:Date.now() + (typeof LIFE2 === 'number' ? LIFE2 : 30 * CL_DAY), updatedAt:TS()});
+      await db.collection('claims').doc(p.tok).set({used:true, usedAt:TS(), phone:ph}, {merge:true}).catch(e => console.warn('used', e));
+      state.cl.page = Object.assign({}, p, {state:'done'});
+      toast(t('clPubOk'));
+    } catch (e) { console.warn('clpub', e); toast(errText(e)); }
+    state.cl.busy = false; render(); window.scrollTo(0, 0);
+  };
+
+  /* when someone signs in by phone, posts carrying that number become theirs */
+  let took = '';
+  async function takeOver(){
+    const u = state.user, ph = u && clE164(u.phone);
+    if (!ph || took === u.uid) return;
+    took = u.uid;
+    for (const coll of ['ads', 'techs']){
+      try {
+        const s = await db.collection(coll).where('ownerPhone', '==', ph).get();
+        for (const d of s.docs){
+          const v = d.data() || {};
+          if (v.ownerUid === u.uid) continue;
+          await db.collection(coll).doc(d.id).update({ownerUid:u.uid, ownerName:u.name || v.ownerName || ''}).catch(e => console.warn('take', e));
+        }
+      } catch (e) { console.warn('take', coll, e); }
+    }
+  }
+  setInterval(() => { if (state.user) takeOver(); else took = ''; }, 1500);
+}
+if (state.n1ctx) clLive(state.n1ctx);
+
+/* ---------- styles ---------- */
+(() => { const st = document.createElement('style'); st.textContent = `
+.cl-st{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 14px 10px;font-size:13px;color:#5b4a53;font-weight:600}
+.cl-dot{width:9px;height:9px;border-radius:999px;background:#c9bcc3;flex:none}
+.cl-dot.se{background:#E0B252}.cl-dot.op{background:#2F7D6B}.cl-dot.ok{background:var(--primary)}
+.cl-pg{max-width:620px}
+.cl-form{display:grid;gap:12px;margin-top:14px;padding:16px}
+.cl-f{display:grid;gap:4px}
+.cl-f .hint{margin:0}
+`; document.head.appendChild(st); })();
 
 render();
 })();
