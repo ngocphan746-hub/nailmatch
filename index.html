@@ -6438,7 +6438,7 @@ Object.assign(T.vi, {
   ctPerson:'Người liên hệ', ctKind:'Loại', ctEmail:'Email', ctSrc:'Nguồn',
   ctNext:'Ngày liên hệ lại', ctNote:'Ghi chú chung',
   ctMore:'Thêm chi tiết', ctSalon:'Tiệm', ctTech:'Thợ',
-  ctF_all:'Tất cả', ctF_new:'Chưa liên hệ', ctF_contacted:'Đã liên hệ', ctF_interested:'Quan tâm',
+  ctF_all:'Tất cả', ctF_tiem:'Tiệm', ctF_tho:'Thợ', ctF_new:'Chưa liên hệ', ctF_contacted:'Đã liên hệ', ctF_interested:'Quan tâm',
   ctF_not:'Không quan tâm', ctF_posted:'Đã đăng tin', ctF_bad:'Số sai', ctF_no:'Đã từ chối',
   ctS_new:'Chưa liên hệ', ctS_contacted:'Đã liên hệ', ctS_interested:'Quan tâm',
   ctS_not:'Không quan tâm', ctS_posted:'Đã đăng tin', ctS_bad:'Số sai',
@@ -6468,7 +6468,7 @@ Object.assign(T.en, {
   ctPerson:'Contact person', ctKind:'Type', ctEmail:'Email', ctSrc:'Source',
   ctNext:'Follow up on', ctNote:'Notes',
   ctMore:'More details', ctSalon:'Salon', ctTech:'Tech',
-  ctF_all:'All', ctF_new:'Not contacted', ctF_contacted:'Contacted', ctF_interested:'Interested',
+  ctF_all:'All', ctF_tiem:'Salons', ctF_tho:'Techs', ctF_new:'Not contacted', ctF_contacted:'Contacted', ctF_interested:'Interested',
   ctF_not:'Not interested', ctF_posted:'Published', ctF_bad:'Bad number', ctF_no:'Opted out',
   ctS_new:'Not contacted', ctS_contacted:'Contacted', ctS_interested:'Interested',
   ctS_not:'Not interested', ctS_posted:'Published', ctS_bad:'Bad number',
@@ -6516,6 +6516,7 @@ function ctMatch(c){
       || c.phone.indexOf(imDig(q)) >= 0 && imDig(q))) return false;
   const f = state.ct.f;
   if (f === 'all') return true;
+  if (f === 'tiem' || f === 'tho') return (c.kind === 'tho' ? 'tho' : 'tiem') === f;
   if (f === 'no') return c.consent === 'no';
   return ctStat(c) === f;
 }
@@ -6527,15 +6528,15 @@ function ctList(){
 function ctRow(c){
   const st = ctStat(c), no = c.consent === 'no';
   return `<tr data-act="ctopen" data-v="${esc(c.phone)}" class="ct-row${no ? ' ct-no' : ''}">
-    <td><b>${esc(c.name || '—')}</b>${c.person ? `<span class="ct-p">${esc(c.person)}</span>` : ''}</td>
+    <td><b>${esc(c.name || '—')}</b><span class="ct-p">${esc([t(c.kind === 'tho' ? 'ctTech' : 'ctSalon'), c.person].filter(Boolean).join(' · '))}</span></td>
     <td class="ct-num">${esc(admPretty(c.phone))}</td>
     <td>${esc(c.city || '')}</td>
     <td><span class="ct-tag ct-${st}">${t('ctS_' + st)}</span>${no ? `<span class="ct-tag ct-off">${t('ctM_no')}</span>` : ''}</td>
     <td class="ct-num">${esc(ctDays(c))}</td></tr>`;
 }
 function ctFilters(){
-  const ks = ['all','new','contacted','interested','not','posted','bad','no'];
-  return `<nav class="ct-fs">${ks.map(k => `<button type="button" class="chip${state.ct.f === k ? ' on' : ''}" data-act="ctfilter" data-v="${k}">${t('ctF_' + k)}</button>`).join('')}</nav>`;
+  const ks = ['all','tiem','tho','new','contacted','interested','not','posted','bad','no'];
+  return `<nav class="ct-fs chipset">${ks.map(k => `<button type="button" class="choice${state.ct.f === k ? ' on' : ''}" data-act="ctfilter" data-v="${k}">${t('ctF_' + k)}</button>`).join('')}</nav>`;
 }
 function admCt(){
   if (state.ct.open) return ctCard(state.ct.open);
@@ -6581,7 +6582,7 @@ function ctCard(phone){
     </div>
     <div class="card adm-card cl-form">
       <h2 class="sec" style="margin-top:0">${t('ctMsg')}</h2>
-      <div class="ct-ms">${['unknown','yes','no'].map(v => `<button type="button" class="chip${(e.consent || 'unknown') === v ? ' on' : ''}${v === 'no' ? ' ct-mno' : ''}" data-act="ctconsent" data-v="${v}">${t('ctM_' + v)}</button>`).join('')}</div>
+      <div class="ct-ms">${['unknown','yes','no'].map(v => `<button type="button" class="choice${(e.consent || 'unknown') === v ? ' on' : ''}${v === 'no' ? ' ct-mno' : ''}" data-act="ctconsent" data-v="${v}">${t('ctM_' + v)}</button>`).join('')}</div>
       ${e.consent === 'no' || e.consent === 'yes'
         ? ctF('cnote', t(e.consent === 'no' ? 'ctWhyL' : 'ctYesL'), `<textarea id="ct-cnote" rows="2" data-ct="cnote" placeholder="${esc(t('ctWhyPh'))}">${esc(e.cnote || '')}</textarea>`,
             e.consentAt ? admFmt(n5Ms(e.consentAt)) : '')
@@ -6818,7 +6819,7 @@ document.addEventListener('change', e => {
 (() => { const st = document.createElement('style'); st.textContent = `
 .ct-q{width:100%;margin-bottom:10px}
 .ct-fs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.ct-fs .chip{font-size:13px;padding:6px 12px}
+.ct-fs .choice{font-size:14px;padding:0 13px;min-height:38px}
 .ct-tbl tbody tr{cursor:pointer}
 .ct-tbl tbody tr:hover td{background:var(--page)}
 .ct-row .ct-p{display:block;font-weight:500;color:#6b5a62;font-size:12px}
@@ -6995,7 +6996,7 @@ function txBar(){
 /* ===================== tab Liên hệ ===================== */
 function sqMode(){ return state.sq.mode === 'call' ? 'call' : 'sms'; }
 function sqTabs(){
-  return `<nav class="ct-fs sq-modes">${['sms','call'].map(k => `<button type="button" class="chip${sqMode() === k ? ' on' : ''}" data-act="sqmode" data-v="${k}">${t(k === 'sms' ? 'sqSms' : 'sqCall')}</button>`).join('')}</nav>`;
+  return `<nav class="ct-fs chipset sq-modes">${['sms','call'].map(k => `<button type="button" class="choice${sqMode() === k ? ' on' : ''}" data-act="sqmode" data-v="${k}">${t(k === 'sms' ? 'sqSms' : 'sqCall')}</button>`).join('')}</nav>`;
 }
 /* ---- nhắn tin ---- */
 function sqPick(o, c){
@@ -7423,8 +7424,9 @@ function sendMsg(it, lg){
 }
 function sendName(it){ return it.k === 'd' ? (admName(it.o) || (it.c && it.c.name) || '—') : (it.c.name || '—'); }
 function sendSub(it){
-  if (it.k === 'd') return [TECHS.includes(it.o) ? t('imTech') : titleOf(it.o), t('sdDraft')].filter(Boolean).join(' · ');
-  return [it.c.person, it.c.city, t('sdInvite')].filter(Boolean).join(' · ');
+  const who = t(sendKind(it) === 'tho' ? 'ctTech' : 'ctSalon');
+  if (it.k === 'd') return [who, TECHS.includes(it.o) ? '' : titleOf(it.o), t('sdDraft')].filter(Boolean).join(' · ');
+  return [who, it.c.person, it.c.city, t('sdInvite')].filter(Boolean).join(' · ');
 }
 
 admSend = function(){
@@ -7544,7 +7546,7 @@ Object.assign(T.vi, {
   tdCall:'Gọi', tdText:'Nhắn', tdOpen:'Mở',
   tdDue:d => d < 0 ? `Trễ ${-d} ngày` : d === 0 ? 'Hôm nay' : `Còn ${d} ngày`,
   tdCount:n => `${n} việc`,
-  stH:'Số liệu danh bạ', stH2:'Số liệu tin đăng', stCt:'Tổng danh bạ', stTouched:'Đã liên hệ', stInt:'Quan tâm',
+  stH:'Số liệu danh bạ', stH2:'Số liệu tin đăng', stCt:'Tổng danh bạ', stSalon:'— trong đó là tiệm', stTech:'— trong đó là thợ', stTouched:'Đã liên hệ', stInt:'Quan tâm',
   stPosted:'Đã đăng tin', stYes:'Đồng ý nhận tin', stNo:'Đã từ chối',
   sdWarn:d => `${d <= 0 ? 'Mới nhắn hôm nay' : d === 1 ? 'Mới nhắn hôm qua' : 'Mới nhắn ' + d + ' ngày trước'}. Nhắn lại sớm quá dễ làm phiền.`,
   mkSalon:'Tin tuyển thợ', mkTech:'Hồ sơ thợ'
@@ -7556,7 +7558,7 @@ Object.assign(T.en, {
   tdCall:'Call', tdText:'Text', tdOpen:'Open',
   tdDue:d => d < 0 ? `${-d} days late` : d === 0 ? 'Today' : `in ${d} days`,
   tdCount:n => `${n} to do`,
-  stH:'Contact numbers', stH2:'Listing numbers', stCt:'Contacts', stTouched:'Contacted', stInt:'Interested',
+  stH:'Contact numbers', stH2:'Listing numbers', stCt:'Contacts', stSalon:'— salons', stTech:'— techs', stTouched:'Contacted', stInt:'Interested',
   stPosted:'Published', stYes:'Agreed to texts', stNo:'Opted out',
   sdWarn:d => `${d <= 0 ? 'Texted today' : d === 1 ? 'Texted yesterday' : 'Texted ' + d + ' days ago'}. Texting again this soon is intrusive.`,
   mkSalon:'Salon job post', mkTech:'Tech profile'
@@ -7582,7 +7584,7 @@ function tdCard(){
   const list = tdList(), ks = ['late','today','soon','all'];
   const n = ctAll().filter(c => c.consent !== 'no' && c.nextAt && n9DueIn(c.nextAt) != null && n9DueIn(c.nextAt) <= 0).length;
   return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('tdH')}${n ? ` (${n})` : ''}</h2>
-    <nav class="ct-fs">${ks.map(k => `<button type="button" class="chip${state.td.f === k ? ' on' : ''}" data-act="tdfilter" data-v="${k}">${t('td' + (k === 'late' ? 'Late' : k === 'today' ? 'Today' : k === 'soon' ? 'Soon' : 'All'))}</button>`).join('')}</nav>
+    <nav class="ct-fs chipset">${ks.map(k => `<button type="button" class="choice${state.td.f === k ? ' on' : ''}" data-act="tdfilter" data-v="${k}">${t('td' + (k === 'late' ? 'Late' : k === 'today' ? 'Today' : k === 'soon' ? 'Soon' : 'All'))}</button>`).join('')}</nav>
     ${list.length ? `<ul class="td-list">${list.map(({c, d}) => `<li class="${d < 0 ? 'late' : ''}">
         <div><b>${esc(c.name || admPretty(c.phone))}</b>
           <span class="td-when">${esc(t('tdDue', d))} · ${esc(admPretty(c.phone))}${c.note ? ' · ' + esc(String(c.note).split('\n')[0].slice(0, 50)) : ''}</span></div>
@@ -7592,6 +7594,8 @@ function tdCard(){
 function stCard(){
   const all = ctAll();
   const rows = [[t('stCt'), all.length],
+    [t('stSalon'), all.filter(c => c.kind !== 'tho').length],
+    [t('stTech'), all.filter(c => c.kind === 'tho').length],
     [t('stTouched'), all.filter(c => (c.msgCount || 0) + (c.callCount || 0) > 0).length],
     [t('stInt'), all.filter(c => ctStat(c) === 'interested').length],
     [t('stPosted'), all.filter(c => ctStat(c) === 'posted').length],
@@ -7611,8 +7615,8 @@ admOver = function(){
 /* ---------- Tạo mới: một tab, hai loại ---------- */
 function admNew(){
   const k = state.mk === 'profile' ? 'profile' : 'hiring';
-  return `<nav class="ct-fs">${[['hiring','mkSalon'],['profile','mkTech']].map(([v, lab]) =>
-      `<button type="button" class="chip${k === v ? ' on' : ''}" data-act="mkpick" data-v="${v}">${t(lab)}</button>`).join('')}</nav>
+  return `<nav class="ct-fs chipset">${[['hiring','mkSalon'],['profile','mkTech']].map(([v, lab]) =>
+      `<button type="button" class="choice${k === v ? ' on' : ''}" data-act="mkpick" data-v="${v}">${t(lab)}</button>`).join('')}</nav>
     ${admMake(k)}`;
 }
 state.mk = 'hiring';
@@ -7659,6 +7663,79 @@ ACT.mkpick = function(el){ state.mk = el.dataset.v; render(); };
 .td-list li.late b{color:#B3261E}
 .td-when{display:block;font-size:12px;color:#8A6A72;margin-top:2px}
 .sq-warn{margin:0 0 10px;padding:8px 12px;border-radius:10px;background:#FFF1D9;color:#8A5A00;font-weight:600;font-size:13px}
+`; document.head.appendChild(st); })();
+
+/* ===========================================================
+   n110 – mỗi tab Admin có một dòng nói rõ nó để làm gì,
+          cộng một bảng hướng dẫn đầy đủ ở Tổng quan
+   loads after n109
+   =========================================================== */
+Object.assign(T.vi, {
+  hwH:'Mỗi mục để làm gì', hwShow:'Xem hướng dẫn', hwHide:'Ẩn hướng dẫn',
+  hw_over:'Việc cần làm hôm nay và các con số chung.',
+  hw_ct:'Mọi tiệm và thợ bạn có số điện thoại. Ai đã từ chối nhận tin cũng nằm ở đây.',
+  hw_send:'Chỗ làm chính hằng ngày: nhắn tin và gọi điện, mỗi lần một người.',
+  hw_imp:'Dán danh sách từ nơi khác vào để tạo tin nháp và danh bạ hàng loạt.',
+  hw_tpl:'Nội dung tin nhắn soạn sẵn. Sửa ở đây thì mọi tin gửi sau đều đổi theo.',
+  hw_draft:'Tin bạn soạn giùm, đang chờ tiệm hoặc thợ bấm đăng.',
+  hw_track:'Ai đã mở link, ai chưa trả lời lời mời hoặc đơn ứng tuyển.',
+  hw_mod:'Tin người dùng tự đăng, chờ bạn duyệt trước khi lên web.',
+  hw_new:'Tự tay soạn một tin tuyển thợ hoặc một hồ sơ thợ.',
+  hw_rep:'Tin bị người dùng báo xấu.',
+  hw_set:'Số điện thoại hỗ trợ, thông báo hiện trên web, múi giờ.'
+});
+Object.assign(T.en, {
+  hwH:'What each tab is for', hwShow:'Show the guide', hwHide:'Hide the guide',
+  hw_over:'What is due today, plus the overall numbers.',
+  hw_ct:'Every salon and tech whose number you have, including anyone who opted out.',
+  hw_send:'Your daily workbench: text and call, one person at a time.',
+  hw_imp:'Paste a list from somewhere else to create drafts and contacts in bulk.',
+  hw_tpl:'Your saved message wording. Edit here and every later message follows.',
+  hw_draft:'Posts you wrote for them, waiting for the salon or tech to publish.',
+  hw_track:'Who opened a link, and who has not answered an offer or application.',
+  hw_mod:'Posts users wrote themselves, waiting for you to approve.',
+  hw_new:'Write a job post or a tech profile by hand.',
+  hw_rep:'Listings users reported.',
+  hw_set:'Support phone number, the notice shown on the site, time zone.'
+});
+
+const HW_TABS = ['over','ct','send','imp','tpl','draft','track','mod','new','rep','set'];
+state.hw = {open:false};
+
+function hwLine(tab){
+  const k = 'hw_' + tab;
+  const s = t(k);
+  return s && s !== k ? `<p class="adm-what">${esc(s)}</p>` : '';
+}
+function hwCard(){
+  return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('hwH')}</h2>
+    ${state.hw.open
+      ? `<ul class="hw-list">${HW_TABS.map(k => `<li><b>${esc(t('admT_' + k))}</b><span>${esc(t('hw_' + k))}</span></li>`).join('')}</ul>
+         <button class="btn btn-ghost" type="button" data-act="hwtoggle">${t('hwHide')}</button>`
+      : `<button class="btn btn-ghost" type="button" data-act="hwtoggle">${t('hwShow')}</button>`}</div>`;
+}
+
+const n10Over0 = admOver;
+admOver = function(){ return n10Over0() + hwCard(); };
+
+const n10Admin0 = viewAdmin;
+viewAdmin = function(tab){
+  const h = n10Admin0(tab);
+  if (h.indexOf('class="adm-tabs"') < 0) return h;
+  const now = (h.match(/<a href="#admin-([a-z]+)"[^>]*class="on"/) || [])[1]
+    || (h.match(/class="on" aria-current="page">[^<]*<\/a>/) ? tab : tab);
+  return h.replace(/(<\/nav>)/, '$1' + hwLine(now === 'ad' || now === 'tech' ? 'new' : now));
+};
+
+ACT.hwtoggle = function(){ state.hw.open = !state.hw.open; render(); };
+
+(() => { const st = document.createElement('style'); st.textContent = `
+.adm-what{margin:-4px 0 14px;color:#6b5a62;font-size:14px;line-height:1.5}
+.hw-list{list-style:none;margin:0 0 14px;padding:0}
+.hw-list li{padding:10px 0;border-top:1px solid var(--line)}
+.hw-list li:first-child{border-top:0}
+.hw-list b{display:block;font-size:15px}
+.hw-list span{display:block;color:#6b5a62;font-size:14px;margin-top:2px;line-height:1.5}
 `; document.head.appendChild(st); })();
 
 render();
