@@ -7808,6 +7808,86 @@ if (state.n1ctx) n11Live(state.n1ctx);
 .nm-box input{width:100%}
 `; document.head.appendChild(st); })();
 
+/* ---------- gỡ ô nhập CSV cũ trong Tạo mới: chỉ còn tab Nhập ---------- */
+(() => {
+  const mk0 = admMake;
+  admMake = function(type){
+    return mk0(type).replace(/<div class="card adm-card"><h2 class="sec" style="margin-top:0">[^<]*<\/h2>\s*<p class="hint">CSV:[\s\S]*?<\/div>/, '');
+  };
+})();
+
+/* ===========================================================
+   n112 – Admin theo dõi "Cần thợ gấp": thợ nào đang bật sẵn sàng,
+          đã có tiệm nào hỏi chưa, ai cần bạn mai mối
+   loads after n111
+   =========================================================== */
+Object.assign(T.vi, {
+  rdH:'⚡ Thợ sẵn sàng đi làm ngay', rdNone:'Hiện chưa có thợ nào bật sẵn sàng.',
+  rdWho:'Thợ', rdWhen:'Rảnh', rdOn:'Bật', rdLeft:'Còn', rdAsk:'Tiệm đã hỏi',
+  rdHot:'Chưa ai hỏi', rdSoon:'Sắp hết hạn',
+  rdLeftH:h => h <= 0 ? 'Hết hạn' : h < 24 ? `${h} giờ` : `${Math.round(h / 24)} ngày`,
+  rdNear:n => `${n} tiệm đang tuyển gần đó`,
+  rdCopy:'Copy lời nhắn', rdPhone:'Copy số',
+  rdNote:'Thợ bật quá 24 giờ mà chưa tiệm nào hỏi thì nên gọi tiệm gần đó giúp họ.',
+  rdMsg:(ten, tp) => `Chào anh/chị, bên em có thợ ${ten} ở ${tp} đang rảnh đi làm ngay. Anh/chị xem hồ sơ ở nail101.com nhé, mục "Cần thợ gấp". – Nail101`,
+  stReady:'Thợ sẵn sàng ngay'
+});
+Object.assign(T.en, {
+  rdH:'⚡ Techs ready to work now', rdNone:'No tech is marked ready right now.',
+  rdWho:'Tech', rdWhen:'Free', rdOn:'Since', rdLeft:'Left', rdAsk:'Salons asked',
+  rdHot:'Nobody asked', rdSoon:'Expiring soon',
+  rdLeftH:h => h <= 0 ? 'Expired' : h < 24 ? `${h}h` : `${Math.round(h / 24)}d`,
+  rdNear:n => `${n} salons hiring nearby`,
+  rdCopy:'Copy a message', rdPhone:'Copy number',
+  rdNote:'If a tech has been ready over 24 hours with nobody asking, call a nearby salon for them.',
+  rdMsg:(ten, tp) => `Hi, we have a tech, ${ten} in ${tp}, free to start right away. Take a look at nail101.com under "Ready-to-Go Techs". – Nail101`,
+  stReady:'Ready to work now'
+});
+
+function rdList(){
+  return TECHS.filter(x => x.live && x.mod === 'ok' && n1Ready(x))
+    .map(x => {
+      const r = n1Ready(x);
+      const hrs = Math.round(((r.until || 0) - Date.now()) / 3600000);
+      const asked = (state.tr && state.tr.threads || []).filter(th => (th.about || {}).id === x.id).length;
+      const near = ADS.filter(a => a.live && a.mod === 'ok' && a.type === 'hiring'
+        && String(a.city || '') === String(r.city || x.city || '')).length;
+      return {x, r, hrs, asked, near};
+    })
+    .sort((a, b) => (a.asked - b.asked) || (a.hrs - b.hrs));
+}
+function rdCard(){
+  const list = rdList();
+  return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('rdH')} (${list.length})</h2>
+    <p class="hint">${esc(t('rdNote'))}</p>
+    ${list.length ? `<div class="im-wrap"><table class="im-tbl"><thead><tr>
+        <th>${t('rdWho')}</th><th>${t('rdWhen')}</th><th>${t('rdOn')}</th><th>${t('rdLeft')}</th><th>${t('rdAsk')}</th><th></th></tr></thead>
+      <tbody>${list.map(({x, r, hrs, asked, near}) => {
+        const hot = asked === 0, soon = hrs > 0 && hrs <= 6;
+        const ph = imDig(x.ownerPhone) || imDig(admContact(x.id));
+        const city = r.city || x.city || '';
+        return `<tr class="${hot ? 'tr-late' : ''}">
+          <td><b>${esc(x.name || '—')}</b><span class="ct-p">${esc([city, (x.services || []).slice(0, 2).map(s => svcName(s.id).split(' – ')[0]).join(', ')].filter(Boolean).join(' · '))}</span></td>
+          <td class="ct-num">${esc(n1ReadyDay(r))} ${esc(fmtTime(r.from || '10:00'))}–${esc(fmtTime(r.to || '19:00'))}</td>
+          <td class="ct-num">${esc(n1Ago(r.atC || r.atMs))}</td>
+          <td class="ct-num">${esc(t('rdLeftH', hrs))}${soon ? ` <b class="im-x">${t('rdSoon')}</b>` : ''}</td>
+          <td class="ct-num">${asked}${hot ? ` <b class="im-x">${t('rdHot')}</b>` : ''}<span class="ct-p">${esc(t('rdNear', near))}</span></td>
+          <td class="ct-num">${ph ? `<button class="btn-link" type="button" data-act="sqphone" data-v="${esc(ph)}">${t('rdPhone')}</button><br>` : ''}
+            <button class="btn-link" type="button" data-act="rdcopy" data-v="${esc(x.name || '')}" data-c="${esc(city)}">${t('rdCopy')}</button>
+            <br><a class="btn-link" href="#tech-${esc(x.id)}">${t('clOpen')}</a></td></tr>`;
+      }).join('')}</tbody></table></div>` : `<p class="empty-s">${t('rdNone')}</p>`}</div>`;
+}
+
+const n12Track0 = admTrack;
+admTrack = function(){ return rdCard() + n12Track0(); };
+
+const n12St0 = stCard;
+stCard = function(){
+  return n12St0().replace('</tbody>', `<tr><td>${esc(t('stReady'))}</td><td><b>${rdList().length}</b></td></tr></tbody>`);
+};
+
+ACT.rdcopy = async function(el){ await admCopy(t('rdMsg', el.dataset.v, el.dataset.c || 'San Antonio')); };
+
 render();
 })();
 </script>
