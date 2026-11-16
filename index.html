@@ -7738,6 +7738,76 @@ ACT.hwtoggle = function(){ state.hw.open = !state.hw.open; render(); };
 .hw-list span{display:block;color:#6b5a62;font-size:14px;margin-top:2px;line-height:1.5}
 `; document.head.appendChild(st); })();
 
+/* ===========================================================
+   n111 – đổi tên tài khoản ngay trong trang Tài khoản,
+          và admin hiện "Quản trị viên" thay vì vai trò thợ/tiệm
+   loads after n110
+   =========================================================== */
+Object.assign(T.vi, {
+  nmRole:'Quản trị viên', nmEdit:'Đổi tên', nmSave:'Lưu tên', nmCancel:'Thôi',
+  nmLabel:'Tên hiện trên web', nmOk:'Đã đổi tên.', nmNeed:'Tên không được để trống.'
+});
+Object.assign(T.en, {
+  nmRole:'Administrator', nmEdit:'Change name', nmSave:'Save name', nmCancel:'Cancel',
+  nmLabel:'Name shown on the site', nmOk:'Name changed.', nmNeed:'The name cannot be empty.'
+});
+
+state.nm = {on:false, v:'', busy:false};
+
+const n11Acc0 = viewAccount;
+viewAccount = function(){
+  let h = n11Acc0();
+  const u = state.user;
+  if (!u) return h;
+  /* admin thì ghi đúng vai trò */
+  if (state.adm && state.adm.on){
+    const r = t('role_' + (u.role || 'other'));
+    h = h.replace(`<p class="biz">${r}`, `<p class="biz">${t('nmRole')}`);
+  }
+  /* đổi tên */
+  const box = state.nm.on
+    ? `<div class="nm-box"><label class="flabel" for="nm-in">${t('nmLabel')}</label>
+        <input id="nm-in" type="text" value="${esc(state.nm.v)}" maxlength="60">
+        <div class="adm-two"><button class="btn btn-primary" type="button" data-act="nmsave"${state.nm.busy ? ' disabled' : ''}>${t('nmSave')}</button>
+          <button class="btn btn-ghost" type="button" data-act="nmcancel">${t('nmCancel')}</button></div></div>`
+    : `<button class="btn-link" type="button" data-act="nmedit">${t('nmEdit')}</button>`;
+  return h.replace('<div class="acc-btns">', box + '<div class="acc-btns">');
+};
+
+function n11Live(c){
+  const {db, TS, errText} = c;
+  ACT.nmedit = function(){ state.nm = {on:true, v:(state.user || {}).name || '', busy:false}; render();
+    const i = document.getElementById('nm-in'); if (i){ i.focus(); i.select(); } };
+  ACT.nmcancel = function(){ state.nm.on = false; render(); };
+  ACT.nmsave = async function(el){
+    const i = document.getElementById('nm-in'), v = (i ? i.value : '').trim();
+    const u = state.user;
+    if (!u) return;
+    if (!v){ toast(t('nmNeed')); return; }
+    state.nm.busy = true; el.disabled = true;
+    try {
+      await db.collection('users').doc(u.uid).set({name:v}, {merge:true});
+      state.user = Object.assign({}, u, {name:v});
+      /* tin của chính mình đổi tên theo */
+      for (const coll of ['ads', 'techs']){
+        try {
+          const s = await db.collection(coll).where('ownerUid', '==', u.uid).get();
+          for (const d of s.docs) await db.collection(coll).doc(d.id).update({ownerName:v}).catch(() => {});
+        } catch (e) { console.warn('nm', coll, e); }
+      }
+      state.nm.on = false;
+      toast(t('nmOk'));
+    } catch (e) { console.warn('nmsave', e); toast(errText(e)); }
+    state.nm.busy = false; render();
+  };
+}
+if (state.n1ctx) n11Live(state.n1ctx);
+
+(() => { const st = document.createElement('style'); st.textContent = `
+.nm-box{display:grid;gap:8px;margin:12px 0;text-align:left}
+.nm-box input{width:100%}
+`; document.head.appendChild(st); })();
+
 render();
 })();
 </script>
