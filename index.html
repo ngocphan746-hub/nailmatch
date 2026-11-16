@@ -6838,6 +6838,525 @@ tr.ct-no td{background:#FFF6F5}
 .btn-danger{background:#B3261E;border-color:#B3261E;color:#fff}
 `; document.head.appendChild(st); })();
 
+/* ===========================================================
+   n107 – Mẫu tin · tab Liên hệ (nhắn + gọi) · lịch sử liên hệ · link lời mời
+   loads after n106
+   =========================================================== */
+Object.assign(T.vi, {
+  admT_tpl:'Mẫu tin', admT_send:'Liên hệ',
+  tpTitle:'Mẫu tin', tpAdd:'Thêm mẫu', tpNone:'Chưa có mẫu nào.',
+  tpName:'Tên mẫu', tpCh:'Kênh', tpFor:'Dùng cho', tpVi:'Nội dung tiếng Việt', tpEn:'Nội dung tiếng Anh',
+  tpSms:'SMS', tpEmail:'Email', tpSocial:'Facebook/Zalo',
+  tpAny:'Cả hai', tpSalon:'Tiệm', tpTech:'Thợ',
+  tpSave:'Lưu mẫu', tpDel:'Xoá mẫu', tpDelQ:'Xoá mẫu này?', tpSaved:'Đã lưu mẫu.',
+  tpVars:'Biến tự điền: {ten} {nguoi} {thanhpho} {bai} {link} {toi}',
+  tpVarH:'{bai} là nội dung tin nháp · {link} là link gửi cho họ',
+  tpOptH:'Dòng cuối mọi tin SMS', tpOptD:'Luôn được thêm vào, không tắt được. Bạn sửa chữ được.',
+  tpMe:'Tên người gửi', tpMeD:'Thay cho {toi} trong mẫu tin. Ví dụ: Jane.',
+  tpBack:'← Mẫu tin', tpEdit:'Sửa', tpPrev:'Xem thử',
+  sqSms:'Nhắn tin', sqCall:'Gọi điện',
+  sqTz:h => `San Antonio: ${h}`, sqLate:'Ngoài giờ bên Mỹ (8h–21h). Gửi lúc này dễ làm phiền và bị báo spam.',
+  sqTpl:'Mẫu tin', sqNoTpl:'Chưa có mẫu nào hợp. Vào tab Mẫu tin để thêm.',
+  sqPrev:'Nội dung sẽ gửi', sqCopyMsg:'Copy nội dung',
+  cqNone:'Không còn ai để gọi.', cqTitle:'Gọi điện', cqLeft:(i, n) => `Người ${i} / ${n}`,
+  cqHow:'Bấm số để copy → gọi → chọn kết quả bên dưới.',
+  cqNo:'Không bắt máy', cqLater:'Hẹn gọi lại', cqYes:'Quan tâm', cqNot:'Không quan tâm', cqStop:'Đừng liên hệ nữa',
+  cqSkip:'Bỏ qua', cqWhen:'Gọi lại ngày nào?', cqNote:'Ghi chú cuộc gọi',
+  cqSaved:'Đã ghi.', cqDue:'Đến hẹn gọi lại', cqNew:'Chưa gọi lần nào',
+  ctLog:'Lịch sử liên hệ', ctLogNone:'Chưa có gì.',
+  lgSms:'Nhắn tin', lgCall:'Gọi điện', lgNote:'Ghi chú', lgInvite:'Gửi lời mời',
+  ivCopy:'Copy lời mời', ivTitle:'Nail101 – nơi tiệm nail và thợ tìm nhau',
+  ivLead:'Miễn phí. Không cần tải app. Đăng tin xong là thợ thấy ngay.',
+  ivB1:'Tiệm đăng tin tuyển thợ, thợ tự tìm tới',
+  ivB2:'Thợ tạo hồ sơ, tiệm chủ động mời làm',
+  ivB3:'Số điện thoại không hiện công khai, hai bên nhắn tin trong web',
+  ivSalon:'Đăng tin tuyển thợ', ivTech:'Tạo hồ sơ thợ', ivSee:'Xem thử trước',
+  ivGone:'Link này không dùng được nữa.'
+});
+Object.assign(T.en, {
+  admT_tpl:'Templates', admT_send:'Outreach',
+  tpTitle:'Templates', tpAdd:'New template', tpNone:'No templates yet.',
+  tpName:'Template name', tpCh:'Channel', tpFor:'For', tpVi:'Vietnamese text', tpEn:'English text',
+  tpSms:'SMS', tpEmail:'Email', tpSocial:'Facebook/Zalo',
+  tpAny:'Both', tpSalon:'Salons', tpTech:'Techs',
+  tpSave:'Save template', tpDel:'Delete template', tpDelQ:'Delete this template?', tpSaved:'Template saved.',
+  tpVars:'Auto-filled: {ten} {nguoi} {thanhpho} {bai} {link} {toi}',
+  tpVarH:'{bai} is the draft post · {link} is the link you send them',
+  tpOptH:'Last line of every SMS', tpOptD:'Always added, cannot be turned off. You can edit the wording.',
+  tpMe:'Your name in messages', tpMeD:'Replaces {toi} in templates. For example: Jane.',
+  tpBack:'← Templates', tpEdit:'Edit', tpPrev:'Preview',
+  sqSms:'Texting', sqCall:'Calling',
+  sqTz:h => `San Antonio: ${h}`, sqLate:'Outside US hours (8am–9pm). Texting now is intrusive and invites spam reports.',
+  sqTpl:'Template', sqNoTpl:'No template fits. Add one under Templates.',
+  sqPrev:'What will be sent', sqCopyMsg:'Copy the message',
+  cqNone:'Nobody left to call.', cqTitle:'Calling', cqLeft:(i, n) => `${i} of ${n}`,
+  cqHow:'Tap the number to copy it → call → pick the outcome below.',
+  cqNo:'No answer', cqLater:'Call back later', cqYes:'Interested', cqNot:'Not interested', cqStop:'Do not contact',
+  cqSkip:'Skip', cqWhen:'Call back on', cqNote:'Call notes',
+  cqSaved:'Logged.', cqDue:'Call-back due', cqNew:'Never called',
+  ctLog:'Contact history', ctLogNone:'Nothing yet.',
+  lgSms:'Text', lgCall:'Call', lgNote:'Note', lgInvite:'Invite sent',
+  ivCopy:'Copy the invite', ivTitle:'Nail101 – where nail salons and techs find each other',
+  ivLead:'Free. No app to install. Post once and techs can see it.',
+  ivB1:'Salons post jobs, techs come to them',
+  ivB2:'Techs post a profile, salons send offers',
+  ivB3:'Phone numbers stay private; both sides message inside the site',
+  ivSalon:'Post a job', ivTech:'Create a tech profile', ivSee:'Look around first',
+  ivGone:'This link no longer works.'
+});
+
+/* ===================== mẫu tin ===================== */
+const TPL_OPT = {vi:'Nhắn STOP nếu anh/chị không muốn nhận tin từ Nail101 nữa.',
+                 en:'Reply STOP to stop receiving texts from Nail101.'};
+const TPL_DEF = [
+  {id:'moibai', name:'Mời đăng bài (có tin nháp)', ch:'sms', kind:'any',
+   vi:'Chào {nguoi}, em là {toi} bên Nail101. Em soạn sẵn tin tuyển thợ cho {ten} rồi, anh/chị xem giúp em:\n\n{bai}\n\n👉 Bấm vào đây để sửa và đăng, không cần đăng nhập: {link}',
+   en:'Hi {nguoi}, this is {toi} from Nail101. I wrote up a job post for {ten} — please take a look:\n\n{bai}\n\n👉 Open this to edit and publish it, no login needed: {link}'},
+  {id:'nhac', name:'Nhắc lần 2', ch:'sms', kind:'any',
+   vi:'Chào {nguoi}, em {toi} bên Nail101 nhắn lại ạ. Tin của {ten} vẫn đang chờ anh/chị bấm đăng: {link}\nNếu cần em sửa gì thì nhắn em nhé.',
+   en:'Hi {nguoi}, {toi} from Nail101 again. The post for {ten} is still waiting for you to publish: {link}\nJust text me if you want anything changed.'},
+  {id:'moitho', name:'Mời thợ tạo hồ sơ', ch:'sms', kind:'tho',
+   vi:'Chào {nguoi}, em là {toi} bên Nail101. Bên em có tiệm ở {thanhpho} đang tìm thợ. Anh/chị tạo hồ sơ miễn phí ở đây là tiệm thấy và liên hệ: {link}',
+   en:'Hi {nguoi}, this is {toi} from Nail101. Salons in {thanhpho} are hiring right now. Put up a free profile here and they can reach you: {link}'},
+  {id:'moiweb', name:'Mời dùng web (không kèm bài)', ch:'sms', kind:'any',
+   vi:'Chào {nguoi}, em là {toi} bên Nail101 — web miễn phí để tiệm nail và thợ ở San Antonio tìm nhau. Anh/chị xem thử và đăng tin ở đây: {link}',
+   en:'Hi {nguoi}, this is {toi} from Nail101 — a free site where San Antonio salons and nail techs find each other. Have a look and post here: {link}'},
+  {id:'camon', name:'Cảm ơn sau khi đăng', ch:'sms', kind:'any',
+   vi:'Cảm ơn anh/chị đã đăng tin trên Nail101. Khi có thợ gửi yêu cầu, anh/chị vào nail101.com để xem và trả lời nhé. Cần sửa gì cứ nhắn em.',
+   en:'Thanks for posting on Nail101. When a tech sends a request, open nail101.com to see it and reply. Text me anytime you want changes.'},
+  {id:'email', name:'Email giới thiệu', ch:'email', kind:'any',
+   vi:'Chào {nguoi},\n\nEm là {toi} bên Nail101, web miễn phí giúp tiệm nail ở {thanhpho} tìm thợ.\n\nAnh/chị đăng tin ở đây, không mất phí: {link}\n\nCảm ơn anh/chị.',
+   en:'Hi {nguoi},\n\nI am {toi} from Nail101, a free site that helps salons in {thanhpho} find nail techs.\n\nYou can post here at no cost: {link}\n\nThank you.'}
+];
+function tplAll(){ const c = (state.adm && state.adm.tpl) || null; return (c && c.list && c.list.length) ? c.list : TPL_DEF; }
+function tplOpt(){ const c = (state.adm && state.adm.tpl) || {}; return c.opt || TPL_OPT; }
+function tplMe(){ const c = (state.adm && state.adm.tpl) || {}; return c.me || (state.user || {}).name || 'Nail101'; }
+function tplFor(kind, ch){ return tplAll().filter(x => (!ch || x.ch === ch) && (x.kind === 'any' || !kind || x.kind === kind)); }
+function tplFill(tpl, lg, ctx){
+  const body = String((lg === 'en' ? tpl.en : tpl.vi) || '');
+  const out = body
+    .replace(/\{ten\}/g, ctx.ten || '')
+    .replace(/\{nguoi\}/g, ctx.nguoi || (lg === 'en' ? 'there' : 'anh/chị'))
+    .replace(/\{thanhpho\}/g, ctx.thanhpho || 'San Antonio')
+    .replace(/\{bai\}/g, ctx.bai || '')
+    .replace(/\{link\}/g, ctx.link || '')
+    .replace(/\{toi\}/g, ctx.toi || tplMe())
+    .replace(/\n{3,}/g, '\n\n').trim();
+  return tpl.ch === 'sms' ? out + '\n\n' + (lg === 'en' ? tplOpt().en : tplOpt().vi) : out;
+}
+function tplCtx(c, o, link){
+  return {ten:(c && c.name) || (o && admName(o)) || '', nguoi:(c && c.person) || '',
+    thanhpho:(c && c.city) || (o && o.city) || 'San Antonio',
+    bai:o ? admText(o) : '', link:link || ''};
+}
+
+/* ---------- tab Mẫu tin ---------- */
+state.tp = {open:null, edit:null, busy:false};
+function tpCard(){
+  const e = state.tp.edit || {};
+  const sel = (k, list, lab) => `<select id="tp-${k}" data-tp="${k}">${list.map(x => `<option value="${x}"${e[k] === x ? ' selected' : ''}>${t(lab(x))}</option>`).join('')}</select>`;
+  return `<button class="btn-link" type="button" data-act="tpclose">${t('tpBack')}</button>
+    <div class="card adm-card cl-form">
+      ${ctF('tname', t('tpName'), `<input id="ct-tname" data-tp="name" value="${esc(e.name || '')}">`)}
+      ${ctF('tch', t('tpCh'), sel('ch', ['sms','email','social'], x => x === 'sms' ? 'tpSms' : x === 'email' ? 'tpEmail' : 'tpSocial'))}
+      ${ctF('tkind', t('tpFor'), sel('kind', ['any','tiem','tho'], x => x === 'any' ? 'tpAny' : x === 'tiem' ? 'tpSalon' : 'tpTech'))}
+      <p class="hint">${esc(t('tpVars'))}<br>${esc(t('tpVarH'))}</p>
+      ${ctF('tvi', t('tpVi'), `<textarea id="ct-tvi" rows="6" data-tp="vi">${esc(e.vi || '')}</textarea>`)}
+      ${ctF('ten2', t('tpEn'), `<textarea id="ct-ten2" rows="6" data-tp="en">${esc(e.en || '')}</textarea>`)}
+    </div>
+    <div class="adm-two"><button class="btn btn-primary" type="button" data-act="tpsave"${state.tp.busy ? ' disabled' : ''}>${t('tpSave')}</button>
+      <button class="btn btn-ghost danger" type="button" data-act="tpdel">${t('tpDel')}</button></div>`;
+}
+function admTpl(){
+  if (state.tp.open) return tpCard();
+  const list = tplAll(), o = tplOpt();
+  return `<div class="stack"><button class="btn btn-primary" type="button" data-act="tpnew">${t('tpAdd')}</button></div>
+    <div class="card adm-card">${list.length ? list.map(x => `<div class="tp-row">
+        <div><b>${esc(x.name)}</b><span class="tp-meta">${t(x.ch === 'sms' ? 'tpSms' : x.ch === 'email' ? 'tpEmail' : 'tpSocial')} · ${t(x.kind === 'any' ? 'tpAny' : x.kind === 'tiem' ? 'tpSalon' : 'tpTech')}</span>
+        <p class="tp-prev">${esc(String(x.vi || '').slice(0, 90))}…</p></div>
+        <button class="btn-link" type="button" data-act="tpopen" data-v="${esc(x.id)}">${t('tpEdit')}</button></div>`).join('')
+      : `<p class="empty-s">${t('tpNone')}</p>`}</div>
+    <div class="card adm-card cl-form"><h2 class="sec" style="margin-top:0">${t('tpOptH')}</h2>
+      <p class="hint">${esc(t('tpOptD'))}</p>
+      ${ctF('ome', t('tpMe'), `<input id="ct-ome" value="${esc(tplMe())}">`, t('tpMeD'))}
+      ${ctF('ovi', t('tpVi'), `<input id="ct-ovi" data-tpo="vi" value="${esc(o.vi)}">`)}
+      ${ctF('oen', t('tpEn'), `<input id="ct-oen" data-tpo="en" value="${esc(o.en)}">`)}
+      <button class="btn btn-ghost" type="button" data-act="tposave">${t('tpSave')}</button></div>`;
+}
+
+/* ===================== giờ bên Mỹ ===================== */
+function txHour(){ return Number(new Date().toLocaleString('en-US', {timeZone:'America/Chicago', hour:'numeric', hour12:false})); }
+function txNow(){ return new Date().toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US', {timeZone:'America/Chicago', weekday:'short', hour:'numeric', minute:'2-digit'}); }
+function txBad(){ const h = txHour(); return h < 8 || h >= 21; }
+function txBar(){
+  return `<div class="tx-bar${txBad() ? ' bad' : ''}"><b>${esc(t('sqTz', txNow()))}</b>${txBad() ? `<span>${esc(t('sqLate'))}</span>` : ''}</div>`;
+}
+
+/* ===================== tab Liên hệ ===================== */
+function sqMode(){ return state.sq.mode === 'call' ? 'call' : 'sms'; }
+function sqTabs(){
+  return `<nav class="ct-fs sq-modes">${['sms','call'].map(k => `<button type="button" class="chip${sqMode() === k ? ' on' : ''}" data-act="sqmode" data-v="${k}">${t(k === 'sms' ? 'sqSms' : 'sqCall')}</button>`).join('')}</nav>`;
+}
+/* ---- nhắn tin ---- */
+function sqPick(o, c){
+  const kind = c ? c.kind : (o && admKind(o) === 'techs' ? 'tho' : 'tiem');
+  const list = tplFor(kind, 'sms');
+  const cur = list.find(x => x.id === state.sq.tpl) || list[0] || null;
+  return {list, cur};
+}
+function sqMsg(o, c, lg){
+  const {cur} = sqPick(o, c);
+  if (!cur) return '';
+  const tok = o ? (clFor(o.id) || {}).tok : (c ? (ivFor(c.phone) || {}).tok : '');
+  return tplFill(cur, lg, tplCtx(c, o, tok ? (o ? clUrl(tok) : ivUrl(tok)) : ''));
+}
+const n7Send0 = admSend;
+admSend = function(){
+  if (sqMode() === 'call') return txBar() + sqTabs() + admCall();
+  const list = sqList();
+  if (!list.length || state.sq.i >= list.length) return txBar() + sqTabs() + n7Send0();
+  const o = list[state.sq.i], c = ctGet(admContact(o.id));
+  const {list:tl, cur} = sqPick(o, c);
+  const body = n7Send0()
+    .replace(/<div class="adm-two"><button class="btn btn-primary" type="button" data-act="clcopy"[\s\S]*?<\/div>/,
+      `${tl.length ? `<div class="cl-f"><label class="flabel" for="sq-tpl">${t('sqTpl')}</label>
+         <select id="sq-tpl" data-act2="sqtpl">${tl.map(x => `<option value="${esc(x.id)}"${cur && cur.id === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
+       <details class="ct-det"><summary>${t('sqPrev')}</summary><pre class="sq-prev">${esc(sqMsg(o, c, 'vi'))}</pre></details>
+       <div class="adm-two"><button class="btn btn-primary" type="button" data-act="sqcopy" data-l="vi">${t('clCopyVi')}</button>
+         <button class="btn btn-ghost" type="button" data-act="sqcopy" data-l="en">${t('clCopyEn')}</button></div>`
+      : `<p class="hint">${t('sqNoTpl')}</p>`}`);
+  return txBar() + sqTabs() + body;
+};
+/* ---- gọi điện ---- */
+function cqList(){
+  if (!state.cq.ids) cqBuild();
+  return state.cq.ids.map(p => ctGet(p)).filter(c => c && c.consent !== 'no');
+}
+function cqBuild(){
+  const today = new Date().toISOString().slice(0, 10);
+  state.cq.ids = ctAll()
+    .filter(c => c.consent !== 'no' && ctStat(c) !== 'bad' && ctStat(c) !== 'not')
+    .sort((a, b) => {
+      const da = (a.nextAt && a.nextAt <= today) ? 0 : 1, db2 = (b.nextAt && b.nextAt <= today) ? 0 : 1;
+      if (da !== db2) return da - db2;
+      return (n5Ms(a.lastAt) || 0) - (n5Ms(b.lastAt) || 0);
+    })
+    .map(c => c.phone);
+  state.cq.i = 0;
+}
+function admCall(){
+  const list = cqList();
+  if (!list.length || state.cq.i >= list.length)
+    return `<p class="empty-s">${t('cqNone')}</p><div class="stack"><button class="btn btn-ghost" type="button" data-act="cqreset">${t('sqRedo')}</button></div>`;
+  const c = list[state.cq.i], today = new Date().toISOString().slice(0, 10);
+  const due = c.nextAt && c.nextAt <= today;
+  return `<p class="hint">${esc(t('cqHow'))}</p>
+    <div class="card adm-card sq-card">
+      <p class="sq-n">${esc(t('cqLeft', state.cq.i + 1, list.length))}${due ? ` · ${t('cqDue')}` : ''}</p>
+      <h2 class="sq-name">${esc(c.name || '—')}</h2>
+      <p class="n1sub">${esc([c.person, c.city, t('ctS_' + ctStat(c))].filter(Boolean).join(' · '))}</p>
+      <button class="sq-ph" type="button" data-act="sqphone" data-v="${esc(c.phone)}">${esc(admPretty(c.phone))}<span>${t('sqPhone')}</span></button>
+      ${c.note ? `<p class="hint cq-note">${esc(c.note)}</p>` : ''}
+      <div class="cl-f"><label class="flabel" for="cq-note">${t('cqNote')}</label>
+        <textarea id="cq-note" rows="2" placeholder="${esc(t('cqNote'))}"></textarea></div>
+      <div class="cq-btns">
+        <button class="btn btn-ghost" type="button" data-act="cqlog" data-v="no">${t('cqNo')}</button>
+        <button class="btn btn-ghost" type="button" data-act="cqlog" data-v="later">${t('cqLater')}</button>
+        <button class="btn btn-primary" type="button" data-act="cqlog" data-v="yes">${t('cqYes')}</button>
+        <button class="btn btn-ghost" type="button" data-act="cqlog" data-v="not">${t('cqNot')}</button>
+        <button class="btn btn-ghost danger" type="button" data-act="cqlog" data-v="stop">${t('cqStop')}</button>
+      </div>
+      <button class="btn-link" type="button" data-act="cqskip">${t('cqSkip')}</button>
+      <button class="btn-link" type="button" data-act="ctopen" data-v="${esc(c.phone)}">${t('ctHist')}</button>
+    </div>`;
+}
+
+/* ===================== link lời mời ===================== */
+function ivFor(ph){
+  const p = imDig(ph), m = state.cl.map || {};
+  return Object.keys(m).map(k => m[k]).find(c => c.coll === 'invite' && imDig(c.phone) === p && !c.used) || null;
+}
+function ivUrl(tok){ return location.origin + location.pathname + '#i-' + tok; }
+function viewInvite(tok){
+  const p = state.cl.page;
+  if (!p || p.tok !== tok) return clShell(`<p class="empty-s">${t('clLoading')}</p>`);
+  if (p.state === 'gone') return clShell(`<h1 class="pg-title">${t('ivGone')}</h1>
+    <div class="stack"><a class="btn btn-primary" href="#home">${t('goHome')}</a></div>`);
+  const tech = p.kind === 'tho';
+  return clShell(`<h1 class="pg-title">${t('ivTitle')}</h1>
+    <p class="hint" style="margin:-6px 0 16px">${esc(t('ivLead'))}</p>
+    <ul class="iv-list"><li>${esc(t('ivB1'))}</li><li>${esc(t('ivB2'))}</li><li>${esc(t('ivB3'))}</li></ul>
+    <div class="stack" style="margin-top:18px">
+      <a class="btn btn-primary btn-block" href="${tech ? '#post-profile' : '#post-hiring'}">${t(tech ? 'ivTech' : 'ivSalon')}</a>
+      <a class="btn btn-ghost" href="${tech ? '#jobs' : '#salon'}">${t('ivSee')}</a></div>
+    <p class="hint" style="margin-top:16px">${supLine ? supLine() : ''}</p>`);
+}
+const n7Route0 = route;
+route = function(){
+  const h = (location.hash || '').replace(/^#/, '');
+  if (h.startsWith('i-')) return {view:'invite', id:h.slice(2)};
+  return n7Route0();
+};
+const n7Render0 = render;
+render = function(){
+  const r = route();
+  if (r.view !== 'invite') return n7Render0();
+  document.documentElement.lang = lang;
+  document.getElementById('app').innerHTML = header(r) + `<main id="main">${viewInvite(r.id)}</main>
+    <footer class="site-footer"><div class="wrap"><span>${t('footS')}</span>${typeof LEGAL_LINKS === 'function' ? `<span class="foot-legal">${LEGAL_LINKS()}</span>` : ''}</div></footer>`;
+  document.body.classList.toggle('has-mbar', false);
+  if (typeof renderModal === 'function') renderModal();
+};
+
+/* ===================== tabs ===================== */
+const N7_TABS = ['over','ct','send','imp','tpl','draft','track','mod','ad','tech','rep','set'];
+const n7Admin0 = viewAdmin;
+viewAdmin = function(tab){
+  if (tab === 'tpl'){
+    if (!state.user) return loginGate();
+    if (!state.adm.on) return notFound();
+    state.adm.tab = tab;
+    const nav = `<nav class="adm-tabs">${N7_TABS.map(k => `<a href="#admin-${k}"${k === tab ? ' class="on" aria-current="page"' : ''}>${t('admT_' + k)}</a>`).join('')}</nav>`;
+    return `<div class="wrap page adm"><h1 class="pg-title">${t('tpTitle')}</h1>${nav}<div class="adm-body">${admTpl()}</div></div>`;
+  }
+  const h = n7Admin0(tab);
+  if (h.indexOf('class="adm-tabs"') < 0) return h;
+  const nav = `<nav class="adm-tabs">${N7_TABS.map(k => `<a href="#admin-${k}"${k === tab ? ' class="on" aria-current="page"' : ''}>${t('admT_' + k)}</a>`).join('')}</nav>`;
+  return h.replace(/<nav class="adm-tabs">[\s\S]*?<\/nav>/, nav);
+};
+
+/* ===================== lịch sử trong thẻ danh bạ ===================== */
+const n7Ct0 = ctCard;
+ctCard = function(phone){
+  const h = n7Ct0(phone);
+  if (phone === '__new') return h;
+  const log = (state.ct.log || {})[imDig(phone)];
+  const rows = !log ? `<p class="empty-s">${t('clLoading')}</p>`
+    : (!log.length ? `<p class="empty-s">${t('ctLogNone')}</p>`
+      : `<ul class="lg-list">${log.map(x => `<li><b>${esc(t('lg' + ({sms:'Sms', call:'Call', invite:'Invite'}[x.kind] || 'Note')))}</b>
+          <span class="lg-when">${esc(admFmt(n5Ms(x.at) || Date.now()))}${x.byName ? ' · ' + esc(x.byName) : ''}</span>
+          ${x.outcome ? `<span class="lg-out">${esc(x.outcome)}</span>` : ''}
+          ${x.text ? `<pre class="lg-txt">${esc(x.text)}</pre>` : ''}</li>`).join('')}</ul>`);
+  return h + `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('ctLog')}</h2>${rows}
+    <div class="adm-two"><button class="btn btn-ghost" type="button" data-act="ivcopy" data-v="${esc(imDig(phone))}" data-l="vi">${t('ivCopy')}</button>
+      <button class="btn btn-ghost" type="button" data-act="ivcopy" data-v="${esc(imDig(phone))}" data-l="en">${t('ivCopy')} (EN)</button></div></div>`;
+};
+
+/* ===================== live ===================== */
+state.cq = {ids:null, i:0};
+function n7Live(c){
+  const {db, TS, errText} = c;
+  const me = () => (state.user || {});
+  let w1 = false;
+  setInterval(() => {
+    if (w1 || !(state.adm && state.adm.on)) return;
+    w1 = true;
+    db.collection('config').doc('templates').onSnapshot(d => {
+      state.adm.tpl = d && d.exists ? d.data() : null;
+      if (typeof softRender === 'function') softRender();
+    }, e => { console.warn('tpl', e); w1 = false; });
+  }, 900);
+
+  async function log(ph, rec){
+    try { await db.collection('contacts').doc(imDig(ph)).collection('log').add(Object.assign({at:TS(), by:me().uid || '', byName:me().name || ''}, rec)); }
+    catch (e) { console.warn('log', e); }
+  }
+  async function loadLog(ph){
+    const p = imDig(ph);
+    try {
+      const s = await db.collection('contacts').doc(p).collection('log').orderBy('at', 'desc').limit(40).get();
+      state.ct.log = Object.assign({}, state.ct.log, {[p]:s.docs.map(d => d.data())});
+    } catch (e) { console.warn('loadLog', e); state.ct.log = Object.assign({}, state.ct.log, {[p]:[]}); }
+    render();
+  }
+  const n7Open0 = ACT.ctopen;
+  ACT.ctopen = function(el){ n7Open0(el); loadLog(el.dataset.v); };
+
+  ACT.sqmode = function(el){ state.sq.mode = el.dataset.v; if (el.dataset.v === 'call') state.cq.ids = null; render(); };
+  ACT.cqskip = function(){ state.cq.i = state.cq.i + 1; render(); };
+  ACT.cqreset = function(){ state.cq.ids = null; render(); };
+  ACT.cqlog = async function(el){
+    const list = cqList(), c = list[state.cq.i];
+    if (!c) return;
+    const box = document.getElementById('cq-note'), note = box ? box.value.trim() : '';
+    const v = el.dataset.v;
+    const lab = {no:t('cqNo'), later:t('cqLater'), yes:t('cqYes'), not:t('cqNot'), stop:t('cqStop')}[v] || '';
+    const patch = {lastAt:TS(), callCount:(c.callCount || 0) + 1};
+    if (v === 'yes') patch.status = 'interested';
+    if (v === 'not') patch.status = 'not';
+    if (v === 'no' && ctStat(c) === 'new') patch.status = 'contacted';
+    if (v === 'stop'){ patch.consent = 'no'; patch.consentAt = TS(); patch.cnote = note || t('cqStop'); }
+    if (v === 'later'){
+      const when = prompt(t('cqWhen'), new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10));
+      if (when) patch.nextAt = when;
+      patch.status = ctStat(c) === 'new' ? 'contacted' : c.status;
+    }
+    el.disabled = true;
+    await window.ctTouch(c.phone, patch);
+    await log(c.phone, {kind:'call', outcome:lab, text:note});
+    if (box) box.value = '';
+    state.cq.i = state.cq.i + 1;
+    toast(t('cqSaved'));
+    render();
+  };
+
+  /* chọn mẫu */
+  document.addEventListener('change', e => {
+    const el = e.target;
+    if (el && el.dataset && el.dataset.act2 === 'sqtpl'){ state.sq.tpl = el.value; render(); }
+  });
+  ACT.sqcopy = async function(el){
+    const list = sqList(), o = list[state.sq.i];
+    if (!o) return;
+    const c = ctGet(admContact(o.id));
+    el.disabled = true;
+    try {
+      let cl = clFor(o.id);
+      if (!clOk(cl)){
+        const tok = clTok(), rec = {coll:admKind(o), docId:o.id, phone:imDig(admContact(o.id)),
+          expMs:Date.now() + CL_LIFE, used:false, sent:false, by:me().uid || '', at:TS()};
+        await db.collection('claims').doc(tok).set(rec);
+        cl = Object.assign({tok}, rec);
+        state.cl.map = Object.assign({}, state.cl.map, {[tok]:cl});
+      }
+      const {cur} = sqPick(o, c);
+      if (!cur){ toast(t('sqNoTpl')); el.disabled = false; return; }
+      const body = tplFill(cur, el.dataset.l, tplCtx(c, o, clUrl(cl.tok)));
+      state.sq.last = {id:o.id, text:body};
+      await admCopy(body);
+      render();
+    } catch (er) { console.warn('sqcopy', er); toast(errText(er)); }
+    el.disabled = false;
+  };
+  /* ghi nội dung đã gửi khi bấm Đã gửi */
+  const n7Next0 = ACT.sqnext;
+  ACT.sqnext = async function(el){
+    const list = sqList(), o = list[state.sq.i];
+    const c = o ? ctGet(admContact(o.id)) : null;
+    const last = state.sq.last && state.sq.last.id === (o || {}).id ? state.sq.last.text : null;
+    const txt = o && el.dataset.v === '1' ? (last || sqMsg(o, c, 'vi')) : '';
+    await n7Next0(el);
+    if (o && el.dataset.v === '1') await log(admContact(o.id), {kind:'sms', text:txt});
+  };
+
+  /* link lời mời */
+  ACT.ivcopy = async function(el){
+    const ph = imDig(el.dataset.v), c = ctGet(ph);
+    el.disabled = true;
+    try {
+      let iv = ivFor(ph);
+      if (!iv){
+        const tok = clTok(), rec = {coll:'invite', docId:'', phone:ph, kind:(c && c.kind) || 'tiem',
+          expMs:Date.now() + 3650 * 86400000, used:false, sent:false, by:me().uid || '', at:TS()};
+        await db.collection('claims').doc(tok).set(rec);
+        iv = Object.assign({tok}, rec);
+        state.cl.map = Object.assign({}, state.cl.map, {[tok]:iv});
+      }
+      const list = tplFor((c && c.kind) || 'tiem', 'sms');
+      const cur = list.find(x => x.id === 'moiweb') || list[0];
+      if (!cur){ toast(t('sqNoTpl')); el.disabled = false; return; }
+      const lg = el.dataset.l === 'en' ? 'en' : 'vi';
+      await admCopy(tplFill(cur, lg, tplCtx(c, null, ivUrl(iv.tok))));
+      await window.ctTouch(ph, {lastAt:TS(), msgCount:((c && c.msgCount) || 0)});
+      await log(ph, {kind:'invite', text:ivUrl(iv.tok)});
+      render();
+    } catch (er) { console.warn('ivcopy', er); toast(errText(er)); }
+    el.disabled = false;
+  };
+
+  /* mẫu tin */
+  async function tplSave(list, opt, who){
+    await db.collection('config').doc('templates').set({list:list || tplAll(), opt:opt || tplOpt(),
+      me:who == null ? tplMe() : who, upAt:TS()}, {merge:true});
+  }
+  ACT.tpnew = function(){ state.tp.open = '__new'; state.tp.edit = {id:'t' + Date.now().toString(36), name:'', ch:'sms', kind:'any', vi:'', en:''}; render(); };
+  ACT.tpopen = function(el){
+    const x = tplAll().find(y => y.id === el.dataset.v);
+    state.tp.open = el.dataset.v; state.tp.edit = Object.assign({}, x); render(); window.scrollTo(0, 0);
+  };
+  ACT.tpclose = function(){ state.tp.open = null; state.tp.edit = null; render(); };
+  ACT.tpsave = async function(el){
+    const e = state.tp.edit; if (!e || !e.name) return;
+    state.tp.busy = true; el.disabled = true;
+    try {
+      const list = tplAll().slice(), i = list.findIndex(x => x.id === e.id);
+      if (i >= 0) list[i] = e; else list.push(e);
+      await tplSave(list);
+      state.tp.open = null; state.tp.edit = null; toast(t('tpSaved'));
+    } catch (er) { console.warn(er); toast(errText(er)); }
+    state.tp.busy = false; render();
+  };
+  ACT.tpdel = async function(){
+    if (!confirm(t('tpDelQ'))) return;
+    try { await tplSave(tplAll().filter(x => x.id !== state.tp.open)); state.tp.open = null; state.tp.edit = null; render(); }
+    catch (e) { console.warn(e); toast(errText(e)); }
+  };
+  ACT.tposave = async function(el){
+    const vi = (document.getElementById('ct-ovi') || {}).value, en = (document.getElementById('ct-oen') || {}).value;
+    const who = (document.getElementById('ct-ome') || {}).value;
+    el.disabled = true;
+    try { await tplSave(null, {vi:vi || TPL_OPT.vi, en:en || TPL_OPT.en}, (who || '').trim()); toast(t('tpSaved')); }
+    catch (e) { console.warn(e); toast(errText(e)); }
+    el.disabled = false;
+  };
+
+  /* trang lời mời: đọc link rồi ghi nhận đã mở */
+  let loading = '';
+  async function ivLoad(tok){
+    if (loading === tok) return; loading = tok;
+    let p = {tok, state:'gone'};
+    try {
+      const d = await db.collection('claims').doc(tok).get();
+      if (d && d.exists){
+        const v = d.data() || {};
+        p = {tok, state:(v.expMs || 0) > Date.now() ? 'ok' : 'gone', kind:v.kind || 'tiem', phone:v.phone || ''};
+        if (p.state === 'ok' && !v.openedAt)
+          db.collection('claims').doc(tok).set({openedAt:TS()}, {merge:true}).catch(e => console.warn('ivopen', e));
+      }
+    } catch (e) { console.warn('invite', e); }
+    state.cl.page = p;
+    render();
+  }
+  const n7Rend = render;
+  render = function(){
+    const r = route();
+    if (r.view === 'invite' && (!state.cl.page || state.cl.page.tok !== r.id)) ivLoad(r.id);
+    return n7Rend();
+  };
+}
+if (state.n1ctx) n7Live(state.n1ctx);
+
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (el && el.dataset && el.dataset.tp && state.tp.edit) state.tp.edit[el.dataset.tp] = el.value;
+});
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el && el.dataset && el.dataset.tp && state.tp.edit && el.tagName === 'SELECT'){ state.tp.edit[el.dataset.tp] = el.value; render(); }
+});
+
+/* ---------- styles ---------- */
+(() => { const st = document.createElement('style'); st.textContent = `
+.tx-bar{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:8px 14px;border-radius:12px;background:#EFE7EA;font-size:13px;margin-bottom:12px}
+.tx-bar.bad{background:#FFF1D9}
+.tx-bar span{color:#8A5A00;font-weight:600}
+.sq-modes{margin-bottom:12px}
+.sq-prev{white-space:pre-wrap;font:inherit;font-size:13px;background:var(--page);padding:12px;border-radius:12px;margin:8px 0 0;line-height:1.5}
+.cq-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cq-note{text-align:left;background:var(--page);padding:10px;border-radius:10px}
+.tp-row{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line)}
+.tp-row:first-child{border-top:0}
+.tp-meta{display:block;font-size:12px;color:#8A6A72;font-weight:600;margin-top:2px}
+.tp-prev{margin:6px 0 0;font-size:13px;color:#6b5a62}
+.lg-list{list-style:none;margin:0;padding:0}
+.lg-list li{padding:10px 0;border-top:1px solid var(--line)}
+.lg-list li:first-child{border-top:0}
+.lg-when{display:block;font-size:12px;color:#8A6A72;margin-top:2px}
+.lg-out{display:inline-block;margin-top:4px;font-size:12px;font-weight:700;color:var(--primary)}
+.lg-txt{white-space:pre-wrap;font:inherit;font-size:13px;color:#5b4a53;background:var(--page);padding:10px;border-radius:10px;margin:6px 0 0}
+.iv-list{margin:0;padding-left:20px;line-height:1.9}
+`; document.head.appendChild(st); })();
+
 render();
 })();
 </script>
