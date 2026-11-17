@@ -4049,7 +4049,7 @@ render = function(){
   const mb = mobileBar(r);
   document.documentElement.lang = lang;
   document.getElementById('app').innerHTML = header(r) + `<main id="main">${main}</main>
-    <footer class="site-footer"><div class="wrap"><span>${t('footS')}</span>${typeof LEGAL_LINKS === 'function' ? `<span class="foot-legal">${LEGAL_LINKS()}</span>` : ''}<span>${supLine()}</span><span>${t('photoCredit')}</span></div></footer>
+    <footer class="site-footer"><div class="wrap"><span>${t('footS')}</span>${typeof LEGAL_LINKS === 'function' ? `<span class="foot-legal">${LEGAL_LINKS()}</span>` : ''}<span>${supLine()}</span></div></footer>
     ${mb ? `<div class="mbar">${mb}</div>` : (r.view === 'form' || r.view === 'thread' ? '' : tabBar(r))}`;
   document.body.classList.toggle('has-mbar', !!mb || (r.view !== 'form' && r.view !== 'thread'));
   renderModal();
@@ -9875,13 +9875,13 @@ T.vi.n23NoPh = '\u26a0 chưa gắn số — chủ không nhận được bài';
 T.en.n23NoPh = '\u26a0 no phone — the owner cannot receive this post';
 (function(){
   const st = document.createElement('style');
-  st.textContent = '.ct-warn{color:#b3261e;display:block}';
+  st.textContent = '.ct-warn{color:#b3261e;display:block;margin-top:4px}' + '.n23-fix{display:inline-block;margin-top:6px;padding:7px 14px;border:1.5px solid #b3261e;border-radius:999px;background:#fff;color:#b3261e;font-weight:700;font-size:14px;cursor:pointer}' + '.n23-fix:hover{background:#b3261e;color:#fff}' + '.n23-fix:disabled{opacity:.5;cursor:default}';
   document.head.appendChild(st);
 })();
 
 /* ---------- 5. gắn số chủ bằng tay cho bài cũ ---------- */
-T.vi.n23Fix = 'Gắn số';
-T.en.n23Fix = 'Attach phone';
+T.vi.n23Fix = 'Gắn số chủ';
+T.en.n23Fix = 'Attach owner phone';
 T.vi.n23Ask = 'Số điện thoại 10 số của chủ bài này:';
 T.en.n23Ask = "Owner's 10-digit phone for this post:";
 T.vi.n23Bad = 'Phải đủ 10 số.';
@@ -9894,8 +9894,8 @@ if (typeof n22Row === 'function'){
   n22Row = function(o, tech){
     const h = n23Row0(o, tech);
     if (n23Dig(o.ownerPhone || '')) return h;
-    const btn = `<button class="btn-link" type="button" data-act="n23fix" data-k="${tech ? 'techs' : 'ads'}" data-v="${esc(o.id)}">${t('n23Fix')}</button>`;
-    return h.replace('</span>', `</span><span class="ct-p ct-warn">${t('n23NoPh')} ${btn}</span>`);
+    const btn = `<button class="n23-fix" type="button" data-act="n23fix" data-k="${tech ? 'techs' : 'ads'}" data-v="${esc(o.id)}">\u260e\ufe0f ${t('n23Fix')}</button>`;
+    return h.replace('</span>', `</span><span class="ct-p ct-warn">${t('n23NoPh')}</span><br>${btn}`);
   };
 }
 
