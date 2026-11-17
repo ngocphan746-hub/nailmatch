@@ -9335,6 +9335,186 @@ ACT.n17go = function(el){
   document.head.appendChild(s);
 })();
 
+/* ============================================================
+   n118 — tin admin soạn giùm phải gắn số của chính chủ
+   Trước đây nó chỉ mang ownerUid của admin, nên:
+     · trang tài khoản admin nhận nhầm nó là hồ sơ của mình
+     · tiệm/thợ đăng nhập bằng số của họ thì không thấy bài đâu
+   ============================================================ */
+
+/* ---------- "hồ sơ thợ của tôi" phải đúng là của mình ---------- */
+(() => {
+  let mp = state.myProfile || null;
+  function mine(x){
+    if (!x) return false;
+    if (x.mod === 'draft') return false;              /* nháp chưa phải hồ sơ của ai */
+    const u = state.user;
+    if (!u) return true;
+    const op = imDig(x.ownerPhone || ''), up = imDig(u.phone || '');
+    if (op) return !!up && op === up;                 /* có số chủ thì phải khớp */
+    return true;
+  }
+  Object.defineProperty(state, 'myProfile', {
+    configurable:true,
+    get(){ return mine(mp) ? mp : null; },
+    set(v){ mp = v || null; }
+  });
+})();
+
+/* danh sách rỗng thì dựng lại, tránh kẹt khi dữ liệu về chậm hơn lần vẽ đầu */
+const n18List0 = sendList;
+sendList = function(){
+  const l = n18List0();
+  if (l.length) return l;
+  state.sq.ids = null;
+  return n18List0();
+};
+
+/* ---------- live ---------- */
+function n18Live(c){
+  const {db, TS, errText} = c;
+
+  /* nhập hàng loạt: ghi kèm số điện thoại và tên của chính chủ */
+  ACT.immake = async function(el){
+    const rows = (state.im.rows || []).filter(r => r.phone.length === 10 && !imTaken(r.phone) && !(r.err || []).length);
+    if (!rows.length || state.im.busy) return;
+    state.im.busy = true; el.disabled = true;
+    let n = 0;
+    for (const r of rows){
+      try {
+        const b = imBuild(r);
+        const ref = await db.collection(b.coll).add({
+          ownerUid:(state.user || {}).uid,
+          ownerPhone:'+1' + imDig(r.phone),
+          ownerName:r.name || '',
+          kind:b.type, createdAt:TS(), updatedAt:TS(),
+          ad:b.ad, form:b.form, mod:'draft', src:r.src || ''});
+        await db.collection('admNotes').doc(ref.id).set({phone:imDig(r.phone), lang:r.lang, by:(state.user || {}).uid, at:TS()});
+        n++;
+      } catch (e) { console.warn('import', e); }
+    }
+    /* mỗi người nhập vào cũng vào luôn tab Hồ sơ */
+    for (const r of rows){
+      const p = imDig(r.phone);
+      if (p.length !== 10) continue;
+      try { await window.ctTouch(p, {name:r.name || '', kind:r.kind === 'tho' ? 'tho' : 'tiem', city:r.city || '', src:r.src || ''}); }
+      catch (e) { console.warn('ct', e); }
+    }
+    state.im.busy = false; state.im.rows = []; state.sq.ids = null; state.sq.all = false;
+    toast(t('imMade', n));
+    location.hash = '#admin-send'; render();
+  };
+
+  /* tạo tin giùm: đăng xong gắn số và tên của chính chủ vào bài */
+  ['fpublish', 'n1pub'].forEach(k => {
+    const prev = ACT[k];
+    if (typeof prev !== 'function') return;
+    ACT[k] = async function(el){
+      const made = state.adm && state.adm.creating;
+      const ph = made ? imDig(made.phone || '') : '';
+      const nm = made ? (made.name || '') : '';
+      const r = await prev(el);
+      if (ph.length !== 10) return r;
+      const type = el.dataset.ft, fs = state.forms[type];
+      if (!fs || !fs.done || !fs.liveId) return r;
+      try {
+        await db.collection(type === 'profile' ? 'techs' : 'ads').doc(fs.liveId)
+          .set({ownerPhone:'+1' + ph, ownerName:nm || undefined}, {merge:true});
+      } catch (e) { console.warn('n18own', e); }
+      return r;
+    };
+  });
+}
+if (state.n1ctx) n18Live(state.n1ctx);
+
+/* ============================================================
+   n119
+   1. Mẫu tin: tên và nội dung xem trước đổi theo ngôn ngữ
+   2. Lời mời / đơn ứng tuyển gửi vào bài admin soạn giùm phải
+      theo chủ thật về khi họ đăng nhập bằng số của mình
+   ============================================================ */
+
+/* ---------- 1. mẫu tin theo ngôn ngữ ---------- */
+const N19_NAME = {
+  moibai:'Invite to publish (draft ready)',
+  nhac:'Second nudge',
+  moitho:'Invite a tech to post',
+  moiweb:'Invite to the site (no post)',
+  camon:'Thanks after publishing',
+  email:'Intro email'
+};
+TPL_DEF.forEach(x => { if (N19_NAME[x.id]) x.nameEn = N19_NAME[x.id]; });
+function n19Name(x){ return (lang === 'en' && x.nameEn) ? x.nameEn : x.name; }
+
+const n19Tpl0 = admTpl;
+admTpl = function(){
+  if (state.tp.open) return n19Tpl0();
+  let h = n19Tpl0();
+  tplAll().forEach(x => {
+    const vi = esc(String(x.vi || '').slice(0, 90));
+    const en = esc(String(x.en || x.vi || '').slice(0, 90));
+    if (lang === 'en'){
+      h = h.replace(`<b>${esc(x.name)}</b>`, `<b>${esc(n19Name(x))}</b>`);
+      if (vi !== en) h = h.replace(`<p class="tp-prev">${vi}…</p>`, `<p class="tp-prev">${en}…</p>`);
+    }
+  });
+  return h;
+};
+
+/* ---------- 2. lời mời theo chủ thật ---------- */
+function n19Live(c){
+  const {db, TS} = c;
+
+  /* ghi thêm số của chủ bài vào cuộc trò chuyện */
+  const n19Send0 = ACT.n1send;
+  if (typeof n19Send0 === 'function'){
+    ACT.n1send = async function(el){
+      const m = state.n1m, u = state.user;
+      const r = await n19Send0(el);
+      if (!m || !u) return r;
+      const it = m.kind === 'apply' ? ADS.find(a => a.id === m.id) : TECHS.find(z => z.id === m.id);
+      const op = it ? imDig(it.ownerPhone || '') : '';
+      if (op.length !== 10) return r;
+      try {
+        await db.collection('threads').doc(`${it.id}__${u.uid}`)
+          .set({ownerPhone:'+1' + op, ownerUid:it.ownerUid || ''}, {merge:true});
+      } catch (e) { console.warn('n19tag', e); }
+      return r;
+    };
+  }
+
+  /* đăng nhập đúng số thì nhận luôn các cuộc trò chuyện của bài mình */
+  let took = '';
+  async function claim(){
+    const u = state.user;
+    if (!u){ took = ''; return; }
+    if (took === u.uid) return;
+    const ph = imDig(u.phone || '');
+    if (ph.length !== 10) return;
+    took = u.uid;
+    try {
+      const s = await db.collection('threads').where('ownerPhone', '==', '+1' + ph).get();
+      for (const d of s.docs){
+        const v = d.data() || {}, mem = v.members || [];
+        if (mem.indexOf(u.uid) >= 0) continue;
+        const old = v.ownerUid || mem.filter(x => x !== v.from)[0];
+        if (!old || old === u.uid) continue;
+        const names = Object.assign({}, v.names || {});
+        names[u.uid] = names[old] || u.name || '—';
+        delete names[old];
+        const readAt = Object.assign({}, v.readAt || {});
+        delete readAt[old];
+        await db.collection('threads').doc(d.id).update({
+          members:mem.map(x => x === old ? u.uid : x),
+          names, readAt, ownerUid:u.uid
+        }).catch(e => console.warn('n19claim', e));
+      }
+    } catch (e) { console.warn('n19claim', e); took = ''; }
+  }
+  setInterval(claim, 2000);
+}
+if (state.n1ctx) n19Live(state.n1ctx);
+
 render();
 })();
 </script>
