@@ -9343,6 +9343,9 @@ ACT.n17go = function(el){
    ============================================================ */
 
 /* ---------- "hồ sơ thợ của tôi" phải đúng là của mình ---------- */
+Object.assign(T.vi, {n18OwnBad:'⚠ Không gắn được số của chủ vào bài. Vào Quản trị → Kiểm tra bài trên web để gắn tay.'});
+Object.assign(T.en, {n18OwnBad:'\u26a0 Could not attach the owner phone to this post. Attach it by hand in Admin → Check posts.'});
+
 (() => {
   let mp = state.myProfile || null;
   function mine(x){
@@ -9417,10 +9420,16 @@ function n18Live(c){
       if (ph.length !== 10) return r;
       const type = el.dataset.ft, fs = state.forms[type];
       if (!fs || !fs.done || !fs.liveId) return r;
+      /* Firestore từ chối cả lệnh ghi nếu có field nào là undefined,
+         nên chỉ đưa ownerName vào khi thật sự có tên. */
+      const pay = {ownerPhone:'+1' + ph};
+      if (nm) pay.ownerName = nm;
       try {
-        await db.collection(type === 'profile' ? 'techs' : 'ads').doc(fs.liveId)
-          .set({ownerPhone:'+1' + ph, ownerName:nm || undefined}, {merge:true});
-      } catch (e) { console.warn('n18own', e); }
+        await db.collection(type === 'profile' ? 'techs' : 'ads').doc(fs.liveId).set(pay, {merge:true});
+      } catch (e) {
+        console.warn('n18own', e);
+        try { toast(t('n18OwnBad')); } catch (e2) {}
+      }
       return r;
     };
   });
@@ -9864,19 +9873,31 @@ if (d0 && d0.get){
 /* ---------- 4. trong Quản trị: báo rõ bài chưa gắn số ---------- */
 T.vi.n23NoPh = '\u26a0 chưa gắn số — chủ không nhận được bài';
 T.en.n23NoPh = '\u26a0 no phone — the owner cannot receive this post';
-if (typeof n22Row === 'function'){
-  const n23Row0 = n22Row;
-  n22Row = function(o, tech){
-    const h = n23Row0(o, tech);
-    if (n23Dig(o.ownerPhone || '')) return h;
-    return h.replace('</span>', `</span><span class="ct-p ct-warn">${t('n23NoPh')}</span>`);
-  };
-}
 (function(){
   const st = document.createElement('style');
   st.textContent = '.ct-warn{color:#b3261e;display:block}';
   document.head.appendChild(st);
 })();
+
+/* ---------- 5. gắn số chủ bằng tay cho bài cũ ---------- */
+T.vi.n23Fix = 'Gắn số';
+T.en.n23Fix = 'Attach phone';
+T.vi.n23Ask = 'Số điện thoại 10 số của chủ bài này:';
+T.en.n23Ask = "Owner's 10-digit phone for this post:";
+T.vi.n23Bad = 'Phải đủ 10 số.';
+T.en.n23Bad = 'Needs 10 digits.';
+T.vi.n23OK  = 'Đã gắn số. Chủ đăng nhập đúng số này là thấy bài.';
+T.en.n23OK  = 'Attached. The owner sees the post after signing in with this number.';
+
+if (typeof n22Row === 'function'){
+  const n23Row0 = n22Row;
+  n22Row = function(o, tech){
+    const h = n23Row0(o, tech);
+    if (n23Dig(o.ownerPhone || '')) return h;
+    const btn = `<button class="btn-link" type="button" data-act="n23fix" data-k="${tech ? 'techs' : 'ads'}" data-v="${esc(o.id)}">${t('n23Fix')}</button>`;
+    return h.replace('</span>', `</span><span class="ct-p ct-warn">${t('n23NoPh')} ${btn}</span>`);
+  };
+}
 
 /* ---------- 3. chuyển quyền sở hữu sang tài khoản chủ ---------- */
 function n23Live(c){
@@ -9908,6 +9929,25 @@ function n23Live(c){
     busy = false;
     render();
   }
+
+  ACT.n23fix = async function(el){
+    const raw = prompt(t('n23Ask'), '');
+    if (raw === null) return;
+    const ph = n23Dig(raw);
+    if (ph.length !== 10){ toast(t('n23Bad')); return; }
+    el.disabled = true;
+    const col = el.dataset.k, id = el.dataset.v;
+    const o = (col === 'techs' ? TECHS : ADS).find(x => x.id === id);
+    const nm = o ? ((typeof adBiz === 'function' && col === 'ads' ? adBiz(o) : '') || o.name || o.businessName || '') : '';
+    const pay = {ownerPhone:'+1' + ph};
+    if (nm) pay.ownerName = nm;
+    try {
+      await db.collection(col).doc(id).set(pay, {merge:true});
+      if (o){ o.ownerPhone = pay.ownerPhone; if (nm) o.ownerName = nm; }
+      toast(t('n23OK'));
+    } catch (e){ console.warn('n23fix', e); toast(typeof errText === 'function' ? errText(e) : String(e)); el.disabled = false; }
+    render();
+  };
 
   let last = '';
   setInterval(() => {
