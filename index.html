@@ -9264,6 +9264,77 @@ function n16Live(c){
 }
 if (state.n1ctx) n16Live(state.n1ctx);
 
+/* ============================================================
+   n117 — Tổng quan gọn lại, khớp với bộ trạng thái mới
+   ============================================================ */
+Object.assign(T.vi, {
+  n17H1:'Hồ sơ', n17H2:'Tin đăng',
+  n17Ppl:n => n + (n === 1 ? ' người' : ' người'),
+  n17Split:(a, b) => a + ' tiệm · ' + b + ' thợ',
+  n17Empty:'Chưa có ai. Vào tab Nhập để thêm.',
+  n17Ads:'Tin tuyển đang chạy', n17Techs:'Hồ sơ thợ đang chạy',
+  n17Draft:'Nháp chờ họ duyệt', n17Mod:'Chờ duyệt', n17Rep:'Báo cáo mới'
+});
+Object.assign(T.en, {
+  n17H1:'Profiles', n17H2:'Listings',
+  n17Ppl:n => n + (n === 1 ? ' person' : ' people'),
+  n17Split:(a, b) => a + ' salons · ' + b + ' techs',
+  n17Empty:'Nobody yet. Add them in the Import tab.',
+  n17Ads:'Live job posts', n17Techs:'Live tech profiles',
+  n17Draft:'Drafts waiting on them', n17Mod:'Waiting for review', n17Rep:'New reports'
+});
+
+/* ---------- thẻ 1: hồ sơ, theo trạng thái, bấm được ---------- */
+stCard = function(){
+  const all = ctAll();
+  const sal = all.filter(c => c.kind !== 'tho').length;
+  const chips = N15_ST.map(s => {
+    const n = all.filter(c => ctStat(c) === s).length;
+    return `<button type="button" class="choice n15-${s} n17-c" data-act="n17go" data-v="${s}">${t('ctS_' + s)}<b>${n}</b></button>`;
+  }).join('');
+  return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('n17H1')}</h2>
+    ${all.length
+      ? `<p class="n17-sum"><b>${esc(t('n17Ppl', all.length))}</b><span>${esc(t('n17Split', sal, all.length - sal))}</span></p>
+         <div class="chipset n17-wrap">${chips}</div>`
+      : `<p class="hint">${esc(t('n17Empty'))}</p>`}</div>`;
+};
+
+/* ---------- thẻ 2: tin đăng, gộp lại còn 5 dòng ---------- */
+const n17Over0 = admOver;
+admOver = function(){
+  const dr = admDrafts();
+  const rows = [
+    [t('n17Ads'), admAds().filter(o => o.mod === 'ok').length],
+    [t('n17Techs'), admTechs().filter(o => o.mod === 'ok').length],
+    [t('n17Draft'), dr.length],
+    [t('n17Mod'), admMods().length],
+    [t('stReady'), rdList().length],
+    [t('n17Rep'), state.adm.reports.length]];
+  const card = `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('n17H2')}</h2>
+    <table class="adm-tbl"><tbody>${rows.map(r => `<tr><td>${esc(r[0])}</td><td><b>${r[1]}</b></td></tr>`).join('')}</tbody></table>
+    <button class="btn btn-ghost" type="button" data-act="admcsv">${t('admExport')}</button></div>`;
+  return n17Over0().replace(/<div class="card adm-card"><h2 class="sec" style="margin-top:0">[^<]*<\/h2>\s*<table class="adm-tbl">[\s\S]*?<\/div>/, card);
+};
+
+ACT.n17go = function(el){
+  state.ct.f = el.dataset.v;
+  state.ct.open = null; state.ct.edit = null;
+  location.hash = '#admin-ct';
+};
+
+/* ---------- css ---------- */
+(() => {
+  const s = document.createElement('style');
+  s.textContent = `
+.n17-sum{margin:0 0 12px;display:flex;flex-wrap:wrap;align-items:baseline;gap:10px}
+.n17-sum b{font-size:1.15rem}
+.n17-sum span{opacity:.65;font-size:.92rem}
+.n17-wrap{gap:8px}
+.n17-c{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;padding:5px 10px}
+.n17-c b{font-size:13.5px}`;
+  document.head.appendChild(s);
+})();
+
 render();
 })();
 </script>
