@@ -9444,7 +9444,11 @@ const N19_NAME = {
   email:'Intro email'
 };
 TPL_DEF.forEach(x => { if (N19_NAME[x.id]) x.nameEn = N19_NAME[x.id]; });
-function n19Name(x){ return (lang === 'en' && x.nameEn) ? x.nameEn : x.name; }
+/* mẫu đã lưu trong Firestore không có nameEn, tra theo id */
+function n19Name(x){
+  if (lang !== 'en') return x.name;
+  return x.nameEn || N19_NAME[x.id] || x.name;
+}
 
 const n19Tpl0 = admTpl;
 admTpl = function(){
@@ -9514,6 +9518,308 @@ function n19Live(c){
   setInterval(claim, 2000);
 }
 if (state.n1ctx) n19Live(state.n1ctx);
+
+/* ============================================================
+   n120 — sửa dữ liệu cũ: gắn số điện thoại chủ vào bài và
+   vào các cuộc trò chuyện đã tạo trước bản sửa
+   ============================================================ */
+Object.assign(T.vi, {
+  n20H:'Sửa dữ liệu cũ',
+  n20D:'Bài và lời mời tạo trước ngày sửa chưa gắn số điện thoại của chủ, nên tiệm/thợ đăng nhập không thấy. Bấm nút này một lần là web gắn lại hết.',
+  n20Go:'Gắn lại số cho bài và lời mời cũ',
+  n20Busy:'Đang sửa…',
+  n20Done:(a, b) => `Xong: ${a} bài, ${b} lời mời.`,
+  n20None:'Không có gì phải sửa.',
+  n20Miss:n => `${n} bài không tìm ra số điện thoại — mở tab Nháp hoặc Hồ sơ nhập số rồi bấm lại.`
+});
+Object.assign(T.en, {
+  n20H:'Repair older data',
+  n20D:'Posts and requests made before the fix carry no owner phone, so salons and techs cannot see them after signing in. Press this once and the site fills them in.',
+  n20Go:'Attach phone numbers to older posts and requests',
+  n20Busy:'Repairing…',
+  n20Done:(a, b) => `Done: ${a} posts, ${b} requests.`,
+  n20None:'Nothing to repair.',
+  n20Miss:n => `${n} posts have no phone number — add one in Drafts or Profiles, then press again.`
+});
+
+state.n20 = {busy:false, msg:''};
+
+const n20Set0 = admSet;
+admSet = function(){
+  return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('n20H')}</h2>
+      <p class="hint">${esc(t('n20D'))}</p>
+      <button class="btn btn-ghost btn-block" type="button" data-act="n20fix"${state.n20.busy ? ' disabled' : ''}>${state.n20.busy ? t('n20Busy') : t('n20Go')}</button>
+      ${state.n20.msg ? `<p class="hint" style="margin-top:10px"><b>${esc(state.n20.msg)}</b></p>` : ''}
+    </div>` + n20Set0();
+};
+
+function n20Live(c){
+  const {db, TS, errText} = c;
+
+  function phoneOf(o){
+    const a = imDig(o.ownerPhone || '');
+    if (a.length === 10) return a;
+    const b = imDig(admContact(o.id) || '');
+    if (b.length === 10) return b;
+    const f = (o._form && o._form.data) || {};
+    const d = imDig(f.phone || '');
+    return d.length === 10 ? d : '';
+  }
+
+  ACT.n20fix = async function(){
+    if (state.n20.busy) return;
+    state.n20.busy = true; state.n20.msg = ''; render();
+    let posts = 0, reqs = 0, miss = 0;
+    const byId = {};
+    try {
+      /* 1. bài: gắn số của chủ */
+      for (const o of admAll()){
+        const ph = phoneOf(o);
+        if (!ph){ miss++; continue; }
+        byId[o.id] = '+1' + ph;
+        if (imDig(o.ownerPhone || '') === ph) continue;
+        try {
+          await db.collection(admKind(o)).doc(o.id).set({ownerPhone:'+1' + ph, updatedAt:TS()}, {merge:true});
+          posts++;
+        } catch (e) { console.warn('n20 post', o.id, e); }
+      }
+      /* 2. lời mời và đơn ứng tuyển: gắn số của chủ bài */
+      const s = await db.collection('threads').get();
+      for (const d of s.docs){
+        const v = d.data() || {};
+        if (imDig(v.ownerPhone || '').length === 10) continue;
+        const pid = v.adId || v.techId || (v.about && v.about.id) || '';
+        const ph = byId[pid];
+        if (!ph) continue;
+        try {
+          await db.collection('threads').doc(d.id).set({ownerPhone:ph}, {merge:true});
+          reqs++;
+        } catch (e) { console.warn('n20 thread', d.id, e); }
+      }
+      state.n20.msg = (posts + reqs) ? t('n20Done', posts, reqs) : t('n20None');
+      if (miss) state.n20.msg += ' ' + t('n20Miss', miss);
+    } catch (e) {
+      console.warn('n20fix', e);
+      state.n20.msg = errText(e);
+    }
+    state.n20.busy = false;
+    render();
+  };
+}
+if (state.n1ctx) n20Live(state.n1ctx);
+
+/* ============================================================
+   n121 — công tắc tắt tin ví dụ
+   ============================================================ */
+Object.assign(T.vi, {
+  n21H:'Tin ví dụ',
+  n21D:'Tin có nhãn "Ví dụ" là tin viết sẵn trong web, không phải tiệm thật. Web tự giấu chúng khi đã có đủ 3 bài thật. Tắt công tắc này là giấu ngay, kể cả khi chưa đủ bài.',
+  n21On:'Đang hiện tin ví dụ', n21Off:'Đã tắt tin ví dụ',
+  n21Btn1:'Tắt tin ví dụ', n21Btn0:'Hiện lại tin ví dụ',
+  n21Saved:'Đã lưu. Mọi người vào web đều thấy như vậy.'
+});
+Object.assign(T.en, {
+  n21H:'Example posts',
+  n21D:'Posts tagged "Example" are written into the site, not real salons. The site hides them once there are 3 real posts. Turn this off to hide them right away.',
+  n21On:'Examples are showing', n21Off:'Examples are hidden',
+  n21Btn1:'Hide example posts', n21Btn0:'Show example posts again',
+  n21Saved:'Saved. Everyone visiting the site sees this.'
+});
+
+state.n21 = {demo:true, busy:false};
+
+/* tin ví dụ chỉ được nạp một lần lúc mở web, nên tắt công tắc thì gỡ hẳn ra khỏi danh sách */
+function n21Strip(){
+  if (state.n21.demo) return false;
+  let n = 0;
+  for (let i = ADS.length - 1; i >= 0; i--) if (ADS[i].sample){ ADS.splice(i, 1); n++; }
+  for (let i = TECHS.length - 1; i >= 0; i--) if (TECHS[i].sample){ TECHS.splice(i, 1); n++; }
+  return n > 0;
+}
+setInterval(() => {
+  if (!n21Strip()) return;
+  const a = document.activeElement;
+  const tp = a ? (a.tagName || '').toLowerCase() : '';
+  if (tp === 'input' || tp === 'textarea' || tp === 'select') return;  /* đang gõ thì chờ */
+  render();
+}, 3000);
+
+const n21Set0 = admSet;
+admSet = function(){
+  const on = state.n21.demo;
+  return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('n21H')}</h2>
+      <p class="hint">${esc(t('n21D'))}</p>
+      <p><b>${esc(t(on ? 'n21On' : 'n21Off'))}</b></p>
+      <button class="btn btn-ghost btn-block" type="button" data-act="n21toggle"${state.n21.busy ? ' disabled' : ''}>${t(on ? 'n21Btn1' : 'n21Btn0')}</button>
+    </div>` + n21Set0();
+};
+
+function n21Live(c){
+  const {db, TS, errText} = c;
+  try {
+    db.collection('config').doc('site').onSnapshot(d => {
+      const v = (d.exists && d.data()) || {};
+      const next = v.demo !== false;
+      if (next !== state.n21.demo){ state.n21.demo = next; n21Strip(); render(); }
+    }, e => console.warn('n21cfg', e));
+  } catch (e) { console.warn('n21cfg', e); }
+
+  ACT.n21toggle = async function(){
+    if (state.n21.busy) return;
+    state.n21.busy = true; render();
+    const next = !state.n21.demo;
+    try {
+      await db.collection('config').doc('site').set({demo:next, at:TS()}, {merge:true});
+      state.n21.demo = next;
+      n21Strip();
+      toast(t('n21Saved'));
+    } catch (e) { console.warn('n21toggle', e); toast(errText(e)); }
+    state.n21.busy = false; render();
+  };
+}
+if (state.n1ctx) n21Live(state.n1ctx);
+
+/* ============================================================
+   n122 — Tổng quan gọn: kiểm tra bài trên web, số liệu người dùng
+          + mẫu tin có tên tiếng Anh
+   ============================================================ */
+Object.assign(T.vi, {
+  n22Rev:'🔎 Kiểm tra bài trên web',
+  n22RevD:'Xem mọi bài đang chạy trên web, kể cả bài người ta tự đăng. Xoá được tin rác.',
+  n22Back:'← Quay lại',
+  n22Sal:'Tin tiệm', n22Tech:'Hồ sơ thợ',
+  n22Empty:'Chưa có bài nào.',
+  n22View:'Xem', n22Del:'Xoá',
+  n22DelQ:'Xoá hẳn bài này? Không lấy lại được.',
+  n22Deleted:'Đã xoá.',
+  n22U:'Người dùng',
+  n22UAll:'Tổng tài khoản', n22USal:'— Tiệm', n22UTech:'— Thợ',
+  n22PAll:'Tổng bài trên web', n22PSal:'— Tin tiệm', n22PTech:'— Hồ sơ thợ',
+  n22ULoad:'Đang đếm…',
+  n22UErr:'Chưa đọc được danh sách tài khoản. Nhớ dán lại firestore.rules.',
+  tpNameEn:'Tên tiếng Anh', tpNameEnD:'Để trống thì bản tiếng Anh dùng luôn tên tiếng Việt.'
+});
+Object.assign(T.en, {
+  n22Rev:'🔎 Review posts on the site',
+  n22RevD:'Every live post, including ones people put up themselves. Delete junk from here.',
+  n22Back:'← Back',
+  n22Sal:'Salon posts', n22Tech:'Tech profiles',
+  n22Empty:'No posts yet.',
+  n22View:'View', n22Del:'Delete',
+  n22DelQ:'Delete this post for good? This cannot be undone.',
+  n22Deleted:'Deleted.',
+  n22U:'People',
+  n22UAll:'Accounts', n22USal:'— Salons', n22UTech:'— Techs',
+  n22PAll:'Posts on the site', n22PSal:'— Salon posts', n22PTech:'— Tech profiles',
+  n22ULoad:'Counting…',
+  n22UErr:'Cannot read the account list. Paste firestore.rules again.',
+  tpNameEn:'English name', tpNameEnD:'Leave blank and the English view uses the Vietnamese name.'
+});
+
+state.n22 = {rev:null, users:null, uerr:false};
+
+/* 2. bỏ thẻ "Hôm nay cần làm" khỏi Tổng quan */
+tdCard = function(){ return ''; };
+
+/* ---------- 4. mẫu tin: ô tên tiếng Anh ---------- */
+const n22Tp0 = tpCard;
+tpCard = function(){
+  const e = state.tp.edit || {};
+  const add = ctF('tnameEn', t('tpNameEn'),
+    `<input id="ct-tnameEn" data-tp="nameEn" value="${esc(e.nameEn || '')}">`, t('tpNameEnD'));
+  return n22Tp0().replace(/(<input id="ct-tname" data-tp="name"[^>]*>\s*<\/div>)/, '$1' + add);
+};
+
+/* ---------- 1. kiểm tra bài trên web ---------- */
+function n22Live2(){
+  const sal = ADS.filter(a => a.live && !a.sample && a.mod === 'ok');
+  const tch = TECHS.filter(x => x.live && !x.sample && x.mod === 'ok');
+  return {sal, tch};
+}
+function n22Row(o, tech){
+  const who = tech ? (o.name || '—') : (adBiz(o) || o.businessName || '—');
+  const sub = [tech ? t('ctTech') : t('ctSalon'), o.city || '', admPretty(imDig(o.ownerPhone || '')) || ''].filter(Boolean).join(' · ');
+  return `<tr><td><b>${esc(who)}</b><span class="ct-p">${esc(sub)}</span></td>
+    <td class="ct-num"><a class="btn-link" href="#${tech ? 'tech' : 'ad'}-${esc(o.id)}">${t('n22View')}</a></td>
+    <td class="ct-num"><button class="btn-link danger" type="button" data-act="n22del" data-k="${tech ? 'techs' : 'ads'}" data-v="${esc(o.id)}">${t('n22Del')}</button></td></tr>`;
+}
+function n22RevCard(){
+  const {sal, tch} = n22Live2(), k = state.n22.rev, list = k === 'tho' ? tch : sal;
+  return `<div class="card adm-card"><button class="btn-link" type="button" data-act="n22close">${t('n22Back')}</button>
+    <h2 class="sec">${t('n22Rev')}</h2>
+    <nav class="ct-fs chipset">
+      <button type="button" class="choice${k !== 'tho' ? ' on' : ''}" data-act="n22pick" data-v="tiem">${t('n22Sal')} (${sal.length})</button>
+      <button type="button" class="choice${k === 'tho' ? ' on' : ''}" data-act="n22pick" data-v="tho">${t('n22Tech')} (${tch.length})</button>
+    </nav>
+    ${list.length ? `<div class="im-wrap"><table class="im-tbl ct-tbl"><tbody>${list.map(o => n22Row(o, k === 'tho')).join('')}</tbody></table></div>`
+      : `<p class="empty-s">${t('n22Empty')}</p>`}</div>`;
+}
+
+/* ---------- 2 + 3. Tổng quan ---------- */
+const n22Over0 = admOver;
+admOver = function(){
+  if (state.n22.rev) return n22RevCard();
+  const {sal, tch} = n22Live2(), u = state.n22.users;
+  const nums = `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('n22U')}</h2>
+    <table class="adm-tbl"><tbody>
+      <tr><td>${t('n22PAll')}</td><td><b>${sal.length + tch.length}</b></td></tr>
+      <tr><td>${t('n22PSal')}</td><td><b>${sal.length}</b></td></tr>
+      <tr><td>${t('n22PTech')}</td><td><b>${tch.length}</b></td></tr>
+      ${u ? `<tr><td>${t('n22UAll')}</td><td><b>${u.all}</b></td></tr>
+        <tr><td>${t('n22USal')}</td><td><b>${u.sal}</b></td></tr>
+        <tr><td>${t('n22UTech')}</td><td><b>${u.tech}</b></td></tr>`
+      : `<tr><td colspan="2">${esc(state.n22.uerr ? t('n22UErr') : t('n22ULoad'))}</td></tr>`}
+    </tbody></table></div>`;
+  const rev = `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('n22Rev')}</h2>
+    <p class="hint">${esc(t('n22RevD'))}</p>
+    <button class="btn btn-ghost btn-block" type="button" data-act="n22open">${t('n22Rev')}</button></div>`;
+  return nums + rev + n22Over0();
+};
+
+function n22Live(c){
+  const {db, errText} = c;
+  async function count(){
+    if (!state.adm || !state.adm.on) return;
+    try {
+      const s = await db.collection('users').get();
+      let sal = 0, tech = 0;
+      s.docs.forEach(d => {
+        const r = (d.data() || {}).role;
+        if (r === 'tech') tech++; else if (r === 'salon') sal++;
+      });
+      state.n22.users = {all:s.size, sal, tech};
+      state.n22.uerr = false;
+    } catch (e) { console.warn('n22users', e); state.n22.users = null; state.n22.uerr = true; }
+    n22Paint();
+  }
+
+  /* chỉ vẽ lại khi đang xem Tổng quan và không ai đang gõ, để không mất chữ đang nhập */
+  function n22Paint(){
+    const a = document.activeElement;
+    const tp = a ? (a.tagName || '').toLowerCase() : '';
+    if (tp === 'input' || tp === 'textarea' || tp === 'select') return;
+    if (!state.adm || state.adm.tab !== 'over') return;
+    render();
+  }
+  let last = '';
+  setInterval(() => {
+    const on = state.adm && state.adm.on ? (state.user || {}).uid : '';
+    if (on && on !== last){ last = on; count(); }
+    if (!on) last = '';
+  }, 2000);
+
+  ACT.n22open = function(){ state.n22.rev = 'tiem'; render(); window.scrollTo(0, 0); };
+  ACT.n22close = function(){ state.n22.rev = null; render(); window.scrollTo(0, 0); };
+  ACT.n22pick = function(el){ state.n22.rev = el.dataset.v; render(); };
+  ACT.n22del = async function(el){
+    if (!confirm(t('n22DelQ'))) return;
+    el.disabled = true;
+    try { await db.collection(el.dataset.k).doc(el.dataset.v).delete(); toast(t('n22Deleted')); }
+    catch (e) { console.warn('n22del', e); toast(errText(e)); el.disabled = false; }
+    render();
+  };
+}
+if (state.n1ctx) n22Live(state.n1ctx);
 
 render();
 })();
