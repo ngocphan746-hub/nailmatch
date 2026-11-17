@@ -8951,6 +8951,319 @@ function n15Live(c){
 }
 if (state.n1ctx) n15Live(state.n1ctx);
 
+/* ============================================================
+   n116 — tab Liên hệ gộp làm một: Tiệm / Thợ
+   mẫu tin → tạo tin giúp → copy → bấm trạng thái
+   ============================================================ */
+Object.assign(T.vi, {
+  n16MkS:'✏️ Tạo tin giúp tiệm này', n16MkT:'✏️ Tạo hồ sơ giúp thợ này',
+  n16How:'Gọi hoặc nhắn xong thì bấm trạng thái ở dưới.',
+  n16Set:'Trạng thái sau khi liên hệ',
+  n16None:'Chưa có ai trong mục này.',
+  n16Copied:'Đã copy. Dán vào tin nhắn rồi gửi.',
+  n16Back:'← Về tab Liên hệ', n16BackPrev:'← Xem lại tin',
+  clPubNow:'✓ Đăng tin ngay', clEditFirst:'✏️ Sửa rồi đăng',
+  clPreview:'Xem lại tin trước khi đăng',
+  clNoPhone:'Thiếu số điện thoại, bấm Sửa rồi đăng để điền.'
+});
+Object.assign(T.en, {
+  n16MkS:'✏️ Write this salon a post', n16MkT:'✏️ Write this tech a profile',
+  n16How:'After you call or text, tap a status below.',
+  n16Set:'Status after contact',
+  n16None:'Nobody here yet.',
+  n16Copied:'Copied. Paste it into your messages app.',
+  n16Back:'← Back to Outreach', n16BackPrev:'← Back to preview',
+  clPubNow:'✓ Publish now', clEditFirst:'✏️ Edit first',
+  clPreview:'Check the post before publishing',
+  clNoPhone:'Phone number missing — use Edit first.'
+});
+
+/* ---------- tab Tiệm / Thợ ---------- */
+function sqKind(){ return state.sq.mode === 'tho' ? 'tho' : 'tiem'; }
+sqTabs = function(){
+  return `<nav class="ct-fs chipset sq-modes">${['tiem', 'tho'].map(k =>
+    `<button type="button" class="choice${sqKind() === k ? ' on' : ''}" data-act="sqmode" data-v="${k}">${t(k === 'tiem' ? 'ctSalon' : 'ctTech')}</button>`).join('')}</nav>`;
+};
+ACT.sqmode = function(el){
+  state.sq.mode = el.dataset.v === 'tho' ? 'tho' : 'tiem';
+  state.sq.i = 0; state.n15.later = false;
+  render();
+};
+
+/* ---------- ai vào danh sách, xếp thế nào ---------- */
+function n16Ph(x){ const p = imDig(x); return p.length === 10 ? p : ''; }
+function n16Cur(ph){ return n16Ph(ph) ? n15Cur(ph) : 'new'; }
+function n16KindOf(it){
+  return it.k === 'd' ? (admKind(it.o) === 'techs' ? 'tho' : 'tiem')
+                      : ((it.c && it.c.kind) === 'tho' ? 'tho' : 'tiem');
+}
+/* thứ tự chốt một lần lúc dựng danh sách, để thẻ không nhảy khi đang thao tác */
+sendBuild = function(){
+  const seen = {}, out = [], today = new Date().toISOString().slice(0, 10);
+  admDrafts().forEach(o => { const ph = n16Ph(admContact(o.id)); if (ph) seen[ph] = 1; out.push({id:'d:' + o.id, ph}); });
+  ctAll().forEach(c => { if (seen[c.phone]) return; out.push({id:'c:' + c.phone, ph:c.phone}); });
+  out.forEach(x => {
+    const c = ctGet(x.ph) || {}, st = n16Cur(x.ph);
+    x.p = st === 'new' ? 0 : ((st === 'later' && c.nextAt && c.nextAt <= today) ? 1 : 2);
+    x.t = n5Ms(c.lastAt) || 0;
+  });
+  out.sort((a, b) => (a.p - b.p) || (a.t - b.t));
+  state.sq.ids = out.map(x => x.id);
+  state.sq.i = 0;
+};
+sendList = function(){
+  if (!state.sq.ids) sendBuild();
+  const kind = sqKind();
+  return state.sq.ids.map(id => {
+    if (id.indexOf('d:') === 0){
+      const o = admAll().find(x => x.id === id.slice(2));
+      if (!o || o.mod !== 'draft') return null;
+      const ph = n16Ph(admContact(o.id));
+      return {k:'d', id, o, c:ctGet(ph), ph};
+    }
+    const c = ctGet(id.slice(2));
+    return c ? {k:'c', id, c, ph:c.phone} : null;
+  }).filter(it => it && n16KindOf(it) === kind && n16Cur(it.ph) !== 'posted');
+};
+
+/* ---------- thẻ một người ---------- */
+admSend = function(){
+  const list = sendList();
+  if (!list.length)
+    return txBar() + sqTabs() + `<p class="empty-s">${t('n16None')}</p>`;
+  if (state.sq.i >= list.length) state.sq.i = list.length - 1;
+  if (state.sq.i < 0) state.sq.i = 0;
+  const it = list[state.sq.i], {list:tl, cur} = sendTpls(it);
+  const c = it.c || {}, st = n16Cur(it.ph), kind = sqKind();
+  const ms = n5Ms(c.lastAt), days = ms ? Math.floor((Date.now() - ms) / 86400000) : null;
+  return txBar() + sqTabs() + `<p class="hint">${esc(t('n16How'))}</p>
+    <div class="card adm-card sq-card">
+      <p class="sq-n">${esc(t('sdLeft', state.sq.i + 1, list.length))}</p>
+      ${n15Nav('sd', state.sq.i, list.length)}
+      <h2 class="sq-name">${esc(sendName(it))}</h2>
+      <p class="n1sub">${esc(sendSub(it))}</p>
+      ${st === 'refused' ? `<p class="n15-warn">${esc(t('n15NoWarn'))}</p>` : ''}
+      ${days != null && days <= 7 ? `<p class="sq-warn">${esc(t('sdWarn', days))}</p>` : ''}
+      <button class="sq-ph" type="button" data-act="n16call" data-v="${esc(it.ph)}">${esc(admPretty(it.ph) || '—')}<span>${t('sqPhone')}</span></button>
+      ${tl.length ? `<div class="cl-f"><label class="flabel" for="sq-tpl">${t('sqTpl')}</label>
+          <select id="sq-tpl" data-act2="sqtpl">${tl.map(x => `<option value="${esc(x.id)}"${cur && cur.id === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
+        <details class="ct-det"><summary>${t('sqPrev')}</summary><pre class="sq-prev">${esc(sendMsg(it, 'vi'))}</pre></details>` : ''}
+      <button class="btn btn-ghost btn-block n16-mk" type="button" data-act="n16make" data-p="${esc(it.ph)}" data-k="${kind}">${t(kind === 'tho' ? 'n16MkT' : 'n16MkS')}</button>
+      ${tl.length ? `<div class="n15-two"><button class="btn btn-primary" type="button" data-act="sdcopy" data-l="vi">${t('clCopyVi')}</button>
+          <button class="btn btn-ghost" type="button" data-act="sdcopy" data-l="en">${t('clCopyEn')}</button></div>`
+        : `<p class="hint">${t('sqNoTpl')}</p>`}
+      <p class="flabel n16-lb">${esc(t('n16Set'))}</p>
+      ${n15Chips(it.ph, st, 'n16set')}
+      ${state.n15.later ? n15Date() : ''}
+      ${it.k === 'd' ? `<button class="btn-link" type="button" data-act="liveedit" data-k="${admKind(it.o)}" data-v="${esc(it.o.id)}">${t('admEdit')}</button>` : ''}
+      <button class="btn-link" type="button" data-act="ctopen" data-v="${esc(it.ph)}">${t('ctHist')}</button>
+    </div>`;
+};
+
+/* ---------- trang người nhận bấm link: xem trước, rồi Đăng hoặc Sửa ---------- */
+state.cl.edit = false;
+const n16Load0 = clLoadForm;
+clLoadForm = function(p){
+  const type = n16Load0(p);
+  const ph = p && n16Ph(p.phone);
+  if (type && ph && state.forms[type] && !state.forms[type].data.phone)
+    state.forms[type].data.phone = admPretty(ph);
+  return type;
+};
+const n16Claim0 = viewClaim;
+viewClaim = function(tok){
+  const p = state.cl.page;
+  if (!p || p.tok !== tok || p.state !== 'ok') return n16Claim0(tok);
+  if (state.cl.edit)
+    return n16Claim0(tok).replace('<div class="cl-head">',
+      `<div class="cl-head"><button class="btn-link" type="button" data-act="n16un">${t('n16BackPrev')}</button>`);
+  const o = clItem(p);
+  if (!o) return n16Claim0(tok);
+  const ph = n16Ph(p.phone);
+  return clShell(`<h1 class="pg-title">${t('clTitle')}</h1>
+    <p class="hint" style="margin:-6px 0 14px">${esc(t('clPreview'))}</p>
+    ${clCard(o, p)}
+    <div class="stack" style="margin-top:16px">
+      <button class="btn btn-primary btn-block" type="button" data-act="n16pub">${t('clPubNow')}</button>
+      <button class="btn btn-ghost btn-block" type="button" data-act="n16edit">${t('clEditFirst')}</button></div>
+    ${ph ? '' : `<p class="hint" style="margin-top:10px">${esc(t('clNoPhone'))}</p>`}
+    <p class="hint" style="margin-top:14px">${esc(t('clMore'))} ${supLine ? supLine() : ''}</p>`);
+};
+
+/* ---------- bản copy phải có cả phần giới thiệu thêm ---------- */
+const n16Text0 = admText;
+admText = function(o){
+  const s = n16Text0(o);
+  if (!o) return s;
+  const tech = TECHS.includes(o);
+  const raw = tech ? o.about : o.extras;
+  const ex = raw ? String(L(raw) || '').trim() : '';
+  if (!ex) return s;
+  const lines = s.split('\n'), at = lines.indexOf(t('cpAsk'));
+  if (at < 1) return s;
+  lines.splice(at - 1, 0, ex);
+  return lines.join('\n');
+};
+
+/* ---------- rời trang claim thì thôi chế độ sửa ---------- */
+window.addEventListener('hashchange', () => {
+  if ((location.hash || '').indexOf('#claim-') !== 0) state.cl.edit = false;
+});
+
+/* ---------- css ---------- */
+(() => {
+  const s = document.createElement('style');
+  s.textContent = `
+.n16-mk{margin-top:12px}
+.n16-lb{display:block;margin:16px 0 2px;text-align:center}
+.sq-modes{justify-content:center}`;
+  document.head.appendChild(s);
+})();
+
+/* ---------- live ---------- */
+function n16Live(c){
+  const {db, TS, errText} = c;
+  const me = () => (state.user || {});
+  async function log(ph, rec){
+    const p = n16Ph(ph); if (!p) return;
+    try { await db.collection('contacts').doc(p).collection('log').add(Object.assign({at:TS(), by:me().uid || '', byName:me().name || ''}, rec)); }
+    catch (e) { console.warn('n16log', e); }
+  }
+  function here(){
+    const l = sendList(), x = l[state.sq.i];
+    return x || null;
+  }
+
+  /* bấm số = gọi điện */
+  const n16Phone0 = ACT.sqphone;
+  ACT.n16call = async function(el){
+    const ph = n16Ph(el.dataset.v);
+    if (n16Phone0) try { n16Phone0(el); } catch (e) { console.warn(e); }
+    if (!ph) return;
+    const old = ctGet(ph) || {};
+    try {
+      await window.ctTouch(ph, {callCount:(old.callCount || 0) + 1, lastAt:TS(), lastKind:'call'});
+      await log(ph, {kind:'call', outcome:t('sqCall')});
+    } catch (e) { console.warn('n16call', e); }
+    render();
+  };
+
+  /* copy = nhắn tin: ghi lịch sử, đánh dấu link đã gửi */
+  const n16Copy0 = ACT.sdcopy;
+  ACT.sdcopy = async function(el){
+    const it = here();
+    await n16Copy0(el);
+    if (!it || !it.ph) return;
+    const txt = (state.sq.last && state.sq.last.text) || '';
+    const old = ctGet(it.ph) || {};
+    try {
+      if (it.k === 'd'){
+        const cl = clFor(it.o.id);
+        if (clOk(cl)) await db.collection('claims').doc(cl.tok).set({sent:true, sentAt:TS()}, {merge:true});
+      }
+      await window.ctTouch(it.ph, {msgCount:(old.msgCount || 0) + 1, lastAt:TS(), lastKind:'sms',
+        name:old.name || sendName(it) || '', kind:old.kind || n16KindOf(it)});
+      await log(it.ph, {kind:'sms', text:txt});
+    } catch (e) { console.warn('n16copy', e); }
+    toast(t('n16Copied'));
+    render();
+  };
+
+  /* hàng trạng thái dưới cùng: bấm là ghi ngay, bấm nút khác là ghi đè */
+  ACT.n16set = async function(el){
+    const ph = n16Ph(el.dataset.p), v = el.dataset.v;
+    if (!ph) return;
+    if (v === 'later'){ state.n15.later = true; render(); return; }
+    state.n15.later = false;
+    el.disabled = true;
+    try {
+      const rec = {status:v, n15set:1, lastAt:TS()};
+      if (v === 'refused'){ rec.consent = 'no'; rec.consentAt = TS(); }
+      else if ((ctGet(ph) || {}).consent === 'no') rec.consent = 'unknown';
+      await window.ctTouch(ph, rec);
+      await log(ph, {kind:'note', outcome:t('ctS_' + v)});
+    } catch (e) { console.warn('n16set', e); toast(errText(e)); }
+    el.disabled = false;
+    render();
+  };
+  ACT.n15save = async function(el){
+    const it = here(); if (!it || !it.ph) return;
+    const box = document.getElementById('n15-d'), when = box ? box.value : '';
+    if (!when){ toast(t('n15Need')); return; }
+    el.disabled = true;
+    try {
+      await window.ctTouch(it.ph, {status:'later', n15set:1, nextAt:when, lastAt:TS()});
+      await log(it.ph, {kind:'note', outcome:t('n13LaterTo', when)});
+      toast(t('n15Ok'));
+    } catch (e) { console.warn('n15save', e); toast(errText(e)); }
+    el.disabled = false;
+    state.n15.later = false;
+    render();
+  };
+
+  /* tạo tin giúp: số điện thoại điền sẵn */
+  ACT.n16make = function(el){
+    const ph = n16Ph(el.dataset.p);
+    if (!ph){ toast(t('ctNeedPh')); return; }
+    const type = el.dataset.k === 'tho' ? 'profile' : 'hiring';
+    const c = ctGet(ph) || {};
+    state.adm.forPhone = ph;
+    state.adm.creating = {type, phone:ph, name:c.name || ''};
+    delete state.forms[type];
+    if (type === 'profile') state.myProfile = null;
+    state.n16back = ph;
+    location.hash = type === 'hiring' ? '#post-hiring' : '#post-profile';
+  };
+  /* đăng xong quay lại đúng người đó */
+  ['fpublish', 'n1pub'].forEach(k => {
+    const prev = ACT[k];
+    if (typeof prev !== 'function') return;
+    ACT[k] = async function(el){
+      const back = state.n16back;
+      const r = await prev(el);
+      const type = el.dataset.ft, fs = state.forms[type];
+      if (back && fs && fs.done){
+        state.n16back = null;
+        setTimeout(() => {
+          state.sq.ids = null;
+          const l = sendList(), i = l.findIndex(x => x.ph === back);
+          state.sq.i = i >= 0 ? i : 0;
+          location.hash = '#admin-send';
+        }, 900);
+      }
+      return r;
+    };
+  });
+
+  /* trang claim: đăng ngay hoặc sửa rồi đăng */
+  ACT.n16edit = function(){ state.cl.edit = true; render(); window.scrollTo(0, 0); };
+  ACT.n16un = function(){ state.cl.edit = false; render(); window.scrollTo(0, 0); };
+  ACT.n16pub = async function(el){
+    const p = state.cl.page;
+    if (!p || p.state !== 'ok') return;
+    const o = clItem(p), ph = n16Ph(p.phone);
+    if (!o) return;
+    if (!ph){ state.cl.edit = true; render(); return; }
+    if (!confirm(t('clPubQ'))) return;
+    el.disabled = true;
+    try {
+      await db.collection(p.coll).doc(p.docId).update({
+        mod:'ok', ownerPhone:'+1' + ph,
+        ownerName:(o.businessName || o.name || ''),
+        claimTok:p.tok,
+        expMs:Date.now() + (typeof LIFE2 === 'number' ? LIFE2 : 30 * CL_DAY),
+        updatedAt:TS()});
+      await db.collection('claims').doc(p.tok).set({used:true, usedAt:TS(), phone:ph}, {merge:true})
+        .catch(e2 => console.warn('used', e2));
+      state.cl.page = Object.assign({}, p, {state:'done'});
+      state.cl.type = null; state.cl.edit = false;
+      toast(t('clPubOk'));
+    } catch (e) { console.warn('n16pub', e); toast(errText(e)); el.disabled = false; }
+    render(); window.scrollTo(0, 0);
+  };
+}
+if (state.n1ctx) n16Live(state.n1ctx);
+
 render();
 })();
 </script>
