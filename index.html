@@ -9304,8 +9304,8 @@ const n17Over0 = admOver;
 admOver = function(){
   const dr = admDrafts();
   const rows = [
-    [t('n17Ads'), admAds().filter(o => o.mod === 'ok').length],
-    [t('n17Techs'), admTechs().filter(o => o.mod === 'ok').length],
+    [t('n17Ads'), admAds().filter(o => (o.mod || '') !== 'draft' && (o.mod || '') !== 'rejected').length],
+    [t('n17Techs'), admTechs().filter(o => (o.mod || '') !== 'draft' && (o.mod || '') !== 'rejected').length],
     [t('n17Draft'), dr.length],
     [t('n17Mod'), admMods().length],
     [t('stReady'), rdList().length],
@@ -9899,6 +9899,23 @@ if (typeof n22Row === 'function'){
   };
 }
 
+/* ---------- 6. đếm MỌI bài đang sống trên web ----------
+   Trước đây chỉ lọc mod === 'ok', tức là chỉ bài đi qua luồng
+   nháp → duyệt của admin. Bài tiệm/thợ tự đăng không có ô mod
+   nên bị bỏ sót cả trong danh sách lẫn trong ô đếm.
+   Giờ tính mọi bài đang sống, chỉ loại nháp và bài bị từ chối. */
+function n23Out(o){
+  const m = o.mod || '';
+  return m === 'draft' || m === 'rejected';
+}
+if (typeof n22Live2 === 'function'){
+  n22Live2 = function(){
+    return {
+      sal: ADS.filter(a => a.live && !a.sample && !n23Out(a)),
+      tch: TECHS.filter(x => x.live && !x.sample && !n23Out(x))
+    };
+  };
+}
 /* ---------- 3. chuyển quyền sở hữu sang tài khoản chủ ---------- */
 function n23Live(c){
   const {db} = c;
@@ -9960,6 +9977,132 @@ function n23Live(c){
 if (state.n1ctx) n23Live(state.n1ctx);
 
 })();
+
+/* ============================================================
+   n124 — bấm vào từng dòng số liệu là hiện danh sách để kiểm tra:
+   3 dòng bài → mở Kiểm tra bài trên web đúng tab
+   3 dòng tài khoản → mở danh sách tài khoản (tiệm / thợ)
+   ============================================================ */
+Object.assign(T.vi, {
+  n24UH:'Danh sách tài khoản',
+  n24UD:'Mọi tài khoản đã đăng nhập vào web, kể cả người chưa đăng bài.',
+  n24All:'Tất cả', n24Sal:'Tiệm', n24Tech:'Thợ',
+  n24Name:'Tên', n24Ph:'Số điện thoại', n24Kind:'Loại', n24When:'Tạo lúc',
+  n24Empty:'Chưa có tài khoản nào.',
+  n24Load:'Đang tải…',
+  n24Err:'Không đọc được danh sách tài khoản. Kiểm tra lại rules trên Firebase.',
+  n24Back:'← Quay lại', n24Other:'Khác', n24NoName:'(chưa đặt tên)'
+});
+Object.assign(T.en, {
+  n24UH:'Accounts',
+  n24UD:'Everyone who has signed in, including people with no post yet.',
+  n24All:'All', n24Sal:'Salons', n24Tech:'Techs',
+  n24Name:'Name', n24Ph:'Phone', n24Kind:'Type', n24When:'Created',
+  n24Empty:'No accounts yet.',
+  n24Load:'Loading…',
+  n24Err:'Could not read the account list. Check the Firestore rules.',
+  n24Back:'\u2190 Back', n24Other:'Other', n24NoName:'(no name)'
+});
+
+state.n24 = {view:null, f:'all', rows:null, err:false, busy:false};
+
+function n24Kind(r){
+  if (r === 'salon') return t('n24Sal');
+  if (r === 'tech') return t('n24Tech');
+  return t('n24Other');
+}
+function n24Ms(x){
+  if (!x) return 0;
+  if (typeof x.toMillis === 'function') return x.toMillis();
+  if (typeof x === 'number') return x;
+  if (x.seconds) return x.seconds * 1000;
+  return 0;
+}
+function n24When(v){
+  const m = n24Ms(v);
+  if (!m) return '—';
+  try { return new Date(m).toLocaleDateString('vi-VN', {day:'2-digit', month:'2-digit', year:'numeric'}); }
+  catch (e) { return '—'; }
+}
+function n24List(){
+  const all = state.n24.rows || [];
+  const f = state.n24.f;
+  if (f === 'sal') return all.filter(x => x.role === 'salon');
+  if (f === 'tech') return all.filter(x => x.role === 'tech');
+  return all;
+}
+function n24Card(){
+  const l = n24List(), all = state.n24.rows || [];
+  const nS = all.filter(x => x.role === 'salon').length;
+  const nT = all.filter(x => x.role === 'tech').length;
+  const chip = (k, lb, n) => `<button type="button" class="choice${state.n24.f === k ? ' on' : ''}" data-act="n24pick" data-v="${k}">${lb} (${n})</button>`;
+  let body;
+  if (state.n24.err) body = `<p class="empty-s">${esc(t('n24Err'))}</p>`;
+  else if (state.n24.rows === null) body = `<p class="empty-s">${t('n24Load')}</p>`;
+  else if (!l.length) body = `<p class="empty-s">${t('n24Empty')}</p>`;
+  else body = `<div class="im-wrap"><table class="im-tbl ct-tbl">
+    <thead><tr><th>${t('n24Name')}</th><th>${t('n24Ph')}</th><th>${t('n24Kind')}</th><th>${t('n24When')}</th></tr></thead>
+    <tbody>${l.map(x => `<tr><td><b>${esc(x.name || t('n24NoName'))}</b></td>
+      <td>${esc(admPretty(imDig(x.phone || '')) || '—')}</td>
+      <td>${esc(n24Kind(x.role))}</td><td>${esc(n24When(x.createdAt))}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="card adm-card"><button class="btn-link" type="button" data-act="n24close">${t('n24Back')}</button>
+    <h2 class="sec">${t('n24UH')}</h2><p class="hint">${esc(t('n24UD'))}</p>
+    <nav class="ct-fs chipset">${chip('all', t('n24All'), all.length)}${chip('sal', t('n24Sal'), nS)}${chip('tech', t('n24Tech'), nT)}</nav>
+    ${body}</div>`;
+}
+
+/* dòng nào bấm được thì cho con trỏ tay + nền sáng khi rê chuột */
+(function(){
+  const st = document.createElement('style');
+  st.textContent = '.n24-row{cursor:pointer}.n24-row:hover{background:#faf2f5}'
+    + '.n24-row td:first-child{text-decoration:underline;text-underline-offset:3px}';
+  document.head.appendChild(st);
+})();
+
+const n24Over0 = admOver;
+admOver = function(){
+  if (state.n24.view === 'users') return n24Card();
+  let h = n24Over0();
+  [['n22PAll', 'p-all'], ['n22PSal', 'p-sal'], ['n22PTech', 'p-tech'],
+   ['n22UAll', 'u-all'], ['n22USal', 'u-sal'], ['n22UTech', 'u-tech']].forEach(([k, v]) => {
+    const lb = t(k);
+    h = h.replace(`<tr><td>${lb}</td>`, `<tr class="n24-row" data-act="n24go" data-v="${v}"><td>${lb}</td>`);
+  });
+  return h;
+};
+
+function n24Live(c){
+  const {db} = c;
+
+  async function load(){
+    if (state.n24.busy) return;
+    state.n24.busy = true;
+    try {
+      const s = await db.collection('users').limit(500).get();
+      state.n24.rows = s.docs.map(d => Object.assign({id:d.id}, d.data() || {}))
+        .sort((a, b) => n24Ms(b.createdAt) - n24Ms(a.createdAt));
+      state.n24.err = false;
+    } catch (e) { console.warn('n24users', e); state.n24.rows = []; state.n24.err = true; }
+    state.n24.busy = false;
+    render();
+  }
+
+  ACT.n24go = function(el){
+    const v = el.dataset.v;
+    if (v.indexOf('p-') === 0){
+      state.n22.rev = (v === 'p-tech') ? 'tho' : 'tiem';
+      render(); window.scrollTo(0, 0); return;
+    }
+    state.n24.f = v === 'u-sal' ? 'sal' : (v === 'u-tech' ? 'tech' : 'all');
+    state.n24.view = 'users';
+    state.n24.rows = null; state.n24.err = false;
+    render(); window.scrollTo(0, 0);
+    load();
+  };
+  ACT.n24close = function(){ state.n24.view = null; render(); window.scrollTo(0, 0); };
+  ACT.n24pick = function(el){ state.n24.f = el.dataset.v; render(); };
+}
+if (state.n1ctx) n24Live(state.n1ctx);
 
 render();
 })();
