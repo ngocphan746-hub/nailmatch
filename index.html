@@ -11540,6 +11540,31 @@ viewThread = function(id){
   return n30Gone(h).replace(/(<div class="n1pg">[\s\S]*?)loading="lazy"/g, '$1');
 };
 
+
+/* ---------- chữ hệ thống lưu trong tin nhắn: hiện theo ngôn ngữ đang chọn ---------- */
+const N30_SYS = ['connectedMsg', 'btnApply', 'btnOffer'];
+function n30SysText(h){
+  N30_SYS.forEach(k => {
+    const vi = esc(T.vi[k] || ''), en = esc(T.en[k] || ''), now = esc(t(k));
+    [vi, en].forEach(x => { if (x && x !== now) h = h.split(`<p class="last">${x}</p>`).join(`<p class="last">${now}</p>`)
+      .split(`<p class="last">${esc(t('you'))}: ${x}</p>`).join(`<p class="last">${esc(t('you'))}: ${now}</p>`); });
+  });
+  return h;
+}
+const n30Inbox1 = viewInbox;
+viewInbox = function(){ return n30SysText(n30Inbox1()); };
+
+/* ---------- chính sách: chỉ còn 2 vai, không còn tin sang tiệm / dịch vụ ---------- */
+(() => {
+  const li = LEGAL && LEGAL.privacy && LEGAL.privacy.secs && LEGAL.privacy.secs[0] && LEGAL.privacy.secs[0].li;
+  if (!Array.isArray(li)) return;
+  li.forEach(x => {
+    if (!x) return;
+    x.vi = String(x.vi || '').replace('vai trò (chủ tiệm / thợ / khác)', 'vai trò (chủ tiệm / thợ)').replace('tin tuyển thợ, tin sang tiệm, tin dịch vụ, hồ sơ thợ', 'tin tuyển thợ, hồ sơ thợ');
+    x.en = String(x.en || '').replace('role (salon owner / tech / other)', 'role (salon owner / tech)').replace('hiring ads, salon-for-sale ads, service ads, tech profiles', 'hiring ads, tech profiles');
+  });
+})();
+
 /* ---------- render: dịch vụ luôn theo thứ tự danh mục ---------- */
 const n30Render0 = render;
 render = function(){ try { n30SortAll(); } catch (e) {} return n30Render0(); };
@@ -11588,7 +11613,7 @@ function n30Back(fallback){
   if (!s.length) s.push(target);
   if (target === cur) return;
   b.going = true;
-  location.hash = target;
+  location.replace(location.pathname + location.search + target);   /* không thêm bước mới vào lịch sử trình duyệt */
 }
 document.addEventListener('click', e => {
   const el = e.target && e.target.closest ? e.target.closest('a.back, button.back, [data-act="n26back"]') : null;
