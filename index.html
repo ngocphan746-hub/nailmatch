@@ -11146,7 +11146,7 @@ Object.assign(T.vi, {
   n30Already:'Bạn và thợ này đã có cuộc trò chuyện. Mở Tin nhắn để trả lời.',
   n30Withdraw:'Rút hồ sơ', n30WithdrawO:'Huỷ lời mời', n30WithdrawQ:'Rút lại? Bên kia sẽ không thấy yêu cầu này nữa.', n30WithdrawDone:'Đã rút lại.',
   n30Stale:'Bên kia chưa trả lời sau 7 ngày. Bạn thử tin khác nhé.',
-  n30Gone:'Tài khoản đã xoá', n30GoneLock:'Người này đã xoá tài khoản. Không gửi tin nhắn được nữa.',
+  n30GoneRow:'Không nhắn tin được nữa', n30Gone:'Tài khoản đã xoá', n30GoneLock:'Người này đã xoá tài khoản. Không gửi tin nhắn được nữa.',
   n30Clear:'Xoá bộ lọc',
   n30PayQ:(lbl, v, lo, hi) => `${lbl} ${v} nằm ngoài mức thường gặp (${lo}–${hi}).\n\nVẫn đăng?`,
   n30Hour:'Lương giờ', n30Day:'Lương ngày', n30Week:'Lương tuần', n30Pct:'Mức ăn chia',
@@ -11181,7 +11181,7 @@ Object.assign(T.en, {
   n30Already:'You already have a conversation with this tech. Open Messages to reply.',
   n30Withdraw:'Withdraw', n30WithdrawO:'Cancel offer', n30WithdrawQ:'Withdraw this? The other side won’t see it any more.', n30WithdrawDone:'Withdrawn.',
   n30Stale:'No reply after 7 days. Try another post.',
-  n30Gone:'Deleted account', n30GoneLock:'This person deleted their account. You can’t send messages any more.',
+  n30GoneRow:'Can’t send messages any more', n30Gone:'Deleted account', n30GoneLock:'This person deleted their account. You can’t send messages any more.',
   n30Clear:'Clear filters',
   n30PayQ:(lbl, v, lo, hi) => `${lbl} ${v} is outside the usual range (${lo}–${hi}).\n\nPost anyway?`,
   n30Hour:'Hourly pay', n30Day:'Daily pay', n30Week:'Weekly pay', n30Pct:'Commission',
@@ -11208,7 +11208,7 @@ const N30_SVC_ORDER = SERVICES.map(s => s.v);
 const N30_SVC_DESC = {
   acrylic_full:['Làm bộ bột mới', 'New full set'], acrylic_fill:['Dặm phần móng mọc ra', 'Refill grown-out nails'],
   dip:['Nhúng bột (SNS)', 'Dip powder (SNS)'], gelx:['Móng úp soft gel', 'Soft gel extensions'],
-  hard_gel:['Gel cứng / builder gel', 'Hard / builder gel'], art_basic:['Vẽ móng cơ bản', 'Basic nail art'],
+  hard_gel:['Builder gel', 'Builder gel'],
   art_advanced:['Vẽ móng nâng cao', 'Advanced nail art']
 };
 const N30_SVC_GROUP = {
@@ -11372,7 +11372,8 @@ renderField = function(type, f, fs){
     return `<div class="fq n30ro" data-q="${f.k}"><span class="flabel">${esc(fieldLabel(f, fs.data))}</span>
       <div class="n30rov">${esc(state.user.name)}</div><p class="hint" style="margin:4px 0 0">${t('n30NameRO')} <a href="#account">${t('n30NameEdit')} →</a></p></div>`;
   }
-  return n30Field0(type, f, fs);
+  const h = n30Field0(type, f, fs);
+  return f.type === 'zip' ? h.replace('placeholder="78209"', `placeholder="${lang === 'vi' ? 'VD: 78209' : 'e.g. 78209'}"`) : h;
 };
 const n30Login0 = viewLogin;
 viewLogin = function(){
@@ -11510,7 +11511,17 @@ viewAccount = function(){
 /* ---------- N3 + C11: tài khoản đã xoá ---------- */
 const n30Gone = s => String(s || '').split(esc(N30_GONE)).join(esc(t('n30Gone')));
 const n30Inbox0 = viewInbox;
-viewInbox = function(){ return n30Gone(n30Inbox0()); };
+viewInbox = function(){
+  let h = n30Inbox0();
+  const u = state.user && state.user.uid;
+  if (u && h) n1Threads().forEach(th => {
+    const other = (th.members || []).find(m => m !== u);
+    if ((th.names || {})[other] !== N30_GONE) return;
+    const id = th.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    h = h.replace(new RegExp(`(href="#inbox-${id}"[\\s\\S]*?<p class="last">)[\\s\\S]*?(<\\/p>)`), `$1${esc(t('n30GoneRow'))}$2`);
+  });
+  return n30Gone(h);
+};
 const n30Thread0 = viewThread;
 viewThread = function(id){
   let h = n30Thread0(id);
@@ -11720,6 +11731,8 @@ function n30Live(c){
   ACT.n1pub = function(el){
     const type = el.dataset.ft, fs = getForm(type), d = fs.data, u = me();
     if (u && u.name && !n30Adm()){ if (type === 'hiring') d.businessName = u.name; if (type === 'profile') d.name = u.name; }
+    fixFormData(type, fs); fs.step = 0;
+    if (!validateStep(type, fs)) return pub0(el);   /* lỗi điền form báo trước, cảnh báo lương sau */
     if (type === 'hiring'){
       d.addrShow = false; d.addrPub = ''; d.mapUrl = '';
       const pt = n27A(d.payType);
