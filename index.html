@@ -11893,6 +11893,234 @@ function n30Live(c){
 }
 if (state.n1ctx) n30Live(state.n1ctx);
 
+/* ============================================================
+   n131 — 5 lỗi ưu tiên cao (18/11 khuya)
+   L1  màn hình chờ khi mới tải: chưa biết đăng nhập / chưa tải xong dữ liệu thì không vẽ trang thật
+   L2  một hàm isTechReadyNow() cho banner, nút "x thợ sẵn sàng", trang Cần thợ gấp và bộ lọc
+   L3  MONG MUỐN chỉ hiện đúng mục thợ chọn ("Có bao lương" thuộc phần lương)
+   L4  một kiểu mã cuộc trò chuyện: getThreadId(adId, techUid) = `${adId}__${techUid}`
+   L5  nhắc nhập email sau khi đăng tin / lưu hồ sơ, "Để sau" = 3 ngày, Tin nhắn có nút mở ô email
+   ============================================================ */
+Object.assign(T.vi, {
+  n31Loading:'Đang tải…',
+  n31MailT:() => (typeof n3Role === 'function' && n3Role() === 'tech') ? 'Nhập email để biết ngay khi tiệm mời' : 'Nhập email để biết ngay khi có thợ nhắn',
+  n31MailBtn:'✉️ Nhận thông báo qua email – bấm để nhập email', n31MailOn:e => `🔔 Thông báo tin mới sẽ gửi tới ${e}.`,
+  n31Later:'Để sau'
+});
+Object.assign(T.en, {
+  n31Loading:'Loading…',
+  n31MailT:() => (typeof n3Role === 'function' && n3Role() === 'tech') ? 'Add your email to hear right away when a salon invites you' : 'Add your email to hear right away when a tech messages you',
+  n31MailBtn:'✉️ Get alerts by email – tap to add your email', n31MailOn:e => `🔔 New-message alerts go to ${e}.`,
+  n31Later:'Later'
+});
+
+/* ---------- L4: mã cuộc trò chuyện ---------- */
+function getThreadId(adId, techUid){ return `${adId}__${techUid}`; }
+function n31TechUid(tc){ return tc ? (tc.ownerUid || (tc.live ? tc.id : tc.id)) : ''; }
+
+/* ---------- L2: thợ sẵn sàng ---------- */
+function isTechReadyNow(tc, now){
+  now = now || Date.now();
+  if (!tc) return false;
+  if (LIVE && !N1_PREVIEW && !tc.live) return false;           /* tin mẫu không tính trên web thật */
+  const r = tc.ready;
+  if (!r || !r.on) return false;
+  if (!(Number(r.until) > now)) return false;                  /* hết giờ (giờ chốt lưu dạng mốc thời gian, tính theo giờ Texas lúc bật) */
+  if (tc.hired) return false;                                   /* "ĐÃ CÓ VIỆC" = hồ sơ ẩn */
+  if (typeof n2Hide === 'function' && n2Hide(tc)) return false; /* hết hạn, bị ẩn/duyệt, bị chặn */
+  return true;
+}
+n1Ready = function(tc){ return isTechReadyNow(tc) ? tc.ready : null; };
+function n31ReadyCount(){ return (typeof n1Techs === 'function' ? n1Techs() : TECHS).filter(x => isTechReadyNow(x)).length; }
+
+/* ---------- L3: MONG MUỐN ---------- */
+const N31_DROP_WANTS = ['guarantee'];
+function n31CleanWants(tc){ if (tc && Array.isArray(tc.wants) && tc.wants.some(w => N31_DROP_WANTS.indexOf(w) >= 0)) tc.wants = tc.wants.filter(w => N31_DROP_WANTS.indexOf(w) < 0); }
+
+/* ---------- moderation notes (n2Status được viết lại ở n130, gắn lại ghi chú duyệt bài) ---------- */
+const n31Status0 = n2Status;
+n2Status = function(o){
+  let h = n31Status0(o);
+  if (h && o && o.live && n2Mine(o)){
+    if (o.mod === 'pending') h = `<p class="n2note warn">${t('modPending')}</p>` + h;
+    if (o.mod === 'rejected') h = `<p class="n2note warn">${t('modRejected')}</p>` + h;
+  }
+  return h;
+};
+
+/* ---------- L1: màn hình chờ ---------- */
+state.n31 = {ready:!LIVE, t0:Date.now(), auth:false, signedIn:false, adsHas:null, techsHas:null};
+function n31IsReady(){
+  const L = state.n31;
+  if (L.ready) return true;
+  if (Date.now() - L.t0 > 9000) return (L.ready = true);       /* mạng quá chậm: không bắt chờ mãi */
+  if (!L.auth || L.adsHas === null || L.techsHas === null) return false;
+  if (L.adsHas && !ADS.some(a => a.live)) return false;
+  if (L.techsHas && !TECHS.some(x => x.live)) return false;
+  if (L.signedIn){
+    if (state.pendingUser) return (L.ready = true);
+    if (!state.user) return false;
+    if (!(state.live && state.live.threadsReady)) return false;
+  }
+  return (L.ready = true);
+}
+function n31Skeleton(){
+  const bar = w => `<div class="n31sk" style="width:${w}"></div>`;
+  return `<div class="demo-bar">Beta</div><header class="site-header"><div class="wrap hdr"><span class="brand"><span class="logo">${ICON.drop}</span><span>Nail101</span></span></div></header>
+    <main id="main" aria-busy="true"><div class="wrap narrow page"><p class="sr">${t('n31Loading')}</p>
+      <div class="card n31card">${bar('55%')}${bar('35%')}</div>
+      <div class="card n31card">${bar('70%')}<div class="n31row">${bar('40%')}<div class="n31pill"></div></div></div>
+      ${bar('40%')}<div class="card n31card n31tall">${bar('60%')}${bar('80%')}${bar('45%')}</div>
+      <div class="card n31card n31tall">${bar('50%')}${bar('75%')}${bar('35%')}</div></div></main>`;
+}
+const n31Render0 = render;
+render = function(){
+  if (!n31IsReady()){
+    const app = document.getElementById('app');
+    if (app) app.innerHTML = n31Skeleton();
+    document.body.classList.remove('has-mbar');
+    return;
+  }
+  return n31Render0.apply(this, arguments);
+};
+if (LIVE){
+  const tick = setInterval(() => { if (n31IsReady()){ clearInterval(tick); render(); } }, 120);
+}
+
+/* ---------- render: dọn dữ liệu hiển thị ---------- */
+const n31Render1 = render;
+render = function(){ try { TECHS.forEach(n31CleanWants); if (state.myProfile) n31CleanWants(state.myProfile); } catch (e) {} return n31Render1.apply(this, arguments); };
+
+/* ---------- css ---------- */
+(() => {
+  const st = document.createElement('style');
+  st.textContent = `
+.n31card{display:grid;gap:10px;padding:16px;margin:0 0 12px}
+.n31tall{min-height:96px}
+.n31sk{height:14px;border-radius:7px;background:#EEE6E8}
+.n31row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.n31pill{width:120px;height:38px;border-radius:999px;background:#EEE6E8;flex:0 0 auto}
+.n31sk,.n31pill{animation:n31p 1.2s ease-in-out infinite}
+@keyframes n31p{0%,100%{opacity:1}50%{opacity:.55}}
+.n31mail{display:block;width:100%;text-align:left;background:#FFF8E6;border:1px solid #F3DFA8;border-radius:12px;padding:10px 14px;font:inherit;font-size:14px;font-weight:600;color:#6E4A00;cursor:pointer;margin:0 0 12px}
+.n31mail:hover{background:#FFF1CC}`;
+  document.head.appendChild(st);
+})();
+
+/* ---------- live ---------- */
+function n31Live(c){
+  const {db, TS, L_, errText, softRender} = c;
+  const me = () => state.user;
+  const ownerOf = it => it ? (it.ownerUid || (it.live ? it.id : null)) : null;
+
+  /* L1: biết chắc đã đăng nhập hay chưa, và kho có dữ liệu không */
+  firebase.auth().onAuthStateChanged(u => { state.n31.auth = true; state.n31.signedIn = !!u; });
+  db.collection('ads').limit(1).get().then(s => { state.n31.adsHas = !s.empty; }).catch(() => { state.n31.adsHas = false; });
+  db.collection('techs').limit(1).get().then(s => { state.n31.techsHas = !s.empty; }).catch(() => { state.n31.techsHas = false; });
+
+  /* L2: thợ hết giờ thì banner / bộ lọc tự cập nhật, không cần tải lại trang */
+  let sig = '';
+  setInterval(() => {
+    if (!state.n31.ready) return;
+    const now = (typeof n1Techs === 'function' ? n1Techs() : TECHS).filter(x => isTechReadyNow(x)).map(x => x.id).join(',');
+    if (now !== sig){ const first = sig === ''; sig = now; if (!first) softRender(); }
+  }, 20000);
+
+  /* L4: "Mời làm" dùng cùng kiểu mã với "Tôi muốn làm" */
+  const picsOf = adId => (((me().pics || {})[adId]) || []);
+  function myPriv(th){ const u = me();
+    if (th.techId === u.uid || n31TechUid(TECHS.find(x => x.id === th.techId)) === u.uid){ const p = u.priv || {}; return {role:'tech', portrait:p.portrait || '', licNo:u.licNo || '', pjobs:p.pjobs || '', mpics:p.mpics || [], avail:p.avail || ''}; }
+    return {role:'salon', addr:((u.addrs || {})[th.adId]) || '', pics:picsOf(th.adId)}; }
+  async function pushPriv(th){ try { await db.collection('threads').doc(th.id).collection('priv').doc(me().uid).set(myPriv(th)); L_.privSent[th.id + '|' + me().uid] = true; } catch (e) { console.warn('priv', e); } }
+  const mailOf = (toUid, kind, fromName) => {
+    const MAIL = {
+      apply:n => ['Có thợ muốn làm ở tiệm bạn – Nail101', `${n} vừa ứng tuyển tin tuyển thợ của bạn trên Nail101.`, 'A nail tech applied to your job post', `${n} just applied to your job post on Nail101.`],
+      offer:n => ['Có tiệm mời bạn đi làm – Nail101', `${n} vừa mời bạn đi làm trên Nail101.`, 'A salon invited you to work', `${n} just invited you to work on Nail101.`]
+    };
+    if (!toUid || !MAIL[kind]) return;
+    const [sv, bv, se, be] = MAIL[kind](fromName || 'Nail101'), link = location.origin + location.pathname + '#inbox';
+    db.collection('mail').add({toUids:[toUid], message:{subject:sv + ' / ' + se, text:`${bv}\nMở Nail101 để xem: ${link}\n\n${be}\nOpen Nail101: ${link}`,
+      html:`<p>${esc(bv)}</p><p><a href="${esc(link)}">Mở Nail101 để xem</a></p><hr><p>${esc(be)}</p><p><a href="${esc(link)}">Open Nail101</a></p>`}, kind, from:me().uid, createdAt:TS()})
+      .catch(e => console.warn('n31 mail', e));
+  };
+  ACT.n1send = async function(el){
+    const m = state.n1m, u = me(); if (!m || !u) return;
+    const note = ((document.getElementById('n1-note') || {}).value || '').trim();
+    el.disabled = true; el.textContent = t('sending');
+    try {
+      let tid, doc, it;
+      if (m.kind === 'apply'){
+        const ad = ADS.find(a => a.id === m.id), owner = ownerOf(ad); it = ad;
+        tid = getThreadId(ad.id, u.uid);
+        doc = {members:[u.uid, owner], names:{[u.uid]:u.name, [owner]:adBiz(ad) || ad.ownerName || '—'}, from:u.uid, kind:'apply', status:'pending', urgent:false,
+          adId:ad.id, techId:(state.myProfile && state.myProfile.id) || u.uid, about:{id:ad.id, kind:'ad', title:adBiz(ad) + ' – ' + titleOf(ad)}, note,
+          lastText:note || t('btnApply'), lastAt:TS(), lastFrom:u.uid, readAt:{[u.uid]:TS()}, createdAt:TS()};
+      } else {
+        const tc = TECHS.find(z => z.id === m.id), techUid = n31TechUid(tc), sel = document.getElementById('n1-ad');
+        const adId = (sel ? sel.value : '') || m.adId || (n1MyAds()[0] || {}).id || '';
+        if (!adId){ state.n1m = {kind:'needad'}; renderModal(); return; }
+        const ad = ADS.find(a => a.id === adId), salon = ad ? adBiz(ad) : u.name; it = tc;
+        tid = getThreadId(adId, techUid);
+        const old = L_.threads.find(x => x.id === tid);
+        if (old && ['pending', 'accepted'].indexOf(old.status) >= 0){ state.modal = null; renderModal(); toast(t('n30Already')); location.hash = old.status === 'accepted' ? '#inbox-' + tid : '#inbox'; return; }
+        doc = {members:[u.uid, techUid], names:{[u.uid]:salon, [techUid]:tc.name}, from:u.uid, kind:'offer', status:'pending', urgent:!!m.urgent,
+          adId, techId:tc.id, about:{id:adId, kind:'ad', title:salon + ' – ' + (ad ? titleOf(ad) : '')}, note,
+          lastText:note || t('btnOffer'), lastAt:TS(), lastFrom:u.uid, readAt:{[u.uid]:TS()}, createdAt:TS()};
+      }
+      const op = it ? imDig(it.ownerPhone || '') : '';
+      if (op.length === 10){ doc.ownerPhone = '+1' + op; doc.ownerUid = it.ownerUid || ''; }
+      await db.collection('threads').doc(tid).set(doc);
+      await pushPriv({id:tid, techId:doc.techId, adId:doc.adId});
+      mailOf(doc.members[1], m.kind === 'apply' ? 'apply' : 'offer', doc.names[u.uid]);
+      state.modal = null; renderModal(); toast(t(m.kind === 'apply' ? 'sentApply' : 'sentOffer')); render();
+    } catch (e) { console.warn(e); el.disabled = false; el.textContent = t(m.kind === 'apply' ? 'sendBtn' : 'sendOffer'); toast(errText(e)); }
+  };
+  /* nút cũ (Nhắn tin / Ứng tuyển kiểu cũ) cũng đi qua đúng một đường */
+  const toNew = el => { const id = el.dataset.v; if (ADS.find(a => a.id === id)) return ACT.n1apply(el); if (TECHS.find(x => x.id === id)) return ACT.n1offer(el); };
+  ACT.msgopen = toNew; ACT.applyopen = toNew;
+
+  /* L4: tài khoản đã xoá → gộp còn 1 dòng (cuộc mới nhất) cho mỗi người đã xoá */
+  const GONE = 'Tài khoản đã xoá · Deleted account', msOf = x => (typeof n28Ms === 'function' ? n28Ms(x) : 0);
+  function collapseGone(list){
+    const u = me() && me().uid, keep = {};
+    if (!u) return list;
+    list.forEach(th => { const o = (th.members || []).find(m => m !== u); if ((th.names || {})[o] === GONE || (th.gone && th.gone[o])){ if (!keep[o] || msOf(th.lastAt) > msOf(keep[o].lastAt)) keep[o] = th; } });
+    return list.filter(th => { const o = (th.members || []).find(m => m !== u); const g = (th.names || {})[o] === GONE || (th.gone && th.gone[o]); return !g || keep[o] === th; });
+  }
+  const withList = fn => { const all = L_.threads; L_.threads = collapseGone(all); try { return fn(); } finally { L_.threads = all; } };
+  const inbox0 = viewInbox; viewInbox = function(){ return withList(() => inbox0()); };
+  const unread0 = unreadCount; unreadCount = function(){ return withList(() => unread0()); };
+
+  /* L5: nhắc email */
+  const SNOOZE = 3 * 86400000, key = () => 'n31mail_' + ((me() && me().uid) || '');
+  const snoozed = () => { try { return Date.now() - (Number(localStorage.getItem(key())) || 0) < SNOOZE; } catch (e) { return false; } };
+  const open0 = openModal;
+  openModal = function(name){
+    if (name === 'n2e' && !state.n31force && (!me() || me().email || snoozed() || (state.adm && state.adm.creating))) return;
+    state.n31force = false;
+    return open0.apply(this, arguments);
+  };
+  const mailOpen0 = ACT.n2mailopen;
+  ACT.n2mailopen = function(el){ state.n31force = true; return mailOpen0 ? mailOpen0(el) : openModal('n2e'); };
+  ACT.n31later = function(){ try { localStorage.setItem(key(), String(Date.now())); } catch (e) {} state.modal = null; renderModal(); };
+  const alerts0 = modalAlerts;
+  modalAlerts = function(){
+    let h = alerts0();
+    if (state.modal !== 'n2e' || !h) return h;
+    return h.replace(/(<h2 id="m-title">)[^<]*(<\/h2>)/, `$1${esc(t('n31MailT'))}$2`)
+      .replace(/data-act="mclose"([^>]*)>[^<]*<\/button>(?=<button class="btn btn-primary" type="button" data-act="n2email")/, `data-act="n31later"$1>${t('n31Later')}</button>`)
+      .replace(/<button class="x" type="button" data-act="mclose"/, '<button class="x" type="button" data-act="n31later"');
+  };
+  const inbox1 = viewInbox;
+  viewInbox = function(){
+    const h = inbox1(), u = me();
+    if (!u || !h) return h;
+    const note = u.email ? `<p class="n1note">${esc(t('n31MailOn', u.email))}</p>` : `<button type="button" class="n31mail" data-act="n2mailopen">${t('n31MailBtn')}</button>`;
+    return h.replace(/<p class="n1note">[\s\S]*?<\/p>/, note);
+  };
+}
+if (state.n1ctx) n31Live(state.n1ctx);
+
 render();
 })();
 </script>
