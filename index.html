@@ -10784,6 +10784,288 @@ if (typeof n26AutoTitle === 'function'){
   };
 }
 
+/* ============================================================
+   n128 — đợt sửa 18/11 chiều:
+   1. dòng vai trò chỉ còn "Vai trò: Tiệm", nằm giữa
+   2. nút Xoá tài khoản (tiệm + thợ)
+   3. ô Lọc ở danh sách thợ: Tất cả · Mới nhất · Cũ nhất · Sẵn sàng đi làm · Gần tiệm nhất
+   4. công tắc Cần gấp cho tin tiệm: viền đỏ + nhãn CẦN GẤP, tự tắt sau 7 ngày
+   5. ô Lọc ở danh sách việc: Tất cả · Mới nhất · Cũ nhất · Cần gấp · Gần tôi nhất
+   6. hai ô lọc cùng kiểu, khớp hai ngôn ngữ
+   7. xoá cuộc trò chuyện (chỉ phía mình)
+   8. tiêu đề tin nhắn: bài đã xoá thì chỉ hiện tên tiệm, không lẫn ngôn ngữ
+   ============================================================ */
+Object.assign(T.vi, {
+  n28Sort:'Lọc', n28All:'Tất cả', n28New:'Mới nhất', n28Old:'Cũ nhất', n28Ready:'Sẵn sàng đi làm', n28Urg:'Cần gấp',
+  n28NearSalon:'Gần tiệm nhất', n28NearMe:'Gần tôi nhất',
+  n28NearNoSalon:'Gần tiệm nhất (cần đăng tin trước)', n28NearNoMe:'Gần tôi nhất (cần có hồ sơ trước)',
+  n28ReadyLbl:'⚡ SẴN SÀNG ĐI LÀM', n28UrgLbl:'CẦN GẤP',
+  n28UrgChk:'🔴 Cần gấp: tin có viền đỏ và nhãn CẦN GẤP để thợ thấy ngay (tự tắt sau 7 ngày)',
+  n28UrgLeft:n => `Đang bật Cần gấp · còn ${n} ngày`,
+  n28DelAcc:'Xoá tài khoản', n28DelAccD:'Xoá hết tin đăng hoặc hồ sơ thợ và thông tin tài khoản. Không khôi phục được. Sau khi xoá, số điện thoại này đăng ký lại được và chọn lại vai trò.',
+  n28DelQ1:'Xoá tài khoản Nail101?\n\nTin đăng, hồ sơ thợ và thông tin tài khoản sẽ bị xoá vĩnh viễn, không khôi phục được.',
+  n28DelQ2:'Gõ chữ XOA để xác nhận:', n28DelWord:'XOA', n28DelNo:'Chưa xoá. Gõ đúng chữ XOA để xác nhận.',
+  n28DelDone:'Đã xoá tài khoản.', n28DelBusy:'Đang xoá…',
+  n28Gone:'Tài khoản đã xoá · Deleted account',
+  n28HideTh:'🗑 Xoá cuộc trò chuyện', n28HideQ:'Xoá cuộc trò chuyện này khỏi hộp thư của bạn?\n\nNgười kia vẫn còn tin nhắn. Nếu họ nhắn tiếp, cuộc trò chuyện sẽ hiện lại.',
+  n28HideDone:'Đã xoá cuộc trò chuyện.'
+});
+Object.assign(T.en, {
+  n28Sort:'Filter', n28All:'All', n28New:'Newest', n28Old:'Oldest', n28Ready:'Ready to go', n28Urg:'Urgent',
+  n28NearSalon:'Closest to my salon', n28NearMe:'Closest to me',
+  n28NearNoSalon:'Closest to my salon (post a job first)', n28NearNoMe:'Closest to me (create a profile first)',
+  n28ReadyLbl:'⚡ READY TO GO', n28UrgLbl:'URGENT',
+  n28UrgChk:'🔴 Urgent: your post gets a red frame and an URGENT label so techs see it first (turns off after 7 days)',
+  n28UrgLeft:n => `Urgent is on · ${n} days left`,
+  n28DelAcc:'Delete account', n28DelAccD:'Deletes your job posts or tech profile and your account details. This can’t be undone. You can sign up again with this number and choose a role again.',
+  n28DelQ1:'Delete your Nail101 account?\n\nYour posts, tech profile and account details will be deleted for good.',
+  n28DelQ2:'Type DELETE to confirm:', n28DelWord:'DELETE', n28DelNo:'Not deleted. Type DELETE exactly to confirm.',
+  n28DelDone:'Account deleted.', n28DelBusy:'Deleting…',
+  n28Gone:'Tài khoản đã xoá · Deleted account',
+  n28HideTh:'🗑 Delete conversation', n28HideQ:'Delete this conversation from your inbox?\n\nThe other person keeps their messages. If they write again, it comes back.',
+  n28HideDone:'Conversation deleted.'
+});
+
+state.n28 = {sortT:'all', sortJ:'all', busy:false};
+function n28Ms(x){ if (!x) return 0; if (typeof x.toMillis === 'function') return x.toMillis(); if (typeof x === 'number') return x; if (x.seconds) return x.seconds * 1000; return 0; }
+const N28_WEEK = 7 * 86400000;
+
+/* ---------- 1. dòng vai trò ---------- */
+const n28Acc0 = viewAccount;
+viewAccount = function(){
+  let h = n28Acc0().replace(/\s*<span class="hint n26lock">[\s\S]*?<\/span>/, '');
+  const role = typeof n3Role === 'function' ? n3Role() : '';
+  if ((role === 'salon' || role === 'tech') && state.user)
+    h += `<div class="wrap narrow n28dz"><div class="card n28dzc"><h2 class="sec" style="margin-top:0">${t('n28DelAcc')}</h2>
+      <p class="hint">${esc(t('n28DelAccD'))}</p>
+      <button class="btn btn-ghost danger btn-block" type="button" data-act="n28delacc"${state.n28.busy ? ' disabled' : ''}>${state.n28.busy ? t('n28DelBusy') : t('n28DelAcc')}</button></div></div>`;
+  return h;
+};
+
+/* ---------- 4. Cần gấp ---------- */
+function n28Urgent(ad){
+  const h = ad && ad.hiring;
+  return !!(h && h.urgent && (n28Ms(h.urgentUntil) || 0) > Date.now());
+}
+(() => {
+  const fl = FORMS.hiring.steps[0].fields;
+  if (fl.some(f => f.k === 'urgent')) return;
+  const at = fl.findIndex(f => f.k === 'city');
+  fl.splice(at >= 0 ? at + 1 : 1, 0, {k:'urgent', type:'check', textKey:'n28UrgChk'});
+})();
+const n28PVO0 = previewObject;
+previewObject = function(type, fs){
+  const o = n28PVO0(type, fs);
+  if (type === 'hiring' && o && o.hiring && fs && fs.data){
+    const d = fs.data;
+    if (d.urgent === true){
+      const keep = n28Ms(d.urgentUntil);
+      if (!keep || keep < Date.now()) d.urgentUntil = Date.now() + N28_WEEK;
+      o.hiring.urgent = true; o.hiring.urgentUntil = d.urgentUntil;
+    } else { o.hiring.urgent = false; o.hiring.urgentUntil = 0; d.urgentUntil = 0; }
+  }
+  return o;
+};
+const n28JobCard0 = n1JobCard;
+n1JobCard = function(ad){
+  const h = n28JobCard0(ad);
+  if (!n28Urgent(ad)) return h;
+  return h.replace('<div class="card n1c', '<div class="card n1c n28urg')
+    .replace('<div class="n1top">', `<div class="n28lbl n28lbl-u">${esc(t('n28UrgLbl'))}</div><div class="n1top">`);
+};
+const n28Ad0 = viewAd;
+viewAd = function(id){
+  const h = n28Ad0(id), ad = ADS.find(a => a.id === id);
+  if (!ad || !n28Urgent(ad)) return h;
+  const left = Math.max(1, Math.ceil((n28Ms(ad.hiring.urgentUntil) - Date.now()) / 86400000));
+  const mine = state.user && (ad.ownerUid === state.user.uid);
+  const tag = `<div class="n28urgbar"><span class="n28lbl n28lbl-u">${esc(t('n28UrgLbl'))}</span>${mine ? `<span class="hint">${esc(t('n28UrgLeft', left))}</span>` : ''}</div>`;
+  return h.replace(/(<a class="back"[^>]*>[\s\S]*?<\/a>)/, '$1' + tag);
+};
+
+/* ---------- 3. thợ sẵn sàng: khung vàng + nhãn ---------- */
+const n28TechCard0 = n1TechCard;
+n1TechCard = function(tc, o){
+  const h = n28TechCard0(tc, o);
+  if (!n1Ready(tc)) return h;
+  return h.replace('<div class="n1top">', `<div class="n28lbl n28lbl-r">${esc(t('n28ReadyLbl'))}</div><div class="n1top">`);
+};
+
+/* ---------- 3 + 5. ô Lọc ---------- */
+function n28Ctx(){
+  let r; try { r = route(); } catch (e) { return ''; }
+  const role = typeof n3Role === 'function' ? n3Role() : '';
+  if (r.view === 'jobs') return 'J';
+  if (r.view === 'salon') return 'T';
+  if (r.view === 'home') return role === 'salon' ? 'T' : role === 'tech' ? 'J' : '';
+  return '';
+}
+function n28Pt(o){
+  if (!o || typeof coordsOf !== 'function') return null;
+  const r = n1Ready(o);
+  const zip = (r && r.zip) || o.zip, city = (r && r.city) || o.city || (o.zip && typeof cityOf === 'function' ? cityOf(o.zip) : '');
+  return coordsOf(zip, city) || null;
+}
+function n28Home(){
+  const role = typeof n3Role === 'function' ? n3Role() : '';
+  if (role === 'salon'){ const a = (typeof n1MyAds === 'function' ? n1MyAds() : []).find(x => x.mod !== 'rejected'); return a ? n28Pt(a) : null; }
+  if (role === 'tech') return state.myProfile ? n28Pt(state.myProfile) : null;
+  return null;
+}
+function n28Dist(o, home){ const p = n28Pt(o); return p && home ? hav(home[0], home[1], p[0], p[1]) : 99999; }
+function n28Age(o){ return Number(o.daysAgo) || 0; }
+function n28Apply(list, kind){
+  const v = kind === 'T' ? state.n28.sortT : state.n28.sortJ;
+  const hot = kind === 'T' ? (x => !!n1Ready(x)) : n28Urgent;
+  let l = list.slice();
+  if (v === 'ready' || v === 'urgent') l = l.filter(hot);
+  if (v === 'old') return l.sort((a, b) => n28Age(b) - n28Age(a));
+  if (v === 'near'){ const home = n28Home(); if (home) return l.sort((a, b) => n28Dist(a, home) - n28Dist(b, home) || n28Age(a) - n28Age(b)); }
+  if (v === 'new' || v === 'ready' || v === 'urgent') return l.sort((a, b) => n28Age(a) - n28Age(b));
+  return l.sort((a, b) => (hot(b) ? 1 : 0) - (hot(a) ? 1 : 0) || n28Age(a) - n28Age(b));
+}
+const n28Techs0 = n2TechList;
+n2TechList = function(){ return n28Apply(n28Techs0(), 'T'); };
+const n28Jobs0 = n2Jobs;
+n2Jobs = function(){ return n28Apply(n28Jobs0(), 'J'); };
+function n28SortBar(kind){
+  const cur = kind === 'T' ? state.n28.sortT : state.n28.sortJ, home = n28Home();
+  const role = typeof n3Role === 'function' ? n3Role() : '';
+  const opts = kind === 'T'
+    ? [['all', t('n28All')], ['new', t('n28New')], ['old', t('n28Old')], ['ready', t('n28Ready')]]
+    : [['all', t('n28All')], ['new', t('n28New')], ['old', t('n28Old')], ['urgent', t('n28Urg')]];
+  const nearOk = kind === 'T' ? role === 'salon' : role === 'tech';
+  if (nearOk) opts.push(['near', home ? t(kind === 'T' ? 'n28NearSalon' : 'n28NearMe') : t(kind === 'T' ? 'n28NearNoSalon' : 'n28NearNoMe'), !home]);
+  return `<div class="n1flt n28flt"><span class="n1fl">${t('n28Sort')}</span><select id="q-sort" data-n28sort="${kind}" aria-label="${esc(t('n28Sort'))}">
+    ${opts.map(([v, l, off]) => `<option value="${v}"${cur === v ? ' selected' : ''}${off ? ' disabled' : ''}>${esc(l)}</option>`).join('')}</select></div>`;
+}
+const n28Bar0 = n1CityBar;
+n1CityBar = function(){
+  const kind = n28Ctx(), area = n28Bar0();
+  return kind ? `<div class="n28bars">${area}${n28SortBar(kind)}</div>` : area;
+};
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (!el || !el.dataset || !el.dataset.n28sort) return;
+  if (el.dataset.n28sort === 'T') state.n28.sortT = el.value; else state.n28.sortJ = el.value;
+  render();
+});
+
+/* ---------- 7. xoá cuộc trò chuyện (chỉ phía mình) ---------- */
+function n28Hidden(th){
+  const u = state.user && state.user.uid;
+  if (!u || !th || !th.hid || !th.hid[u]) return false;
+  return n28Ms(th.lastAt) <= n28Ms(th.hid[u]);
+}
+function n28WithVisible(fn){
+  const L = state.live;
+  if (!L || !Array.isArray(L.threads)) return fn();
+  const all = L.threads;
+  L.threads = all.filter(th => !n28Hidden(th));
+  try { return fn(); } finally { L.threads = all; }
+}
+const n28Inbox0 = viewInbox;
+viewInbox = function(){ return n28WithVisible(() => n28Inbox0()); };
+const n28Unread0 = unreadCount;
+unreadCount = function(){ return n28WithVisible(() => n28Unread0()); };
+const n28Thread0 = viewThread;
+viewThread = function(id){
+  const h = n28Thread0(id);
+  const th = ((state.live && state.live.threads) || []).find(x => x.id === id);
+  if (!th || !h) return h;
+  const btn = `<div class="n28thbar"><button class="btn-link danger" type="button" data-act="n28hide" data-v="${esc(id)}">${t('n28HideTh')}</button></div>`;
+  return /<h1[^>]*>[\s\S]*?<\/h1>/.test(h) ? h.replace(/(<h1[^>]*>[\s\S]*?<\/h1>)/, '$1' + btn) : btn + h;
+};
+
+/* ---------- 8. tiêu đề tin nhắn khi bài đã bị xoá ---------- */
+if (typeof n26FixThreads === 'function'){
+  const n28Fix0 = n26FixThreads;
+  n26FixThreads = function(){
+    n28Fix0();
+    ((state.live && state.live.threads) || []).forEach(th => {
+      const ab = th && th.about;
+      if (!ab || !ab.title) return;
+      const id = ab.id || th.adId;
+      const ad = id ? ADS.find(a => a.id === id) : null;
+      if (ad && ad.type === 'hiring'){ ab.title = adBiz(ad) + ' – ' + titleOf(ad); return; }
+      if (ab.kind === 'ad' && !ad && ab.title.indexOf(' – ') > 0) ab.title = ab.title.split(' – ')[0];
+    });
+  };
+}
+
+/* ---------- css ---------- */
+(() => {
+  const st = document.createElement('style');
+  st.textContent = `
+.n2note.n3role{text-align:center}
+.n28dz{margin-top:6px;margin-bottom:24px}
+.n28dzc{border-color:#F3C7C3}
+.btn.danger{color:#b3261e;border-color:#b3261e}
+.n28bars{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;width:100%;max-width:560px;flex:1 1 100%}
+.n28bars .n1flt{display:flex;flex-direction:column;align-items:stretch;gap:4px;margin:0;min-width:0}
+.n28bars .n1fl{font-size:13px;font-weight:600}
+.n28bars select{width:100%;min-width:0;max-width:none}
+.n2row:has(.n28bars){flex-wrap:wrap}
+.n28lbl{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.4px;border-radius:999px;padding:2px 9px;margin:0 0 4px}
+.n28lbl-u{background:#FDE7E5;color:#B3261E}
+.n28lbl-r{background:#FFE9B3;color:#6E4A00}
+.card.n1c.n28urg{border:2px solid #D93025;box-shadow:0 0 0 3px #FDE7E5}
+.card.n1c.is-ready{border:2px solid #EFB84A;background:#FFFBEF}
+.n28urgbar{display:flex;align-items:center;gap:10px;margin:6px 0 2px}
+.n28urgbar .n28lbl{font-size:12px;margin:0}
+.n28thbar{margin:-6px 0 12px}`;
+  document.head.appendChild(st);
+})();
+
+/* ---------- live ---------- */
+function n28Live(c){
+  const {db} = c;
+
+  ACT.n28hide = async function(el){
+    const id = el.dataset.v, u = state.user && state.user.uid;
+    if (!id || !u || !confirm(t('n28HideQ'))) return;
+    try {
+      await db.collection('threads').doc(id).update({['hid.' + u]:Date.now()});
+      const th = ((state.live && state.live.threads) || []).find(x => x.id === id);
+      if (th){ th.hid = Object.assign({}, th.hid, {[u]:Date.now()}); }
+      toast(t('n28HideDone'));
+      location.hash = '#inbox';
+      render();
+    } catch (e) { console.warn('n28hide', e); toast(c.errText ? c.errText(e) : String(e)); }
+  };
+
+  ACT.n28delacc = async function(){
+    const u = state.user;
+    if (!u || !u.uid) return;
+    if (!confirm(t('n28DelQ1'))) return;
+    const w = prompt(t('n28DelQ2'), '');
+    if (w == null) return;
+    if (String(w).trim().toUpperCase() !== t('n28DelWord')){ toast(t('n28DelNo')); return; }
+    state.n28.busy = true; render();
+    const uid = u.uid, warn = e => console.warn('n28del', e);
+    try {
+      const mineAds = ADS.filter(a => a.live && (a.ownerUid === uid));
+      const mineTechs = TECHS.filter(x => x.live && (x.ownerUid === uid || x.id === uid));
+      for (const a of mineAds) await db.collection('ads').doc(a.id).delete().catch(warn);
+      for (const x of mineTechs) await db.collection('techs').doc(x.id).delete().catch(warn);
+      const ths = ((state.live && state.live.threads) || []).filter(th => (th.members || []).includes(uid));
+      for (const th of ths)
+        await db.collection('threads').doc(th.id).update({['names.' + uid]:t('n28Gone'), ['hid.' + uid]:Date.now()}).catch(warn);
+      await db.collection('users').doc(uid).delete().catch(warn);
+      try { const cu = firebase.auth().currentUser; if (cu) await cu.delete(); } catch (e) { warn(e); }
+      try { await firebase.auth().signOut(); } catch (e) { warn(e); }
+      state.n28.busy = false;
+      toast(t('n28DelDone'));
+      location.hash = '#home';
+      render();
+    } catch (e) {
+      warn(e); state.n28.busy = false; render();
+      toast(c.errText ? c.errText(e) : String(e));
+    }
+  };
+}
+if (state.n1ctx) n28Live(state.n1ctx);
+
 render();
 })();
 </script>
