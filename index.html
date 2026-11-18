@@ -10104,6 +10104,28 @@ function n24Live(c){
 }
 if (state.n1ctx) n24Live(state.n1ctx);
 
+/* ============================================================
+   n125 — từ trang duyệt bài (link gửi tiệm/thợ) bấm vào xem bài,
+   nút "Quay lại" phải về lại trang duyệt (có Đăng ngay / Sửa rồi đăng),
+   không phải về trang Tìm việc.
+   ============================================================ */
+state.n25 = state.n25 || {from:'', to:''};
+let n25Prev = location.hash;
+window.addEventListener('hashchange', () => {
+  const now = location.hash;
+  if (/^#claim-/.test(n25Prev) && /^#(ad|tech)-/.test(now)) state.n25 = {from:n25Prev, to:now};
+  else if (now !== state.n25.to && now !== state.n25.from) state.n25 = {from:'', to:''};
+  n25Prev = now;
+});
+function n25Back(html){
+  if (!state.n25.from || location.hash !== state.n25.to) return html;
+  return html.replace(/<a class="back" href="[^"]*">/, `<a class="back" href="${esc(state.n25.from)}">`);
+}
+const n25Ad0 = viewAd;
+viewAd = function(id){ return n25Back(n25Ad0(id)); };
+const n25Tech0 = viewTech;
+viewTech = function(id){ return n25Back(n25Tech0(id)); };
+
 render();
 })();
 </script>
