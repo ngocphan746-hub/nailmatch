@@ -11131,9 +11131,13 @@ Object.assign(T.vi, {
   n30NameRO:'Tên lấy từ tài khoản của bạn.', n30NameEdit:'Đổi tên ở trang Tài khoản',
   n30ZipHint:'Không hiện công khai. Chỉ dùng để tính khoảng cách.',
   filledBtn:'Đánh dấu đã tuyển xong', hiredBtn:'Tôi đã có việc',
-  n30FillQ:'Đóng tin này? Thợ sẽ không ứng tuyển được nữa.\n\nBạn mở lại được bất cứ lúc nào bằng nút “Mở lại tin”.',
-  n30HireQ:'Ẩn hồ sơ của bạn? Tiệm sẽ không mời bạn được nữa và “Sẵn sàng đi làm” sẽ tắt.\n\nBạn bật lại được bằng nút “Đang tìm việc”.',
-  n30Closed:'Đã đóng. Bấm nút bên dưới nếu bấm nhầm.',
+  n30FillQ:'Đóng tin này? Thợ sẽ không ứng tuyển được nữa.\n\nMuốn mở lại, bấm lại công tắc.',
+  n30HireQ:'Ẩn hồ sơ của bạn? Tiệm sẽ không mời bạn được nữa và “Sẵn sàng đi làm” sẽ tắt.\n\nMuốn hiện lại, bấm lại công tắc.',
+  n30Closed:'Đã tắt. Bấm lại công tắc để mở.', n30Opened:'Đã mở lại.', n30See:'Xem',
+  n30SOn:'Tin đang mở', n30SOnD:'Tắt khi đã tuyển đủ thợ', n30SOnB:'ĐANG TUYỂN',
+  n30SOff:'Tin đã đóng', n30SOffD:'Thợ không thấy tin này', n30SOffB:'ĐÃ ĐÓNG',
+  n30TOn:'Hồ sơ đang hiện', n30TOnD:'Tắt khi đã có việc', n30TOnB:'ĐANG TÌM VIỆC',
+  n30TOff:'Hồ sơ đang ẩn', n30TOffD:'Tiệm không thấy hồ sơ của bạn', n30TOffB:'ĐÃ CÓ VIỆC',
   n30HiredReady:'Bạn đang để “Tôi đã có việc” nên hồ sơ đang ẩn.\n\nBật Sẵn sàng sẽ hiện lại hồ sơ cho các tiệm. Tiếp tục?',
   n30BadHours:'Giờ bắt đầu phải trước giờ kết thúc.', n30Moved:'Giờ hôm nay đã qua (giờ Texas) nên đã chuyển sang ngày mai.', n30Past:'Khung giờ này đã qua.',
   n30TxTime:'giờ Texas',
@@ -11159,16 +11163,21 @@ Object.assign(T.vi, {
   msgsNote:'🔔 Muốn nhận thông báo qua email khi có tin mới, thêm email ở trang Tài khoản.',
   spicsHint:'Nên đăng 3 ảnh thật của tiệm (bên trong, ghế pedi, quầy). Thợ thấy ảnh sau khi hai bên kết nối.',
   salonPhotoHint:'Nên đăng 3 ảnh thật của tiệm (bên trong, ghế pedi, quầy). Thợ tin tưởng hơn khi thấy tiệm.',
-  needAdD:'Bạn cần có một tin tuyển trước khi mời thợ.'
+  needAdD:'Bạn cần có một tin tuyển trước khi mời thợ.',
+  delPost:'Xoá tin', confirmDel:'Xoá tin này? Không khôi phục được.', deleted:'Đã xoá.'
 });
 Object.assign(T.en, {
   n30NameHint:'Enter the name you want people to see. It will appear on your job post or tech profile. Salon owners: enter the salon name. Techs: your name or nickname.',
   n30NameRO:'This name comes from your account.', n30NameEdit:'Change it on the Account page',
   n30ZipHint:'Not shown publicly. Only used to work out distance.',
   filledBtn:'Mark position filled', hiredBtn:'I found a job',
-  n30FillQ:'Close this post? Techs will no longer be able to apply.\n\nYou can reopen it any time with “Reopen post”.',
-  n30HireQ:'Hide your profile? Salons won’t be able to offer you a job and “Ready to work” turns off.\n\nTurn it back on with “Looking again”.',
-  n30Closed:'Closed. Use the button below if that was a mistake.',
+  n30FillQ:'Close this post? Techs will no longer be able to apply.\n\nTap the switch again to reopen it.',
+  n30HireQ:'Hide your profile? Salons won’t be able to offer you a job and “Ready to work” turns off.\n\nTap the switch again to show it.',
+  n30Closed:'Turned off. Tap the switch again to reopen.', n30Opened:'Reopened.', n30See:'See',
+  n30SOn:'Post is open', n30SOnD:'Turn off once you’ve hired', n30SOnB:'HIRING',
+  n30SOff:'Post is closed', n30SOffD:'Techs can’t see this post', n30SOffB:'CLOSED',
+  n30TOn:'Profile is visible', n30TOnD:'Turn off once you have a job', n30TOnB:'LOOKING',
+  n30TOff:'Profile is hidden', n30TOffD:'Salons can’t see your profile', n30TOffB:'FOUND A JOB',
   n30HiredReady:'Your profile is hidden because you marked “I found a job”.\n\nTurning on Ready will show it to salons again. Continue?',
   n30BadHours:'The start time must be before the end time.', n30Moved:'Today’s hours have already passed (Texas time), so this is set for tomorrow.', n30Past:'Those hours have already passed.',
   n30TxTime:'Texas time',
@@ -11392,21 +11401,37 @@ viewForm = function(type){
   return h;
 };
 
-/* ---------- C7: nút đóng tin / ẩn hồ sơ ---------- */
-const n30Status0 = n2Status;
-n2Status = function(o){
-  const h = n30Status0(o);
-  if (!h || !o) return h;
-  const closed = TECHS.includes(o) ? o.hired : o.filled;
-  return closed ? h : h.replace(/class="btn btn-ghost" type="button" data-act="n2close"/, 'class="btn-link n30close" type="button" data-act="n2close"');
-};
-/* T2: số người ứng tuyển bấm được */
+/* ---------- C7 (phương án A): công tắc trạng thái thay cho nút chữ ---------- */
 n2Stats = function(o){
   if (!n2Mine(o) || TECHS.includes(o)) return '';
   const n = n1Threads().filter(x => x.adId === o.id && x.kind === 'apply' && ['withdrawn', 'blocked'].indexOf(x.status) < 0).length;
-  const s = esc(t('statApply', n));
-  return `<p class="n2stats">${n ? `<a href="#ad-${esc(o.id)}">${s} →</a>` : s} · ${esc(t('statView', o.views || 0))}</p>`;
+  const s = `<span>👥 ${esc(t('statApply', n))} · ${esc(t('statView', o.views || 0))}</span>`;
+  return n ? `<button type="button" class="n30statrow" data-act="n30apps" data-v="${esc(o.id)}">${s}<span class="n30go">${t('n30See')} ›</span></button>`
+    : `<div class="n30statrow">${s}</div>`;
 };
+n2Status = function(o){
+  if (!o || !n2Mine(o) || !n2Live2()) return '';
+  const tech = TECHS.includes(o), id = esc(o.id), k = tech ? 'techs' : 'ads';
+  const closed = !!(tech ? o.hired : o.filled), exp = n2Expired(o), left = n2Left(o);
+  let warn = '';
+  if (!closed && exp) warn = `<p class="n2note warn">${t(tech ? 'expNoteT' : 'expNote')}</p>`;
+  else if (!closed && left <= 7) warn = `<p class="n2note warn">${esc(t('expSoon', left))} – ${t(tech ? 'stillLooking' : 'stillHiring')}</p>`;
+  const renew = !closed && (exp || left <= 7) ? `<div class="n2btns"><button class="btn btn-primary" type="button" data-act="n2renew" data-k="${k}" data-v="${id}">${t('renewBtn')}</button></div>` : '';
+  const key = (tech ? 'n30T' : 'n30S') + (closed ? 'Off' : 'On');
+  const sw = `<div class="n30swrow"><div><div class="n30swt">${t(key)}</div><div class="n30sws">${t(key + 'D')}</div></div>
+    <button type="button" class="n30sw${closed ? '' : ' on'}" role="switch" aria-checked="${!closed}" data-act="n2close" data-k="${k}" data-v="${id}" data-on="${closed ? '0' : '1'}"><span class="n30dot" aria-hidden="true"></span>${t(key + 'B')}</button></div>`;
+  return `<div class="card n2box n30box">${n2Stats(o)}${warn}${renew}${sw}</div>`;
+};
+ACT.n30apps = function(el){
+  const id = el.dataset.v, box = document.getElementById('n30apps');
+  if (location.hash === '#ad-' + id && box){ box.scrollIntoView({behavior:'smooth', block:'start'}); return; }
+  state.n30goApps = id; location.hash = '#ad-' + id;
+};
+window.addEventListener('hashchange', () => {
+  const id = state.n30goApps; if (!id || location.hash !== '#ad-' + id) return;
+  state.n30goApps = '';
+  setTimeout(() => { const box = document.getElementById('n30apps'); if (box) box.scrollIntoView({behavior:'smooth', block:'start'}); }, 250);
+});
 
 /* ---------- T2: danh sách người ứng tuyển trên tin + T5 bỏ địa chỉ công khai ---------- */
 function n30TechName(th){
@@ -11434,7 +11459,7 @@ viewAd = function(id){
   const ad = ADS.find(a => a.id === id);
   if (!ad || ad.type !== 'hiring' || !h) return h;
   if (ad.live && ad.spicsN === 0) h = h.replace(/(<h1>[\s\S]*?<\/h1>)/, `$1<span class="n30nopic">${esc(t('n30NoPics'))}</span>`);
-  if (n2Mine(ad)) h = h.replace(/(<div class="card n2box">)/, n30Apps(ad) + '$1');
+  if (n2Mine(ad)) h = h.replace(/(<div class="card n2box[^"]*">)/, n30Apps(ad) + '$1');
   if (h.indexOf('n30apps') < 0 && n2Mine(ad)) h = h.replace(/<\/div>\s*$/, n30Apps(ad) + '</div>');
   return h;
 };
@@ -11577,7 +11602,17 @@ render = function(){ try { n30SortAll(); } catch (e) {} return n30Render0(); };
 .n30fit{font-size:13px;color:#1F6B45;font-weight:600;margin-top:3px}
 .n30nopic{display:inline-block;width:fit-content;font-size:11px;font-weight:700;background:#EFEAEC;color:#6B5A60;border-radius:999px;padding:2px 8px;margin:2px 0 0}
 .n30ro .n30rov{border:1px solid var(--field);border-radius:12px;padding:12px 14px;background:#F6F1F2;font-weight:600}
-.btn-link.n30close{font-size:14px;color:var(--muted);text-decoration:underline;flex:0 0 auto;min-width:0;align-self:center}
+.n30box{gap:12px}
+.n30statrow{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;background:none;border:0;border-bottom:1px solid var(--line);padding:2px 0 12px;font:inherit;font-size:14.5px;font-weight:600;color:var(--ink);text-align:left;cursor:pointer}
+div.n30statrow{cursor:default}
+.n30go{color:var(--primary);font-weight:700;white-space:nowrap}
+.n30swrow{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.n30swt{font-weight:700;font-size:15px}.n30sws{font-size:13px;color:var(--muted)}
+.n30sw{display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:8px 16px;border-radius:999px;border:1.5px solid #888780;background:#F1EFE8;color:#444441;font:inherit;font-size:13px;font-weight:800;letter-spacing:.3px;cursor:pointer;white-space:nowrap;flex:0 0 auto;transition:box-shadow .15s}
+.n30sw.on{border-color:#3B6D11;background:#EAF3DE;color:#27500A}
+.n30sw:hover,.n30sw:focus-visible{box-shadow:0 0 0 4px rgba(155,29,79,.15)}
+.n30sw:active{transform:scale(.98)}
+.n30dot{width:9px;height:9px;border-radius:50%;background:currentColor}
 .n30apps .n30app{border-top:1px solid var(--line);padding:10px 0;display:grid;gap:6px}
 .n30apps .n30app:first-of-type{border-top:0}
 .n30appn{display:flex;flex-direction:column;color:inherit;text-decoration:none}
@@ -11747,7 +11782,7 @@ function n30Live(c){
   ACT.n2close = async function(el){
     if (el.dataset.on === '1' && !confirm(t(el.dataset.k === 'ads' ? 'n30FillQ' : 'n30HireQ'))) return;
     await close0(el);
-    if (el.dataset.on === '1') toast(t('n30Closed'));
+    toast(t(el.dataset.on === '1' ? 'n30Closed' : 'n30Opened'));
   };
 
   /* ---- N2 + N4: Sẵn sàng theo giờ Texas ---- */
