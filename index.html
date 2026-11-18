@@ -3141,7 +3141,7 @@ function initLive(){
   function fromDoc(doc){
     try {
       const d = doc.data(EST), o = d.ad || {};
-      return Object.assign({}, o, {id:doc.id, live:true, ownerUid:d.ownerUid, ownerPhone:d.ownerPhone || '', ownerName:d.ownerName || '', daysAgo:daysSince(d.createdAt), _form:d.form || null, _kind:d.kind || '', avatar:d.avatar || '', filled:!!d.filled, hired:!!d.hired, expMs:d.expMs || 0, views:d.views || 0, mod:d.mod || '', claim:d.claim || null, licOk2:!!d.licOk2, ready:d.ready ? Object.assign({}, d.ready, {atMs:ms(d.ready.at) || Date.now()}) : null});
+      return Object.assign({}, o, {id:doc.id, live:true, ownerUid:d.ownerUid, ownerPhone:d.ownerPhone || '', ownerName:d.ownerName || '', daysAgo:daysSince(d.createdAt), postedMs:ms(d.createdAt) || ms(d.updatedAt) || 0, _form:d.form || null, _kind:d.kind || '', avatar:d.avatar || '', filled:!!d.filled, hired:!!d.hired, expMs:d.expMs || 0, views:d.views || 0, mod:d.mod || '', claim:d.claim || null, licOk2:!!d.licOk2, ready:d.ready ? Object.assign({}, d.ready, {atMs:ms(d.ready.at) || Date.now()}) : null});
     } catch (e) { return null; }
   }
   function replaceLive(arr, list){ for (let i = arr.length - 1; i >= 0; i--) if (arr[i].live) arr.splice(i, 1); arr.unshift(...list); }
@@ -11065,6 +11065,36 @@ function n28Live(c){
   };
 }
 if (state.n1ctx) n28Live(state.n1ctx);
+
+/* ============================================================
+   n129 — ngày đăng (ngày/tháng/năm, không giờ) dưới mỗi thẻ tin
+   tiệm và thẻ hồ sơ thợ. Lấy từ ngày tạo bài lưu trên máy chủ.
+   ============================================================ */
+Object.assign(T.vi, {n29Posted:d => `Đăng ngày ${d}`});
+Object.assign(T.en, {n29Posted:d => `Posted ${d}`});
+function n29Date(o){
+  let m = Number(o && o.postedMs) || 0;
+  if (!m && o) m = Date.now() - (Number(o.daysAgo) || 0) * 86400000;
+  if (!m) return '';
+  const d = new Date(m);
+  if (lang === 'vi') return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  return d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+}
+function n29Add(h, o){
+  const s = n29Date(o);
+  if (!s) return h;
+  const line = `<div class="n29date">${esc(t('n29Posted', s))}</div>`;
+  return /<div class="n1loc">[\s\S]*?<\/div>/.test(h) ? h.replace(/(<div class="n1loc">[\s\S]*?<\/div>)/, '$1' + line) : h;
+}
+const n29Job0 = n1JobCard;
+n1JobCard = function(ad){ return n29Add(n29Job0(ad), ad); };
+const n29Tech0 = n1TechCard;
+n1TechCard = function(tc, o){ return n29Add(n29Tech0(tc, o), tc); };
+(() => {
+  const st = document.createElement('style');
+  st.textContent = '.n29date{font-size:12px;color:var(--muted,#5E5458);margin-top:3px}';
+  document.head.appendChild(st);
+})();
 
 render();
 })();
