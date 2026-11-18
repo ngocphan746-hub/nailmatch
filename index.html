@@ -11283,14 +11283,36 @@ techPay = function(pw){
 /* ---------- C5: độ khớp ---------- */
 function n30Fit(ad, tc, techSide){
   if (!ad || !tc || !ad.hiring) return '';
-  const h = ad.hiring, need = (h.services || []).filter(x => x.need === 'must' || !x.need).map(x => x.id);
-  const has = (tc.services || []).map(x => x.id);
-  const out = [];
-  if (need.length){ const n = need.filter(x => has.indexOf(x) >= 0).length; if (n) out.push(t('n30Fit', n, need.length)); }
-  if (tc.license === 'have' && (!techSide || h.license === 'required' || h.license === true)) out.push(t('n30FitLic'));
+  const h = ad.hiring, ch = [], lvl = (a, b) => (b && a / b >= 0.7 ? 'ok' : 'mid');
+  /* lỗi 6 + 9: đếm theo mã dịch vụ chuẩn, xanh khi từ 70% trở lên */
+  const need = n32Ids((h.services || []).filter(x => !x || !x.need || x.need === 'must')), has = n32Ids(tc.services || []);
+  if (need.length){ const n = need.filter(x => has.indexOf(x) >= 0).length; ch.push([lvl(n, need.length), t('n30Fit', n, need.length)]); }
+  /* lỗi 7: so loại lương */
+  const pa = n27A(h.payType), pw = tc.payWanted, pt = pw ? n27A(pw.type) : [];
+  if (pa.length && pt.length){
+    const fam = x => (/^commission/.test(x) ? 'c' : x), same = pt.some(x => pa.some(y => fam(x) === fam(y)));
+    if (!same) ch.push(['warn', t('n32PayDiff')]);
+    else {
+      const ap = n27Num(h.commissionPct), wp = n27Num(pw.pct), aa = n27Num(h.amount), wa = n27Num(pw.amount);
+      if ((ap != null && wp != null && ap < wp) || (aa != null && wa != null && aa < wa)) ch.push(['mid', t('n32PayLow')]);
+      else ch.push(['ok', t('n32PayOk')]);
+    }
+  }
+  if (tc.license === 'have' && (!techSide || h.license === 'required' || h.license === true)) ch.push(['ok', t('n30FitLic')]);
+  /* lỗi 12: tin part-time không tính "rảnh x/y ngày" theo cả tuần */
   const sc = typeof schedOf === 'function' ? schedOf(h) : {}, open = Object.keys(sc || {}).filter(k => sc[k]);
-  if (open.length && Array.isArray(tc.days) && tc.days.length){ const n = open.filter(d => tc.days.indexOf(d) >= 0).length; if (n) out.push(t('n30FitDays', n, open.length)); }
-  return out.length ? `<div class="n30fit">✓ ${out.map(esc).join(' · ')}</div>` : '';
+  if (open.length && Array.isArray(tc.days) && tc.days.length){
+    const n = open.filter(d => tc.days.indexOf(d) >= 0).length, jt = n27A(h.jobType);
+    if (jt.length && jt.every(x => x === 'part_time' || x === 'weekends')){ if (n) ch.push(['ok', t('n32DaysPart', n)]); }
+    else ch.push([lvl(n, open.length), t('n30FitDays', n, open.length)]);
+  }
+  /* lỗi 8: mong muốn của thợ, hiện cho cả hai bên */
+  const wants = (tc.wants || []).filter(x => x !== 'guarantee'), perks = h.perks || [];
+  const hit = wants.filter(p => perks.indexOf(p) >= 0).length;
+  if (hit) ch.push(['ok', techSide ? t('n32WantT', hit) : t('n32WantS', hit, wants.length)]);
+  if (!ch.length) return '';
+  const ic = {ok:'✓ ', mid:'', warn:'⚠ '};
+  return `<div class="n30fit">${ch.map(([c, x]) => `<span class="n32${c}">${ic[c]}${esc(x)}</span>`).join('')}</div>`;
 }
 function n30MyAd(){ return (typeof n1MyAds === 'function' ? n1MyAds() : []).find(a => !a.filled && a.mod !== 'rejected' && a.mod !== 'draft') || null; }
 
@@ -11302,21 +11324,22 @@ function n30MyAd(){ return (typeof n1MyAds === 'function' ? n1MyAds() : []).find
   const c = fl.findIndex(f => f.k === 'city'); fl.splice(c < 0 ? 1 : c + 1, 0, z);
 });
 function n30Miles(o){
-  const kind = typeof n28Ctx === 'function' ? n28Ctx() : '';
-  const v = kind === 'T' ? state.n28.sortT : kind === 'J' ? state.n28.sortJ : '';
-  if (v !== 'near') return '';
+  /* lỗi 19: hiện "~5 dặm" khi cả hai bên có ZIP; không có thì không thêm dấu "·" */
   const r = n1Ready(o), oz = (r && r.zip) || o.zip, role = n30Role();
   const hz = role === 'salon' ? (n30MyAd() || {}).zip : role === 'tech' ? (state.myProfile || {}).zip : '';
-  if (!ZIPS[oz] || !ZIPS[hz]) return '';
+  if (!ZIPS[oz] || !ZIPS[hz] || n2Mine(o)) return '';
   const home = typeof n28Home === 'function' ? n28Home() : null, d = home ? n28Dist(o, home) : 99999;
-  return d < 9999 ? ` · ${esc(t('milesAway', Math.max(1, Math.round(d))))}` : '';
+  return d < 9999 ? ` · ${esc(t('n32Mi', Math.max(1, Math.round(d))))}` : '';
 }
-function n30AddLoc(h, extra){ return extra ? h.replace(/(<div class="n1loc">[\s\S]*?)(<\/div>)/, `$1${extra}$2`) : h; }
+function n30AddLoc(h, extra){
+  h = h.replace(/(<div class="n1loc">[^<]*(?:<(?!\/div)[^<]*)*?) · \d+ (?:dặm|mi)(?=[\s<])/, '$1');
+  return extra ? h.replace(/(<div class="n1loc">[\s\S]*?)(<\/div>)/, `$1${extra}$2`) : h;
+}
 
 /* ---------- cards ---------- */
 const n30Job0 = n1JobCard;
 n1JobCard = function(ad){
-  let h = n30AddLoc(n30Job0(ad), n30Miles(ad));
+  let h = n30AddLoc(n30Job0(ad).replace(/ · <span class="n1hit">[\s\S]*?<\/span>/, ''), n30Miles(ad));
   if (n30Role() === 'tech' && state.myProfile){ const f = n30Fit(ad, state.myProfile, true); if (f) h = h.replace(/(<div class="n1loc">)/, f + '$1'); }
   if (ad && ad.live && ad.spicsN === 0) h = h.replace(/(<div class="n1top">[\s\S]*?<\/div>)/, `$1<span class="n30nopic">${esc(t('n30NoPics'))}</span>`);
   return h;
@@ -11404,9 +11427,10 @@ viewForm = function(type){
 /* ---------- C7 (phương án A): công tắc trạng thái thay cho nút chữ ---------- */
 n2Stats = function(o){
   if (!n2Mine(o) || TECHS.includes(o)) return '';
-  const n = n1Threads().filter(x => x.adId === o.id && x.kind === 'apply' && ['withdrawn', 'blocked'].indexOf(x.status) < 0).length;
-  const s = `<span>👥 ${esc(t('statApply', n))} · ${esc(t('statView', o.views || 0))}</span>`;
-  return n ? `<button type="button" class="n30statrow" data-act="n30apps" data-v="${esc(o.id)}">${s}<span class="n30go">${t('n30See')} ›</span></button>`
+  const l = n1Threads().filter(x => x.adId === o.id && ['withdrawn', 'blocked'].indexOf(x.status) < 0);
+  const na = l.filter(x => x.kind === 'apply').length, no = l.filter(x => x.kind === 'offer').length;
+  const s = `<span>👥 ${esc([t('statApply', na), no ? t('n32StatOffer', no) : '', t('statView', o.views || 0)].filter(Boolean).join(' · '))}</span>`;
+  return na + no ? `<button type="button" class="n30statrow" data-act="n30apps" data-v="${esc(o.id)}">${s}<span class="n30go">${t('n30See')} ›</span></button>`
     : `<div class="n30statrow">${s}</div>`;
 };
 n2Status = function(o){
@@ -11417,9 +11441,9 @@ n2Status = function(o){
   if (!closed && exp) warn = `<p class="n2note warn">${t(tech ? 'expNoteT' : 'expNote')}</p>`;
   else if (!closed && left <= 7) warn = `<p class="n2note warn">${esc(t('expSoon', left))} – ${t(tech ? 'stillLooking' : 'stillHiring')}</p>`;
   const renew = !closed && (exp || left <= 7) ? `<div class="n2btns"><button class="btn btn-primary" type="button" data-act="n2renew" data-k="${k}" data-v="${id}">${t('renewBtn')}</button></div>` : '';
-  const key = (tech ? 'n30T' : 'n30S') + (closed ? 'Off' : 'On');
-  const sw = `<div class="n30swrow"><div><div class="n30swt">${t(key)}</div><div class="n30sws">${t(key + 'D')}</div></div>
-    <button type="button" class="n30sw${closed ? '' : ' on'}" role="switch" aria-checked="${!closed}" data-act="n2close" data-k="${k}" data-v="${id}" data-on="${closed ? '0' : '1'}"><span class="n30dot" aria-hidden="true"></span>${t(key + 'B')}</button></div>`;
+  const key = (tech ? 'n32T' : 'n32S') + (closed ? 'Off' : 'On');
+  const sw = `<div class="n32st"><span class="n32badge${closed ? '' : ' on'}">${closed ? '🔒' : '●'} ${esc(t(key))}</span>
+    <button type="button" class="n32big${closed ? ' prim' : ''}" data-act="n2close" data-k="${k}" data-v="${id}" data-on="${closed ? '0' : '1'}">${esc(t(key + 'B'))}</button></div>`;
   return `<div class="card n2box n30box">${n2Stats(o)}${warn}${renew}${sw}</div>`;
 };
 ACT.n30apps = function(el){
@@ -11439,19 +11463,23 @@ function n30TechName(th){
   return (tc && tc.name) || (th.names || {})[th.techId] || '—';
 }
 function n30Apps(ad){
-  const list = n1Threads().filter(x => x.adId === ad.id && (x.kind === 'apply' || x.kind === 'offer') && ['withdrawn', 'blocked'].indexOf(x.status) < 0)
+  const all = n1Threads().filter(x => x.adId === ad.id && (x.kind === 'apply' || x.kind === 'offer') && ['withdrawn', 'blocked'].indexOf(x.status) < 0)
     .sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || n30Ms(b.lastAt) - n30Ms(a.lastAt));
   const row = x => {
-    const nm = n30TechName(x), gone = (x.names || {})[x.techId] === N30_GONE;
+    const nm = n30TechName(x), gone = (x.names || {})[x.techId] === N30_GONE, ap = x.kind === 'apply';
+    const day = n32Day(n30Ms(x.createdAt) || n30Ms(x.lastAt));
     let st, btns = '';
-    if (x.status === 'accepted'){ st = t('n30StAcc'); btns = `<a class="btn btn-ghost" href="#inbox-${esc(x.id)}">${t('btnChat')}</a>`; }
-    else if (x.status === 'declined'){ st = t('n30StDec'); }
-    else if (x.kind === 'apply'){ st = t('n30StApply'); btns = `<button class="btn btn-primary" type="button" data-act="n1acc" data-v="${esc(x.id)}">${t('accept')}</button><button class="btn btn-ghost" type="button" data-act="n1dec" data-v="${esc(x.id)}">${t('decline')}</button>`; }
-    else st = t('n30StOffer');
+    if (x.status === 'accepted'){ st = t('n32StAcc', ap, day); btns = `<a class="btn btn-ghost" href="#inbox-${esc(x.id)}">${t('btnChat')}</a>`; }
+    else if (x.status === 'declined') st = t(ap ? 'n32StDecA' : 'n32StDecO');
+    else if (ap){ st = t('n32StApply', day); btns = `<button class="btn btn-primary" type="button" data-act="n1acc" data-v="${esc(x.id)}">${t('accept')}</button><button class="btn btn-ghost" type="button" data-act="n1dec" data-v="${esc(x.id)}">${t('decline')}</button>`; }
+    else st = t('n32StOffer', day);
     return `<div class="n30app"><a class="n30appn" href="#tech-${esc(x.techId)}"><b>${esc(gone ? t('n30Gone') : nm)}</b><small>${esc(st)}</small></a>
       ${x.note ? `<p class="note">“${esc(x.note)}”</p>` : ''}${btns && !gone ? `<div class="row">${btns}</div>` : ''}</div>`;
   };
-  return `<section class="jd-sec n30apps" id="n30apps"><h2>${esc(t('n30Apps', list.length))}</h2>${list.length ? list.map(row).join('') : `<p class="hint" style="margin:0">${t('n30AppsNone')}</p>`}</section>`;
+  const apps = all.filter(x => x.kind === 'apply'), offs = all.filter(x => x.kind === 'offer');
+  let body = `<h2>${esc(t('n32Apps', apps.length))}</h2>` + (apps.length ? apps.map(row).join('') : `<p class="hint" style="margin:0">${t('n30AppsNone')}</p>`);
+  if (offs.length) body += `<h2 class="n32h2">${esc(t('n32Offs', offs.length))}</h2>` + offs.map(row).join('');
+  return `<section class="jd-sec n30apps" id="n30apps">${body}</section>`;
 }
 const n30Ad0 = viewAd;
 viewAd = function(id){
@@ -11557,9 +11585,15 @@ viewThread = function(id){
     if ((th.names || {})[other] === N30_GONE || (th.gone && th.gone[other])){
       h = h.replace(/<div class="n2q">[\s\S]*?<\/div>/, '').replace(/<p class="n1conn">[\s\S]*?<\/p>/, '').replace(/<div class="reply">[\s\S]*?<\/div>/, `<p class="n30lock">${t('n30GoneLock')}</p>`)
         .replace(/<div class="n2sharerow"><button class="btn btn-ghost" type="button" data-act="n2block"[\s\S]*?<\/div>/, '');
-    } else if (th.techId !== u && th.adId && (((state.user.pics || {})[th.adId]) || []).length < 3){
-      const nudge = `<div class="card n30nudge"><p>${t('n30PicsNudge')}</p><button class="btn btn-ghost" type="button" data-act="liveedit" data-k="ads" data-v="${esc(th.adId)}">${t('n30PicsBtn')}</button></div>`;
-      h = h.replace(/(<div class="bubbles">)/, nudge + '$1');
+    } else if (th.techId !== u && th.adId){
+      /* lỗi 16: nhắc tiệm thêm địa chỉ / ảnh ngay trong chat; bỏ câu gợi ý "gửi địa chỉ" khi chưa có địa chỉ */
+      const noPics = (((state.user.pics || {})[th.adId]) || []).length < 3, noAddr = !String(((state.user.addrs || {})[th.adId]) || '').trim();
+      if (noAddr) h = h.replace(/<button type="button" class="pill sm" data-act="n2qr" data-v="2" data-r="0">[\s\S]*?<\/button>/, '');
+      if (noPics || noAddr){
+        const msg = noAddr && noPics ? t('n32NudgeBoth') : noAddr ? t('n32NudgeAddr') : t('n30PicsNudge');
+        const nudge = `<div class="card n30nudge"><p>${msg}</p><button class="btn btn-ghost" type="button" data-act="liveedit" data-k="ads" data-v="${esc(th.adId)}">${t(noAddr ? 'n32NudgeBtn' : 'n30PicsBtn')}</button></div>`;
+        h = h.replace(/(<div class="bubbles">)/, nudge + '$1');
+      }
     }
   }
   return n30Gone(h).replace(/(<div class="n1pg">[\s\S]*?)loading="lazy"/g, '$1');
@@ -11816,7 +11850,7 @@ function n30Live(c){
   };
 
   /* ---- T6 + C1 + T5: trước khi đăng ---- */
-  const N30_PAY = {amtHour:[10, 40, 'n30Hour', '$'], amtDay:[80, 350, 'n30Day', '$'], amtWeek:[500, 2500, 'n30Week', '$'], commissionPct:[40, 75, 'n30Pct', '%']};
+  const N30_PAY = {amtHour:[10, 30, 'n30Hour', '$'], amtDay:[80, 350, 'n30Day', '$'], amtWeek:[500, 2500, 'n30Week', '$'], commissionPct:[40, 70, 'n30Pct', '%']};
   const pub0 = ACT.n1pub;
   ACT.n1pub = function(el){
     const type = el.dataset.ft, fs = getForm(type), d = fs.data, u = me();
@@ -11832,6 +11866,12 @@ function n30Live(c){
         const v = n27Num(d[k]); if (v == null || (v >= lo && v <= hi)) continue;
         const f = x => unit === '$' ? '$' + x : x + '%';
         if (!confirm(t('n30PayQ', t(lbl), f(v), f(lo), f(hi)))) return;
+      }
+      /* lỗi 12: tin part-time mà lịch làm gần cả tuần */
+      const jt = n27A(d.jobType);
+      if (jt.length && jt.every(x => x === 'part_time' || x === 'weekends')){
+        const sc = schedOf(d) || {}, nd = Object.keys(sc).filter(k => sc[k]).length;
+        if (nd >= 5 && !confirm(t('n32PartQ', nd))) return;
       }
     }
     return pub0(el);
@@ -12120,6 +12160,367 @@ function n31Live(c){
   };
 }
 if (state.n1ctx) n31Live(state.n1ctx);
+
+/* ============================================================
+   n132 — sửa lỗi 6–21 + banner + nút trạng thái (kiểu B) +
+   tiệm/thợ chỉ xem tin cùng vai + bấm không ăn trên điện thoại
+   ============================================================ */
+Object.assign(T.vi, {
+  n32PartQ:n => `Tin part-time nhưng lịch làm có ${n} ngày/tuần, giống tin full-time.\n\nNếu chỉ cần thợ vài ngày, bấm Huỷ rồi chỉ giữ những ngày cần thợ.\n\nVẫn đăng như vậy?`,
+  n32PayDiff:'Khác cách tính lương', n32PayLow:'Lương thấp hơn mức thợ muốn', n32PayOk:'Hợp cách tính lương',
+  n32DaysPart:n => `Rảnh ${n} ngày trong lịch tiệm`,
+  n32WantT:n => `${n} quyền lợi bạn muốn`, n32WantS:(a, b) => `Khớp ${a}/${b} mong muốn của thợ`,
+  n32Apps:n => `Người ứng tuyển (${n})`, n32Offs:n => `Thợ bạn đã mời (${n})`,
+  n32StApply:d => `Ứng tuyển ngày ${d} · đang chờ bạn trả lời`, n32StOffer:d => `Bạn đã mời ngày ${d} · đang chờ thợ trả lời`,
+  n32StAcc:(ap, d) => `✓ Đã kết nối · ${ap ? 'ứng tuyển' : 'bạn mời'} ngày ${d}`, n32StDecA:'Bạn đã bỏ qua', n32StDecO:'Thợ đã từ chối lời mời',
+  n32StatOffer:n => `${n} người bạn đã mời`,
+  n32SOn:'Đang tuyển', n32SOnB:'Đóng tin – đã tuyển đủ thợ', n32SOff:'Đã đóng tin', n32SOffB:'Mở lại tin',
+  n32TOn:'Đang tìm việc', n32TOnB:'Tôi đã có việc – ẩn hồ sơ', n32TOff:'Đã có việc · hồ sơ đang ẩn', n32TOffB:'Tìm việc lại – hiện hồ sơ',
+  n32Mi:n => `~${n} dặm`,
+  n32NudgeBoth:'📍 Bạn chưa thêm địa chỉ và ảnh tiệm. Thợ cần địa chỉ để tới làm thử, và tin tiệm hơn khi thấy ảnh.',
+  n32NudgeAddr:'📍 Bạn chưa thêm địa chỉ tiệm. Thêm vào tin để thợ biết đường tới làm thử.', n32NudgeBtn:'Thêm địa chỉ',
+  n32Hello:n => `Chưa có tin nhắn. Gửi lời chào đến ${n} 👋`,
+  n32PvSalonNone:'Tiệm chưa thêm địa chỉ và ảnh tiệm. Hãy hỏi trong tin nhắn.',
+  n32PvSalonNoAddr:'Tiệm chưa thêm địa chỉ – hãy hỏi trong tin nhắn.', n32PvSalonNoPic:'Tiệm chưa thêm ảnh tiệm.',
+  n32PvTechNone:'Thợ chưa thêm ảnh chân dung, số bằng, nơi làm trước và lịch rảnh.',
+  n32PvMiss:s => `Chưa có: ${s}.`, n32F:{portrait:'ảnh chân dung', licNo:'số bằng', pjobs:'nơi làm trước', avail:'lịch rảnh'},
+  n32AddrLater:'📍 Địa chỉ cụ thể sẽ hiện sau khi hai bên kết nối.', n32AddrAsk:'📍 Tiệm chưa thêm địa chỉ – hãy hỏi trong tin nhắn.',
+  n32SysConn:(who, ap) => `✓ Đã kết nối · ${who} ${ap ? 'ứng tuyển' : 'mời làm'}`, n32You:'Bạn',
+  n32SysApply:who => `${who} gửi hồ sơ ứng tuyển`, n32SysOffer:who => `${who} mời làm`,
+  n32ViewOnlyS:'Bạn đang dùng tài khoản tiệm nên chỉ xem được tin của tiệm khác.',
+  n32TAll:n => `Tất cả thợ (${n})`, n32TReady:n => `Thợ sẵn sàng đi làm (${n})`, n32TNear:n => `Thợ gần tiệm nhất (${n})`,
+  n32JAll:n => `Tất cả việc làm (${n})`, n32JUrg:n => `Tin cần gấp (${n})`, n32JNear:n => `Việc gần bạn nhất (${n})`,
+  n32In:a => ` ở ${a}`, n32PostedOn:d => `Đăng ngày ${d}`, n32Pick:'— Chọn ngày —'
+});
+Object.assign(T.en, {
+  n32PartQ:n => `This is a part-time post, but the schedule has ${n} days a week, like a full-time job.\n\nIf you only need a tech on some days, tap Cancel and keep just those days.\n\nPost it anyway?`,
+  n32PayDiff:'Different pay type', n32PayLow:'Pay below what the tech wants', n32PayOk:'Pay type matches',
+  n32DaysPart:n => `Free ${n} of the salon’s days`,
+  n32WantT:n => `${n} perk${n > 1 ? 's' : ''} you want`, n32WantS:(a, b) => `Matches ${a}/${b} of what the tech wants`,
+  n32Apps:n => `Applicants (${n})`, n32Offs:n => `Techs you invited (${n})`,
+  n32StApply:d => `Applied ${d} · waiting for your answer`, n32StOffer:d => `You invited on ${d} · waiting for the tech`,
+  n32StAcc:(ap, d) => `✓ Connected · ${ap ? 'applied' : 'you invited'} ${d}`, n32StDecA:'You dismissed this', n32StDecO:'The tech declined',
+  n32StatOffer:n => `${n} invited`,
+  n32SOn:'Hiring', n32SOnB:'Close post – position filled', n32SOff:'Post closed', n32SOffB:'Reopen post',
+  n32TOn:'Looking for work', n32TOnB:'I found a job – hide profile', n32TOff:'Found a job · profile hidden', n32TOffB:'Look for work again – show profile',
+  n32Mi:n => `~${n} mi`,
+  n32NudgeBoth:'📍 You haven’t added the salon address or photos. Techs need the address to come in for a trial, and trust a salon they can see.',
+  n32NudgeAddr:'📍 You haven’t added the salon address. Add it to your post so techs know where to go.', n32NudgeBtn:'Add address',
+  n32Hello:n => `No messages yet. Say hello to ${n} 👋`,
+  n32PvSalonNone:'The salon hasn’t added its address or photos yet. Ask in the chat.',
+  n32PvSalonNoAddr:'The salon hasn’t added its address – ask in the chat.', n32PvSalonNoPic:'The salon hasn’t added photos yet.',
+  n32PvTechNone:'The tech hasn’t added a portrait, license number, previous jobs or availability yet.',
+  n32PvMiss:s => `Not added yet: ${s}.`, n32F:{portrait:'portrait', licNo:'license number', pjobs:'previous jobs', avail:'availability'},
+  n32AddrLater:'📍 The exact address shows once you connect.', n32AddrAsk:'📍 The salon hasn’t added its address – ask in the chat.',
+  n32SysConn:(who, ap) => `✓ Connected · ${who} ${ap ? 'applied' : 'invited'}`, n32You:'You',
+  n32SysApply:who => `${who} applied`, n32SysOffer:who => `${who} offered a job`,
+  n32ViewOnlyS:'You’re using a salon account, so other salons’ posts are view-only.',
+  n32TAll:n => `All techs (${n})`, n32TReady:n => `Techs ready to work (${n})`, n32TNear:n => `Techs closest to your salon (${n})`,
+  n32JAll:n => `All jobs (${n})`, n32JUrg:n => `Urgent jobs (${n})`, n32JNear:n => `Jobs closest to you (${n})`,
+  n32In:a => ` in ${a}`, n32PostedOn:d => `Posted ${d}`, n32Pick:'— Pick a day —'
+});
+
+
+/* lời nhắc theo nút mới (không còn "công tắc") */
+Object.assign(T.vi, {
+  n30FillQ:'Đóng tin này? Thợ sẽ không ứng tuyển được nữa.\n\nMuốn tuyển tiếp, bấm “Mở lại tin”.',
+  n30HireQ:'Ẩn hồ sơ của bạn? Tiệm sẽ không mời bạn được nữa và “Sẵn sàng đi làm” sẽ tắt.\n\nMuốn tìm việc lại, bấm “Tìm việc lại – hiện hồ sơ”.',
+  n30Closed:'Đã đóng. Bấm nút bên dưới khi muốn mở lại.', n30Opened:'Đã mở lại.'
+});
+Object.assign(T.en, {
+  n30FillQ:'Close this post? Techs will no longer be able to apply.\n\nTo hire again, tap “Reopen post”.',
+  n30HireQ:'Hide your profile? Salons won’t be able to offer you a job and “Ready to work” will turn off.\n\nTo look for work again, tap “Look for work again – show profile”.',
+  n30Closed:'Closed. Tap the button below to reopen.', n30Opened:'Reopened.'
+});
+
+/* ---------- lỗi 6: một danh mục dịch vụ, một tên cho mỗi mã ---------- */
+const N32_SVC = {
+  acrylic_full:['Bột', 'Acrylic'], acrylic_fill:['Fill bột', 'Acrylic fill'], dip:['Dip', 'Dip'], gelx:['Gel-X', 'Gel-X'],
+  hard_gel:['Gel cứng / Builder', 'Hard gel / Builder'], gel_polish:['Sơn gel', 'Gel polish'], manicure:['Tay nước', 'Manicure'],
+  pedicure:['Chân nước', 'Pedicure'], ombre_french:['Ombre / French', 'Ombre / French'], art_basic:['Vẽ móng cơ bản', 'Basic nail art'],
+  art_advanced:['Vẽ móng nâng cao', 'Advanced nail art'], waxing:['Wax', 'Waxing'], lashes:['Nối mi', 'Lashes']
+};
+Object.keys(N32_SVC).forEach(k => { SHORT[k] = N32_SVC[k].slice(); const s = SERVICES.find(x => x.v === k); if (s){ s.vi = N32_SVC[k][0]; s.en = N32_SVC[k][1]; } });
+OPTS.svc = SERVICES.map(s => ({v:s.v, vi:s.vi, en:s.en}));
+Object.assign(N30_SVC_DESC, {
+  acrylic_full:['Làm bộ bột mới (full set)', 'New full set'], acrylic_fill:['Dặm phần móng mọc ra', 'Refill grown-out nails'],
+  dip:['Nhúng bột (SNS)', 'Dip powder (SNS)'], gelx:['Móng úp soft gel', 'Soft gel extensions'],
+  art_advanced:['Vẽ 3D, vẽ tay chi tiết', '3D and detailed hand-painted art']
+});
+delete N30_SVC_DESC.hard_gel;
+const N32_ALIAS = {acrylic:'acrylic_full', full_set:'acrylic_full', fill:'acrylic_fill', sns:'dip', dip_powder:'dip', gel_x:'gelx', soft_gel:'gelx',
+  builder:'hard_gel', builder_gel:'hard_gel', hardgel:'hard_gel', gel:'gel_polish', shellac:'gel_polish', mani:'manicure', pedi:'pedicure',
+  ombre:'ombre_french', french:'ombre_french', pink_white:'ombre_french', art:'art_basic', nail_art:'art_basic', nail_art_basic:'art_basic',
+  art_3d:'art_advanced', nail_art_3d:'art_advanced', nail_art_advanced:'art_advanced', '3d':'art_advanced', wax:'waxing', lash:'lashes', eyelash:'lashes'};
+function n32Id(x){
+  const raw = String((typeof x === 'string' ? x : x && (x.id || x.v || x.name || x.vi)) || '').trim();
+  if (!raw) return '';
+  if (N32_SVC[raw]) return raw;
+  const k = raw.toLowerCase().replace(/[\s-]+/g, '_');
+  if (N32_ALIAS[k]) return N32_ALIAS[k];
+  if (N32_SVC[k]) return k;
+  const txt = raw.replace(/_/g, ' ');
+  const hit = (typeof IM_SVC !== 'undefined' ? IM_SVC : []).find(([re]) => re.test(txt));
+  return hit ? hit[1] : raw;
+}
+function n32Ids(list){ const out = []; (list || []).forEach(x => { const id = n32Id(x); if (id && out.indexOf(id) < 0) out.push(id); }); return out; }
+function n32NormList(list){
+  if (!Array.isArray(list)) return list;
+  const seen = {}, out = [];
+  list.forEach(x => { if (!x) return; const id = n32Id(x); if (!id || seen[id]) return; seen[id] = 1; out.push(typeof x === 'string' ? id : Object.assign({}, x, {id})); });
+  if (out.length === list.length && out.every((x, i) => (typeof x === 'string' ? x : x.id) === (typeof list[i] === 'string' ? list[i] : list[i].id))) return list;
+  list.length = 0; out.forEach(x => list.push(x)); return list;
+}
+function n32NormAll(){
+  ADS.forEach(a => { if (a && a.hiring && Array.isArray(a.hiring.services)) n32NormList(a.hiring.services); });
+  TECHS.forEach(x => { if (x && Array.isArray(x.services)) n32NormList(x.services); });
+}
+
+/* ---------- lỗi 18: một kiểu ngày giờ cho toàn trang ---------- */
+const N32_WD = {vi:['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'], en:['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']};
+const N32_MO = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function n32Hm(h, m){ h = Number(h) || 0; m = Number(m) || 0; return `${((h + 11) % 12) + 1}${m ? ':' + String(m).padStart(2, '0') : ''}${h >= 12 ? 'pm' : 'am'}`; }
+function n32Md(mo, d, vi){ return vi ? `${Number(d)} thg ${Number(mo)}` : `${N32_MO[Number(mo) - 1]} ${Number(d)}`; }
+function n32Day(ms0){ if (!ms0) return ''; const p = n30TxParts(ms0); return n32Md(p.month, p.day, lang === 'vi'); }
+fmtTime = function(v){ if (!v) return ''; const [h, m] = String(v).split(':').map(Number); return n32Hm(h, m); };
+(() => {
+  const ls0 = Date.prototype.toLocaleString;
+  Date.prototype.toLocaleString = function(loc, o){
+    if (!o || !o.hour || o.hour12 !== undefined || o.hourCycle || (loc !== 'vi-VN' && loc !== 'en-US') || isNaN(this.getTime())) return ls0.call(this, loc, o);
+    const p = {};
+    new Intl.DateTimeFormat('en-US', {timeZone:o.timeZone, year:'numeric', month:'numeric', day:'numeric', weekday:'short', hour:'numeric', minute:'2-digit', hourCycle:'h23'})
+      .formatToParts(this).forEach(x => { p[x.type] = x.value; });
+    const vi = loc === 'vi-VN', parts = [];
+    if (o.weekday) parts.push(N32_WD[vi ? 'vi' : 'en'][N32_WD.en.indexOf(p.weekday)] || p.weekday);
+    if (o.month || o.day) parts.push(n32Md(p.month, p.day, vi));
+    const tm = n32Hm(Number(p.hour) % 24, p.minute);
+    return parts.length ? `${parts.join(', ')}, ${tm}` : tm;
+  };
+})();
+function n32DayDiff(ms0){
+  const a = n30TxParts(Date.now()), b = n30TxParts(ms0);
+  return Math.round((Date.UTC(+a.year, +a.month - 1, +a.day) - Date.UTC(+b.year, +b.month - 1, +b.day)) / 86400000);
+}
+n29Date = function(o){
+  let m = Number(o && o.postedMs) || 0;
+  if (!m && o) m = Date.now() - (Number(o.daysAgo) || 0) * 86400000;
+  if (!m) return '';
+  const n = Math.max(0, n32DayDiff(m));
+  return n === 0 ? t('today') : n === 1 ? t('yesterday') : n < 30 ? t('daysAgo', n) : t('n32PostedOn', n32Day(m));
+};
+T.vi.n29Posted = d => d; T.en.n29Posted = d => d;
+if (typeof postedText === 'function'){
+  const n32Posted0 = postedText;
+  postedText = function(d){ d = Number(d) || 0; return d >= 30 ? t('n32PostedOn', n32Day(Date.now() - d * 86400000)) : n32Posted0(d); };
+}
+/* ô chọn ngày của "Sẵn sàng đi làm": danh sách ngày, không phụ thuộc kiểu ngày của điện thoại */
+const n32RBox0 = n1ReadyBox;
+n1ReadyBox = function(){
+  const h = n32RBox0();
+  return h.replace(/<input id="(n1r-dfrom|n1r-dto)" type="date"[^>]*?value="([^"]*)"[^>]*>/g, (all, id, val) => {
+    const opts = [`<option value="">${esc(t('n32Pick'))}</option>`];
+    for (let i = 0; i < 14; i++){
+      const d = n1Today(i), [y, mo, dd] = d.split('-').map(Number), wd = new Date(Date.UTC(y, mo - 1, dd)).getUTCDay();
+      const txt = `${N32_WD[lang === 'vi' ? 'vi' : 'en'][wd]}, ${n32Md(mo, dd, lang === 'vi')}`;
+      opts.push(`<option value="${d}"${d === val ? ' selected' : ''}>${esc(txt)}</option>`);
+    }
+    return `<select id="${id}">${opts.join('')}</select>`;
+  });
+};
+
+/* ---------- banner: bỏ "ở San Antonio" ---------- */
+if (typeof N26_DEF === 'object' && N26_DEF.slides && N26_DEF.slides[0]){ N26_DEF.slides[0].vi = 'Tìm thợ nail miễn phí'; N26_DEF.slides[0].en = 'Find nail techs for free'; }
+if (typeof n26Slides === 'function'){
+  const n32Sl0 = n26Slides;
+  n26Slides = function(){
+    return n32Sl0().map(s => Object.assign({}, s, {t:String(s.t || '').replace(/Tìm thợ nail ở San Antonio,?\s*miễn phí/i, 'Tìm thợ nail miễn phí').replace(/Find nail techs in San Antonio,?\s*(for\s+)?free/i, 'Find nail techs for free')}));
+  };
+}
+
+/* ---------- lỗi 20: tiêu đề danh sách theo bộ lọc ---------- */
+(() => {
+  const title = (kind, n) => {
+    const v = kind === 'T' ? state.n28.sortT : state.n28.sortJ, area = state.n26 && state.n26.area;
+    const key = kind === 'T' ? (v === 'ready' ? 'n32TReady' : v === 'near' ? 'n32TNear' : 'n32TAll') : (v === 'urgent' ? 'n32JUrg' : v === 'near' ? 'n32JNear' : 'n32JAll');
+    let s = t(key, n);
+    if (area && v !== 'near') s = s.replace(/ \((\d+)\)$/, `${t('n32In', area)} ($1)`);
+    return s;
+  };
+  ['vi', 'en'].forEach(l => { T[l].techsNear = n => title('T', n); T[l].jobsNear = n => title('J', n); });
+})();
+
+/* ---------- lỗi 21: một nguồn ảnh đại diện (ảnh đã tải lên, không có thì chữ cái đầu) ---------- */
+avatarOf = function(o){ return o && o.avatar ? `<img class="avatar" src="${esc(o.avatar)}" alt="">` : `<span class="avatar ini">${esc(String((o && (o.name || o.businessName)) || '?').trim().slice(0, 1).toUpperCase() || '?')}</span>`; };
+
+/* ---------- tiệm chỉ xem tin tiệm khác, thợ chỉ xem hồ sơ thợ khác ---------- */
+function n32SameSide(it){
+  if (!it || n2Mine(it)) return false;
+  const role = n30Role(), tech = TECHS.includes(it);
+  return (role === 'salon' && !tech) || (role === 'tech' && tech);
+}
+const n32Job0 = n1JobCard;
+n1JobCard = function(ad){
+  let h = n32Job0(ad);
+  if (n32SameSide(ad)) h = h.replace(/<button type="button" class="n2star[^"]*"[^>]*>★<\/button>/, '');
+  if (ad && !ad.avatar){
+    const ini = `<span class="avatar ini">${esc(String(adBiz(ad) || '?').trim().slice(0, 1).toUpperCase() || '?')}</span>`;
+    h = /<a class="n1main n1row"[^>]*><img class="avatar"[^>]*>/.test(h) ? h.replace(/(<a class="n1main n1row"[^>]*>)<img class="avatar"[^>]*>/, '$1' + ini)
+      : h.replace(/(<a class="n1main n1row"[^>]*>)(<div>)/, '$1' + ini + '$2');
+  }
+  return h;
+};
+const n32Act0 = n1Action;
+n1Action = function(it, o){ return n32SameSide(it) ? '' : n32Act0(it, o); };
+
+/* ---------- lỗi 11 + 17: hộp thư ---------- */
+function n32Gone(th, u){
+  const o = (th.members || []).find(m => m !== u), nm = (th.names || {})[o];
+  return nm === N30_GONE || nm === T.vi.n28Gone || nm === T.en.n28Gone || !!(th.gone && th.gone[o]);
+}
+function n32SysCopy(th, u){
+  const lt = th.lastText || '', conn = [T.vi.connectedMsg, T.en.connectedMsg].indexOf(lt) >= 0;
+  const app = [T.vi.btnApply, T.en.btnApply].indexOf(lt) >= 0, off = [T.vi.btnOffer, T.en.btnOffer].indexOf(lt) >= 0;
+  if (!conn && !app && !off) return th;
+  const who = th.from === u ? t('n32You') : ((th.names || {})[th.from] || '—'), ap = th.kind === 'apply';
+  const text = conn ? t('n32SysConn', who, ap) : app ? t('n32SysApply', who) : t('n32SysOffer', who);
+  return Object.assign({}, th, {lastText:text, lastFrom:null});
+}
+function n32Threads(fn, sys){
+  const L0 = state.live;
+  if (!L0 || !Array.isArray(L0.threads) || !state.user) return fn();
+  const all = L0.threads, u = state.user.uid;
+  L0.threads = all.filter(th => !n32Gone(th, u)).map(th => sys ? n32SysCopy(th, u) : th);
+  try { return fn(); } finally { L0.threads = all; }
+}
+const n32Inbox0 = viewInbox;
+viewInbox = function(){ return n32Threads(() => n32Inbox0(), true); };
+const n32Unread0 = unreadCount;
+unreadCount = function(){ return n32Threads(() => n32Unread0(), false); };
+
+/* ---------- lỗi 14 + 15: phòng chat ---------- */
+const n32Thread0 = viewThread;
+viewThread = function(id){
+  let h = n32Thread0(id);
+  const L0 = state.live, u = state.user && state.user.uid;
+  if (!h || !L0 || !u) return h;
+  const th = (L0.threads || []).find(x => x.id === id);
+  if (!th) return h;
+  const other = (th.members || []).find(m => m !== u), nm = (th.names || {})[other] || '—', msgs = (L0.msgs || {})[id];
+  if (Array.isArray(msgs) && !msgs.length && th.status === 'accepted' && !n32Gone(th, u))
+    h = h.replace(/<div class="bubbles">\s*<\/div>/, `<div class="bubbles"><p class="n32hello">${esc(t('n32Hello', nm))}</p></div>`);
+  const pv = L0.priv && L0.priv[id + '|' + u], p = pv && pv.d;
+  if (p && /class="card n1pv"/.test(h)){
+    const amTech = th.techId === u;
+    let none = '', miss = '';
+    if (amTech){
+      const noA = !String(p.addr || th.addr || '').trim(), noP = !(p.pics || []).length;
+      if (noA && noP) none = t('n32PvSalonNone'); else if (noA) miss = t('n32PvSalonNoAddr'); else if (noP) miss = t('n32PvSalonNoPic');
+    } else {
+      const F = t('n32F'), lack = ['portrait', 'licNo', 'pjobs', 'avail'].filter(k => !String(p[k] || '').trim());
+      if (lack.length === 4 && !(p.mpics || []).length) none = t('n32PvTechNone');
+      else if (lack.length) miss = t('n32PvMiss', lack.map(k => F[k]).join(', '));
+    }
+    if (none) h = h.split(t('pvNone')).join(esc(none));
+    else if (miss) h = h.replace(/(<div class="card n1pv">[\s\S]*?)(<p class="hint" style="margin:0">[^<]*<\/p><\/div>)/, `$1<p class="hint n32miss">${esc(miss)}</p>$2`);
+  }
+  return h;
+};
+
+/* ---------- css ---------- */
+(() => {
+  const st = document.createElement('style');
+  st.textContent = `
+.n30fit{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:13px;font-weight:600;margin-top:3px;color:inherit}
+.n32ok{color:#1F6B45}.n32mid{color:#8A5A00}.n32warn{color:#B3261E}
+.n30apps .n32h2{margin-top:18px}
+.n32st{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.n32badge{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:5px 12px;border-radius:999px;background:#F1EFE8;color:#444441}
+.n32badge.on{background:#EAF3DE;color:#27500A}
+.n32big{display:flex;align-items:center;justify-content:center;text-align:center;width:100%;min-height:52px;padding:10px 14px;border-radius:12px;border:1.5px solid var(--primary);background:#fff;color:var(--primary);font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.n32big.prim{background:var(--primary);color:#fff}
+.n32big:active{transform:scale(.99)}.n32big:focus-visible{box-shadow:0 0 0 4px rgba(155,29,79,.18);outline:none}
+button,a,[data-act],select,label{touch-action:manipulation;-webkit-tap-highlight-color:rgba(155,29,79,.08)}
+.n32hello{text-align:center;color:var(--muted);margin:18px 0}
+.n32miss{margin:6px 0 0}
+.n32addr{font-size:14px;color:var(--muted);margin:8px 0 0}
+.n32addr a{color:var(--primary);font-weight:600}
+.n3chiprole,a.n3chiprole{border:0;padding:0;background:none;color:var(--muted);font-weight:600}
+a.n3chiprole:hover{background:none;color:var(--primary);text-decoration:underline}
+.toast,.toast[hidden]{bottom:auto!important;top:calc(env(safe-area-inset-top, 0px) + 68px);padding:9px 14px;font-size:14px;max-width:min(88vw,420px)}`;
+  document.head.appendChild(st);
+})();
+
+/* ---------- bấm không ăn trên điện thoại: không vẽ lại màn hình khi ngón tay đang chạm ---------- */
+(() => {
+  const r0 = render;
+  let hold = 0, pending = false;
+  render = function(){
+    if (hold && Date.now() - hold < 1500){ pending = true; return; }
+    try { n32NormAll(); } catch (e) {}
+    return r0.apply(this, arguments);
+  };
+  const release = () => { if (!hold) return; hold = 0; if (pending){ pending = false; render(); } };
+  document.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse') return;
+    if (e.target && e.target.closest && e.target.closest('button, a, [data-act], select, label')) hold = Date.now();
+  }, true);
+  document.addEventListener('click', () => setTimeout(release, 0), true);
+  document.addEventListener('pointercancel', () => setTimeout(release, 0), true);
+  window.addEventListener('scroll', () => { if (hold) setTimeout(release, 0); }, {passive:true, capture:true});
+  setInterval(() => { if (hold && Date.now() - hold >= 1500) release(); }, 300);
+})();
+
+/* ---------- live ---------- */
+function n32Live(c){
+  const {db} = c;
+  const save0 = ACT.n2save;
+  ACT.n2save = function(el){
+    const ad = ADS.find(a => a.id === el.dataset.v);
+    if (n30Role() === 'salon' && ad && !n2Mine(ad)){ toast(t('n32ViewOnlyS')); return; }
+    return save0(el);
+  };
+  /* lỗi 16: trang tin, phía thợ — giải thích vì sao chưa có địa chỉ */
+  state.n32a = state.n32a || {};
+  const n32Ad0 = viewAd;
+  viewAd = function(id){
+    let h = n32Ad0(id);
+    const ad = ADS.find(a => a.id === id), u = state.user && state.user.uid;
+    if (!h || !ad || ad.type !== 'hiring' || !ad.live || n30Role() !== 'tech' || n2Mine(ad) || /class="n1addr"/.test(h)) return h;
+    const th = (n1Threads() || []).find(x => x.adId === ad.id && x.status === 'accepted' && (x.members || []).indexOf(u) >= 0);
+    let line;
+    if (!th) line = esc(t('n32AddrLater'));
+    else {
+      const c0 = state.n32a[th.id];
+      if (!c0){
+        state.n32a[th.id] = {busy:true};
+        const salon = (th.members || []).find(m => m !== u);
+        db.collection('threads').doc(th.id).collection('priv').doc(salon).get()
+          .then(d => { state.n32a[th.id] = {addr:String((d.exists && d.data().addr) || '').trim()}; render(); })
+          .catch(e => { console.warn('n32 addr', e); state.n32a[th.id] = {addr:''}; });
+        return h;
+      }
+      if (c0.busy) return h;
+      line = c0.addr ? `📍 <b>${t('addrLbl')}:</b> ${esc(c0.addr)}` : `${esc(t('n32AddrAsk'))} <a href="#inbox-${esc(th.id)}">${t('btnChat')} ›</a>`;
+    }
+    return h.replace(/(<span class="loc">[\s\S]*?<\/span>)/, `$1<p class="n32addr">${line}</p>`);
+  };
+}
+if (state.n1ctx) n32Live(state.n1ctx);
+
+/* lỗi 19: thêm mã ZIP vùng San Antonio để tính được "~x dặm" (toạ độ gần đúng ở giữa mỗi ZIP) */
+Object.entries({
+  '78202':[29.428,-98.461], '78203':[29.415,-98.460], '78204':[29.404,-98.507], '78205':[29.424,-98.489], '78207':[29.422,-98.524],
+  '78208':[29.440,-98.446], '78210':[29.397,-98.466], '78211':[29.344,-98.564], '78212':[29.461,-98.495], '78213':[29.515,-98.522],
+  '78214':[29.364,-98.492], '78215':[29.442,-98.481], '78217':[29.540,-98.419], '78218':[29.489,-98.396], '78219':[29.445,-98.383],
+  '78220':[29.410,-98.401], '78221':[29.302,-98.500], '78222':[29.383,-98.367], '78224':[29.317,-98.539], '78225':[29.388,-98.526],
+  '78226':[29.381,-98.556], '78227':[29.403,-98.635], '78229':[29.505,-98.570], '78231':[29.574,-98.540], '78232':[29.584,-98.471],
+  '78234':[29.459,-98.437], '78235':[29.346,-98.444], '78237':[29.420,-98.565], '78238':[29.477,-98.619], '78239':[29.515,-98.361],
+  '78240':[29.519,-98.600], '78242':[29.351,-98.611], '78244':[29.479,-98.349], '78247':[29.583,-98.408], '78248':[29.590,-98.524],
+  '78250':[29.505,-98.669], '78251':[29.460,-98.678], '78252':[29.344,-98.703], '78253':[29.475,-98.783], '78254':[29.531,-98.733],
+  '78255':[29.645,-98.660], '78256':[29.622,-98.629], '78257':[29.651,-98.595], '78259':[29.629,-98.443], '78260':[29.701,-98.490],
+  '78261':[29.703,-98.411], '78148':[29.551,-98.297, 'Universal City'], '78108':[29.575,-98.231, 'Cibolo'], '78132':[29.757,-98.199, 'New Braunfels'],
+  '78023':[29.583,-98.721, 'Helotes'], '78015':[29.744,-98.646, 'Fair Oaks Ranch']
+}).forEach(([z, v]) => { if (!ZIPS[z]) ZIPS[z] = [v[0], v[1], v[2] || 'San Antonio']; });
 
 render();
 })();
