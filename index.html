@@ -10126,6 +10126,664 @@ viewAd = function(id){ return n25Back(n25Ad0(id)); };
 const n25Tech0 = viewTech;
 viewTech = function(id){ return n25Back(n25Tech0(id)); };
 
+/* ============================================================
+   n126 — đợt sửa theo góp ý sếp (18/11):
+   1. icon Trang chủ dưới chữ Nail101
+   2. banner nhiều slide thay dòng tiêu đề trang chủ (chỉnh trong Cài đặt)
+   3. ăn chia + bao lương ngày/tuần: chỉ bấm chọn, không điền %, không điền $
+   4. mặc định tiếng Việt, nhớ ngôn ngữ theo máy và theo tài khoản
+   5. mỗi số một vai: bỏ nút đổi vai, xem chéo được nhưng không có nút hành động
+   6. mặc định Tất cả khu vực, bỏ "gần bạn" và "0 dặm"
+   7. nút Quay lại cho mọi trang người dùng
+   8. tiêu đề bài + tiêu đề tin nhắn đổi theo ngôn ngữ (kể cả bài cũ)
+   ============================================================ */
+Object.assign(T.vi, {
+  n26All:'Tất cả khu vực', n26Area:'Khu vực',
+  techsNear:n => state.n26 && state.n26.area ? `Thợ ở ${state.n26.area} (${n})` : `Tất cả thợ (${n})`,
+  jobsNear:n => state.n26 && state.n26.area ? `Việc ở ${state.n26.area} (${n})` : `Tất cả việc làm (${n})`,
+  noTechs:'Chưa có thợ ở khu vực này.', noJobs2:'Chưa có tin tuyển ở khu vực này.',
+  readyLead:'Thợ đang sẵn sàng đi làm ngay. Mới bật ở trên.', readyAll:'Xem tất cả thợ',
+  n3SalonHome:'Tìm thợ', n3TechHome:'Tìm việc', salonHubTitle:'Tìm thợ', techHubTitle:'Tìm việc',
+  n26OtherSalons:'Tiệm khác đang tuyển', n26OtherTechs:'Thợ khác',
+  n26OtherSalonsD:'Bạn đang xem bằng tài khoản tiệm, chỉ xem được, không ứng tuyển.',
+  n26OtherTechsD:'Bạn đang xem bằng tài khoản thợ, chỉ xem được, không mời làm.',
+  n26GoOtherSalons:'Xem tiệm khác đang tuyển →', n26GoOtherTechs:'Xem thợ khác →',
+  n26RoleLocked:'Mỗi số điện thoại chỉ dùng cho một vai trò.',
+  n26BanH:'Banner trang chủ', n26BanD:'Các slide tự chạy ở đầu trang chủ, thay cho dòng tiêu đề.',
+  n26BanTitleVi:'Tiêu đề (Việt)', n26BanTitleEn:'Tiêu đề (Anh)', n26BanSubVi:'Dòng phụ (Việt)', n26BanSubEn:'Dòng phụ (Anh)',
+  n26BanLink:'Bấm vào thì mở', n26BanOn:'Hiện slide này', n26BanAdd:'+ Thêm slide', n26BanDel:'Xoá slide',
+  n26BanReady:'Hiện slide “số thợ sẵn sàng hôm nay” (tự cập nhật)', n26BanSup:'Hiện slide “Cần hỗ trợ?” với số điện thoại hỗ trợ',
+  n26BanSave:'Lưu banner', n26BanSaved:'Đã lưu banner.', n26BanMax:'Tối đa 5 slide.', n26Slide:n => `Slide ${n}`,
+  n26RdyT:n => `${n} thợ sẵn sàng đi làm hôm nay`, n26RdyS:'Bấm để xem ngay',
+  n26SupT:'Cần hỗ trợ?', n26SupS:p => `Nhắn hoặc gọi ${p}`,
+  n26Free:'100% MIỄN PHÍ'
+});
+Object.assign(T.en, {
+  n26All:'All areas', n26Area:'Area',
+  techsNear:n => state.n26 && state.n26.area ? `Techs in ${state.n26.area} (${n})` : `All techs (${n})`,
+  jobsNear:n => state.n26 && state.n26.area ? `Jobs in ${state.n26.area} (${n})` : `All jobs (${n})`,
+  noTechs:'No techs in this area yet.', noJobs2:'No jobs in this area yet.',
+  readyLead:'Techs ready to work right now. Newest first.', readyAll:'See all techs',
+  n3SalonHome:'Find techs', n3TechHome:'Find a job', salonHubTitle:'Find techs', techHubTitle:'Find a job',
+  n26OtherSalons:'Other salons hiring', n26OtherTechs:'Other techs',
+  n26OtherSalonsD:'You are signed in as a salon, so you can look but not apply.',
+  n26OtherTechsD:'You are signed in as a tech, so you can look but not send offers.',
+  n26GoOtherSalons:'See other salons hiring →', n26GoOtherTechs:'See other techs →',
+  n26RoleLocked:'Each phone number has one role.',
+  n26BanH:'Home page banner', n26BanD:'Slides that rotate at the top of the home page, in place of the headline.',
+  n26BanTitleVi:'Title (Vietnamese)', n26BanTitleEn:'Title (English)', n26BanSubVi:'Subtitle (Vietnamese)', n26BanSubEn:'Subtitle (English)',
+  n26BanLink:'Opens', n26BanOn:'Show this slide', n26BanAdd:'+ Add slide', n26BanDel:'Delete slide',
+  n26BanReady:'Show the “techs ready today” slide (updates itself)', n26BanSup:'Show the “Need help?” slide with the support number',
+  n26BanSave:'Save banner', n26BanSaved:'Banner saved.', n26BanMax:'5 slides at most.', n26Slide:n => `Slide ${n}`,
+  n26RdyT:n => `${n} techs ready to work today`, n26RdyS:'Tap to see them',
+  n26SupT:'Need help?', n26SupS:p => `Text or call ${p}`,
+  n26Free:'100% FREE'
+});
+
+state.n26 = {area:'', bi:0, hold:0, ban:null, ed:null, busy:false, stack:[location.hash || '#home']};
+
+/* ---------- 4. mặc định tiếng Việt ---------- */
+try { if (!localStorage.getItem('nailmatch-lang')) lang = 'vi'; } catch (e) { lang = 'vi'; }
+document.documentElement.lang = lang;
+
+/* ---------- 6. tất cả khu vực, bỏ khoảng cách ---------- */
+state.center = null;
+const N26_LINKS = [['#post-hiring', {vi:'Đăng tin tuyển thợ', en:'Post a job'}], ['#post-profile', {vi:'Tạo hồ sơ thợ', en:'Create a tech profile'}],
+  ['#ready', {vi:'Thợ sẵn sàng hôm nay', en:'Techs ready today'}], ['#jobs', {vi:'Tìm việc', en:'Find a job'}],
+  ['#salon', {vi:'Tìm thợ', en:'Find techs'}], ['#login', {vi:'Đăng nhập', en:'Sign in'}]];
+function n26CityOf(o){
+  if (!o) return '';
+  const r = typeof n1Ready === 'function' && n1Ready(o);
+  return (r && r.city) || o.city || (o.zip && typeof cityOf === 'function' ? cityOf(o.zip) : '') || '';
+}
+n1CityBar = function(){
+  const cur = state.n26.area;
+  return `<div class="n1flt"><span class="n1fl">${t('n26Area')}</span><select id="q-area" data-n26area="1" aria-label="${esc(t('n26Area'))}">
+    <option value=""${cur ? '' : ' selected'}>${esc(t('n26All'))}</option>
+    ${Object.keys(CITIES).map(c => `<option value="${esc(c)}"${cur === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></div>`;
+};
+const n26Flt0 = n1Flt;
+n1Flt = function(list){
+  const l = n26Flt0(list), a = state.n26.area;
+  return a ? l.filter(o => n26CityOf(o) === a) : l;
+};
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el && el.dataset && el.dataset.n26area){ state.n26.area = el.value; state.center = null; render(); }
+});
+
+/* ---------- 3. ăn chia + bao lương: chỉ chọn, không điền số ---------- */
+const N26_PRIV = ['commission_guarantee', 'commission_week'];
+[FORMS.hiring, FORMS.profile].forEach(F => (F.steps || []).forEach(s => (s.fields || []).forEach(f => {
+  if (f.k === 'commissionPct') f.show = d => (d.payType || '') === 'commission';
+  if (f.k === 'amount') f.show = d => !!d.payType && !/^commission/.test(d.payType);
+})));
+const n26Pay0 = payText;
+payText = function(p){
+  if (p && N26_PRIV.includes(p.payType) && p.payPublic !== false) return opt('payType', p.payType);
+  return n26Pay0(p);
+};
+
+/* ---------- 8. tiêu đề bài đổi theo ngôn ngữ ---------- */
+function n26AutoTitle(ad, lg){
+  const h = ad.hiring || {}, sv = {};
+  (h.services || []).forEach(s => { if (s && s.id) sv[s.id] = s.need === 'must' || !s.need ? 'must' : s.need; });
+  const old = lang;
+  try { lang = lg; return autoTitle('hiring', {services:sv, jobType:h.jobType, techsNeeded:h.techsNeeded}); }
+  catch (e) { return ''; }
+  finally { lang = old; }
+}
+const n26Title0 = titleOf;
+titleOf = function(ad){
+  if (ad && ad.type === 'hiring' && ad.hiring && Array.isArray(ad.hiring.services) && ad.hiring.services.length && typeof ad.title !== 'object'){
+    const s = n26AutoTitle(ad, lang);
+    if (s) return s;
+  }
+  return n26Title0(ad);
+};
+function n26FixThreads(){
+  const list = (state.live && state.live.threads) || [];
+  list.forEach(th => {
+    const ab = th && th.about;
+    if (!ab || ab.kind !== 'ad' || !ab.id) return;
+    const ad = ADS.find(a => a.id === ab.id);
+    if (ad) ab.title = adBiz(ad) + ' – ' + titleOf(ad);
+  });
+}
+
+/* ---------- 5. mỗi số một vai ---------- */
+function n26Role(){ return typeof n3Role === 'function' ? n3Role() : ''; }
+const n26Act0 = n1Action;
+n1Action = function(it, o){
+  const h = n26Act0(it, o);
+  const role = n26Role();
+  if (role !== 'salon' && role !== 'tech') return h;
+  if (h.indexOf('data-act="liveedit"') >= 0) return h;            /* bài của chính mình: giữ Sửa / Xoá */
+  const isTech = TECHS.includes(it);
+  if (role === 'salon' && !isTech) return '';                      /* tiệm xem tiệm khác: chỉ xem */
+  if (role === 'tech' && isTech) return '';                        /* thợ xem thợ khác: chỉ xem */
+  return h;
+};
+const n26Route0 = route;
+route = function(){
+  const h = (location.hash || '').replace(/^#/, '');
+  const role = n26Role();
+  if (role === 'salon' && (h === 'jobs' || h === 'ads')) return {view:'jobs'};
+  if (role === 'tech' && (h === 'salon' || h === 'job-seekers')) return {view:'salon'};
+  if (role === 'salon' && h === 'post-profile') return {view:'home'};
+  if (role === 'tech' && h === 'post-hiring') return {view:'home'};
+  return n26Route0();
+};
+const n26Jobs0 = viewTechHub;
+viewTechHub = function(){
+  let s = n26Jobs0();
+  if (n26Role() !== 'salon') return s;
+  s = s.replace(/<a class="btn btn-primary btn-block n1big" href="#post-profile">[\s\S]*?<\/a>\s*<p class="hint"[^>]*>[\s\S]*?<\/p>/, '');
+  return s.replace(/<h1 class="pg-title">[\s\S]*?<\/h1>/, `<h1 class="pg-title">${t('n26OtherSalons')}</h1><p class="hint n26view">${esc(t('n26OtherSalonsD'))}</p>`);
+};
+const n26Techs0 = viewSalonHub;
+viewSalonHub = function(){
+  let s = n26Techs0();
+  if (n26Role() !== 'tech') return s;
+  s = s.replace(/<a class="btn btn-primary btn-block n1big" href="#post-hiring">[\s\S]*?<\/a>/, '');
+  return s.replace(/<h1 class="pg-title">[\s\S]*?<\/h1>/, `<h1 class="pg-title">${t('n26OtherTechs')}</h1><p class="hint n26view">${esc(t('n26OtherTechsD'))}</p>`);
+};
+const n26SalHome0 = n3SalonHome;
+n3SalonHome = function(){
+  return n26SalHome0().replace(/(<h1 class="pg-title n3h">[\s\S]*?<\/h1>)/, `$1<a class="n26cross" href="#jobs">${t('n26GoOtherSalons')}</a>`);
+};
+const n26TechHome0 = n3TechHome;
+n3TechHome = function(){
+  return n26TechHome0().replace(/(<h1 class="pg-title n3h">[\s\S]*?<\/h1>)/, `$1<a class="n26cross" href="#salon">${t('n26GoOtherTechs')}</a>`);
+};
+const n26Acc0 = viewAccount;
+viewAccount = function(){
+  return n26Acc0().replace(/<button class="btn-link" type="button" data-act="n3switch"[^>]*>[\s\S]*?<\/button>/,
+    `<span class="hint n26lock">${esc(t('n26RoleLocked'))}</span>`);
+};
+ACT.n3switch = function(){ toast(t('n26RoleLocked')); };
+
+/* ---------- 1. icon Trang chủ dưới chữ Nail101 ---------- */
+const n26Head0 = header;
+header = function(r){
+  return n26Head0(r).replace('<span>Nail101</span>',
+    `<span class="n26nm"><span>Nail101</span><small class="n26home">${ICON.home}<span>${esc(t('nav_home'))}</span></small></span>`);
+};
+
+/* ---------- 2. banner ---------- */
+const N26_DEF = {ready:true, support:true, slides:[
+  {on:true, vi:'Tìm thợ nail ở San Antonio, miễn phí', en:'Find nail techs in San Antonio, free',
+   sv:'Đăng tin tuyển thợ trong 2 phút · Không phí', se:'Post a job in 2 minutes · No fees', link:'#post-hiring', free:true},
+  {on:true, vi:'Thợ nail: tìm việc gần nhà', en:'Nail techs: find a job near home',
+   sv:'Tạo hồ sơ miễn phí, tiệm tự liên hệ bạn', se:'Create a free profile, salons reach out to you', link:'#jobs'}
+]};
+function n26Ban(){ return state.n26.ban || N26_DEF; }
+function n26Pretty(d){ d = String(d || '').replace(/\D/g, '').slice(-10); return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : d; }
+function n26SafeLink(l){
+  l = String(l || '').trim();
+  if (/^#[a-z0-9-]*$/i.test(l) || /^tel:\+?\d+$/.test(l) || /^https:\/\/[^\s"'<>]+$/i.test(l)) return l;
+  return '#home';
+}
+function n26Slides(){
+  const b = n26Ban(), out = [];
+  (b.slides || []).filter(s => s && s.on !== false && (s.vi || s.en)).forEach(s => out.push({
+    kind:'c', t:(lang === 'vi' ? s.vi : s.en) || s.vi || s.en, s:(lang === 'vi' ? s.sv : s.se) || s.sv || s.se || '', link:n26SafeLink(s.link), free:!!s.free}));
+  if (b.ready !== false){
+    const n = typeof n1Techs === 'function' ? n1Techs().filter(n1Ready).length : 0;
+    if (n) out.splice(Math.min(1, out.length), 0, {kind:'r', t:t('n26RdyT', n), s:t('n26RdyS'), link:'#ready'});
+  }
+  if (b.support !== false){
+    const si = typeof supInfo === 'function' ? supInfo() : {phone:''};
+    if (si.phone) out.push({kind:'s', t:t('n26SupT'), s:t('n26SupS', n26Pretty(si.phone) + (si.name ? ` (${si.name})` : '')), link:'tel:+1' + si.phone});
+  }
+  return out;
+}
+function n26BannerHtml(){
+  const sl = n26Slides();
+  if (!sl.length) return '';
+  const i = Math.min(state.n26.bi, sl.length - 1);
+  const ext = l => /^https:/.test(l) ? ' target="_blank" rel="noopener"' : '';
+  return `<div class="n26ban" aria-roledescription="carousel"><div class="n26track" id="n26track">
+    ${sl.map((s, k) => `<a class="n26sl n26k-${s.kind}" href="${esc(s.link)}"${ext(s.link)} aria-label="${esc(s.t)}" data-k="${k}">
+      ${s.free ? `<span class="n26free">${esc(t('n26Free'))}</span>` : ''}
+      ${s.kind === 'r' ? `<span class="n26bolt" aria-hidden="true">⚡</span>` : ''}
+      <b>${esc(s.t)}</b>${s.s ? `<span>${esc(s.s)}</span>` : ''}</a>`).join('')}
+    </div>${sl.length > 1 ? `<div class="n26dots">${sl.map((s, k) => `<button type="button" class="n26dot${k === i ? ' on' : ''}" data-act="n26go" data-v="${k}" aria-label="${k + 1}"></button>`).join('')}</div>` : ''}</div>`;
+}
+const n26Home0 = viewHome;
+viewHome = function(){
+  const h = n26Home0();
+  const ttl = `<h1>${t('h_title')}</h1>`;
+  return h.indexOf(ttl) >= 0 ? h.replace(ttl, n26BannerHtml()) : h;
+};
+function n26Show(k, smooth){
+  const tr = document.getElementById('n26track');
+  if (!tr) return;
+  const n = tr.children.length;
+  if (!n) return;
+  k = ((k % n) + n) % n;
+  state.n26.bi = k;
+  const sl = tr.children[k], x = sl ? sl.offsetLeft - tr.children[0].offsetLeft : tr.clientWidth * k;
+  tr.scrollTo({left:x, behavior:smooth ? 'smooth' : 'auto'});
+  document.querySelectorAll('.n26dot').forEach((d, j) => d.classList.toggle('on', j === k));
+}
+ACT.n26go = function(el){ state.n26.hold = Date.now() + 8000; n26Show(Number(el.dataset.v) || 0, true); };
+document.addEventListener('scroll', e => {
+  const tr = e.target;
+  if (!tr || tr.id !== 'n26track' || !tr.clientWidth) return;
+  const k = Math.round(tr.scrollLeft / tr.clientWidth);
+  if (k !== state.n26.bi){ state.n26.bi = k; document.querySelectorAll('.n26dot').forEach((d, j) => d.classList.toggle('on', j === k)); }
+}, true);
+document.addEventListener('pointerdown', e => { if (e.target && e.target.closest && e.target.closest('#n26track')) state.n26.hold = Date.now() + 8000; }, true);
+setInterval(() => {
+  if (Date.now() < state.n26.hold || document.hidden) return;
+  const tr = document.getElementById('n26track');
+  if (tr && tr.children.length > 1) n26Show(state.n26.bi + 1, true);
+}, 5000);
+
+/* ---------- 2b. Cài đặt: chỉnh banner ---------- */
+function n26EdInit(){
+  if (!state.n26.ed) state.n26.ed = JSON.parse(JSON.stringify(n26Ban()));
+  return state.n26.ed;
+}
+function n26BanCard(){
+  const ed = n26EdInit();
+  const sl = ed.slides || (ed.slides = []);
+  const inp = (i, k, lb) => `<label class="flabel" for="n26-${i}-${k}">${esc(lb)}</label><input id="n26-${i}-${k}" type="text" maxlength="${k === 'link' ? 200 : 80}" data-n26b="${i}" data-n26k="${k}" value="${esc(sl[i][k] || '')}">`;
+  const lk = i => `<label class="flabel" for="n26-${i}-link">${esc(t('n26BanLink'))}</label>
+    <select id="n26-${i}-link" data-n26b="${i}" data-n26k="link">${N26_LINKS.map(([v, l]) => `<option value="${v}"${sl[i].link === v ? ' selected' : ''}>${esc(L(l))}</option>`).join('')}
+    ${N26_LINKS.some(([v]) => v === sl[i].link) || !sl[i].link ? '' : `<option value="${esc(sl[i].link)}" selected>${esc(sl[i].link)}</option>`}</select>`;
+  return `<div class="card adm-card n26bcard"><h2 class="sec" style="margin-top:0">${t('n26BanH')}</h2><p class="hint">${esc(t('n26BanD'))}</p>
+    ${sl.map((s, i) => `<fieldset class="n26fs"><legend>${esc(t('n26Slide', i + 1))}</legend>
+      <label class="n26chk"><input type="checkbox" data-n26b="${i}" data-n26k="on"${s.on !== false ? ' checked' : ''}> ${esc(t('n26BanOn'))}</label>
+      ${inp(i, 'vi', t('n26BanTitleVi'))}${inp(i, 'en', t('n26BanTitleEn'))}${inp(i, 'sv', t('n26BanSubVi'))}${inp(i, 'se', t('n26BanSubEn'))}${lk(i)}
+      <button class="btn-link danger" type="button" data-act="n26bdel" data-v="${i}">${t('n26BanDel')}</button></fieldset>`).join('')}
+    <button class="btn btn-ghost btn-block" type="button" data-act="n26badd">${t('n26BanAdd')}</button>
+    <label class="n26chk"><input type="checkbox" data-n26b="g" data-n26k="ready"${ed.ready !== false ? ' checked' : ''}> ${esc(t('n26BanReady'))}</label>
+    <label class="n26chk"><input type="checkbox" data-n26b="g" data-n26k="support"${ed.support !== false ? ' checked' : ''}> ${esc(t('n26BanSup'))}</label>
+    <button class="btn btn-primary btn-block" type="button" data-act="n26bsave"${state.n26.busy ? ' disabled' : ''}>${t('n26BanSave')}</button></div>`;
+}
+document.addEventListener('input', n26EdIn, true);
+document.addEventListener('change', n26EdIn, true);
+function n26EdIn(e){
+  const el = e.target;
+  if (!el || !el.dataset || el.dataset.n26b === undefined) return;
+  const ed = n26EdInit(), k = el.dataset.n26k, v = el.type === 'checkbox' ? el.checked : el.value;
+  if (el.dataset.n26b === 'g') ed[k] = v;
+  else { const s = ed.slides[Number(el.dataset.n26b)]; if (s) s[k] = v; }
+}
+ACT.n26badd = function(){
+  const ed = n26EdInit();
+  if (ed.slides.length >= 5){ toast(t('n26BanMax')); return; }
+  ed.slides.push({on:true, vi:'', en:'', sv:'', se:'', link:'#home'});
+  render();
+};
+ACT.n26bdel = function(el){ const ed = n26EdInit(); ed.slides.splice(Number(el.dataset.v), 1); render(); };
+if (typeof admSet === 'function'){
+  const n26Set0 = admSet;
+  admSet = function(){ return n26BanCard() + n26Set0(); };
+}
+
+/* ---------- 7. nút Quay lại cho mọi trang ---------- */
+window.addEventListener('hashchange', () => {
+  const s = state.n26.stack, h = location.hash || '#home';
+  if (s.length > 1 && s[s.length - 2] === h) s.pop();
+  else if (s[s.length - 1] !== h) s.push(h);
+  if (s.length > 50) s.splice(0, s.length - 50);
+});
+ACT.n26back = function(){
+  if (state.n26.stack.length > 1) history.back();
+  else location.hash = '#home';
+};
+function n26NeedBack(r){
+  if (!r || r.view === 'home' || r.view === 'admin') return false;
+  if (r.view === 'claim') return state.n26.stack.length > 1;
+  return true;
+}
+function n26InjectBack(){
+  let r;
+  try { r = route(); } catch (e) { return; }
+  const m = document.getElementById('main');
+  if (!m || !n26NeedBack(r)) return;
+  if (m.querySelector('a.back, .back, [data-act=n16un]')) return;
+  m.insertAdjacentHTML('afterbegin', `<div class="wrap narrow n26bkw"><button type="button" class="back n26bk" data-act="n26back">${ICON.back}${esc(t('back'))}</button></div>`);
+}
+
+/* ---------- render: tiêu đề tin nhắn + nút quay lại ---------- */
+const n26Render0 = render;
+render = function(){
+  n26FixThreads();
+  n26Render0.apply(this, arguments);
+  n26InjectBack();
+  if (state.n26.bi) n26Show(state.n26.bi, false);
+};
+
+/* ---------- css ---------- */
+(() => {
+  const st = document.createElement('style');
+  st.textContent = `
+.brand .n26nm{display:flex;flex-direction:column;line-height:1.05}
+.brand .n26nm .n26home{display:inline-flex;align-items:center;gap:3px;font-size:11px!important;font-weight:600;line-height:1;color:var(--primary,#9B1D4F);margin-top:3px;letter-spacing:.2px}
+.brand .n26nm .n26home span{font-size:11px!important;font-weight:600}
+.brand .n26nm .n26home svg{width:12px;height:12px}
+.n1home,.n1home .wrap{min-width:0;max-width:100%}
+.n26ban{margin:6px auto 18px;width:100%;max-width:560px;min-width:0;box-sizing:border-box}
+@media (min-width:961px){.n26ban{max-width:680px}}
+.n26track{width:100%;box-sizing:border-box;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;border-radius:16px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.n26track::-webkit-scrollbar{display:none}
+.n26sl{flex:0 0 100%;scroll-snap-align:start;box-sizing:border-box;min-height:128px;padding:18px 20px;display:flex;flex-direction:column;justify-content:center;gap:6px;text-decoration:none;background:var(--primary,#9B1D4F);color:#fff}
+.n26sl b{font-size:20px;line-height:1.25;color:#fff}
+.n26sl span{font-size:14px;color:#F9D3E1}
+.n26sl .n26free{align-self:flex-start;font-size:11px;font-weight:700;background:#FAC775;color:#412402;padding:3px 10px;border-radius:999px}
+.n26k-r{background:#FFF2D6;color:#412402;border:1.5px solid #EFB84A}
+.n26k-r b{color:#412402}.n26k-r span{color:#7A5200}
+.n26k-r .n26bolt{font-size:22px;color:#7A5200}
+.n26k-s{background:#2B2326}
+.n26dots{display:flex;justify-content:center;gap:8px;margin-top:10px}
+.n26dot{width:8px;height:8px;padding:0;border-radius:999px;border:0;background:#D9C7CE;cursor:pointer}
+.n26dot.on{width:22px;background:var(--primary,#9B1D4F)}
+.n26cross{display:inline-block;margin:-4px 0 12px;font-weight:600;color:var(--primary,#9B1D4F)}
+.n26view{margin:-6px 0 14px}
+.n26lock{margin-left:8px}
+.n26bkw{padding-top:14px}
+.n26bk{background:none;border:0;padding:0;font:inherit;cursor:pointer}
+.n26fs{border:1px solid var(--line,#EFE6E8);border-radius:12px;padding:12px;margin:0 0 12px;display:grid;gap:6px}
+.n26fs legend{font-weight:700;padding:0 6px}
+.n26chk{display:flex;align-items:center;gap:8px;margin:8px 0}
+.n26bcard select,.n26bcard input[type=text]{width:100%}`;
+  document.head.appendChild(st);
+})();
+
+/* ---------- live: banner + ngôn ngữ theo tài khoản ---------- */
+function n26Live(c){
+  const {db} = c;
+  try {
+    db.collection('config').doc('banner').onSnapshot(d => {
+      const v = d && d.exists ? d.data() : null;
+      state.n26.ban = v && Array.isArray(v.slides) ? v : null;
+      const r = route();
+      if (r && r.view === 'home') render();
+    }, e => console.warn('n26ban', e));
+  } catch (e) { console.warn('n26ban', e); }
+
+  ACT.n26bsave = async function(){
+    const ed = n26EdInit();
+    const slides = (ed.slides || []).map(s => ({on:s.on !== false, vi:String(s.vi || '').trim(), en:String(s.en || '').trim(),
+      sv:String(s.sv || '').trim(), se:String(s.se || '').trim(), link:n26SafeLink(s.link), free:!!s.free})).filter(s => s.vi || s.en);
+    state.n26.busy = true; render();
+    try {
+      await db.collection('config').doc('banner').set({slides, ready:ed.ready !== false, support:ed.support !== false});
+      state.n26.ban = {slides, ready:ed.ready !== false, support:ed.support !== false};
+      state.n26.ed = null;
+      toast(t('n26BanSaved'));
+    } catch (e) { console.warn('n26save', e); toast(c.errText ? c.errText(e) : String(e)); }
+    state.n26.busy = false; render();
+  };
+
+  const l0 = ACT.lang;
+  ACT.lang = function(el){
+    l0.call(ACT, el);
+    const u = state.user;
+    if (u && u.uid) db.collection('users').doc(u.uid).set({lang}, {merge:true}).catch(e => console.warn('n26lang', e));
+  };
+
+  let seen = '';
+  setInterval(async () => {
+    const u = state.user ? state.user.uid : '';
+    if (u === seen) return;
+    seen = u;
+    if (!u) return;
+    try {
+      const d = await db.collection('users').doc(u).get();
+      const l = d && d.exists ? (d.data() || {}).lang : '';
+      if ((l === 'vi' || l === 'en') && l !== lang){
+        lang = l;
+        try { localStorage.setItem('nailmatch-lang', l); } catch (e) {}
+        render();
+      } else if (!l) db.collection('users').doc(u).set({lang}, {merge:true}).catch(() => {});
+    } catch (e) { console.warn('n26ulang', e); }
+  }, 1500);
+}
+if (state.n1ctx) n26Live(state.n1ctx);
+
+/* ============================================================
+   n127 — chọn nhiều + nút "Khác" (góp ý sếp 18/11)
+   Tiệm: Loại việc, Kinh nghiệm, Lương → chọn nhiều + Khác
+   Thợ:  Loại việc, Lương mong muốn    → chọn nhiều + Khác
+   Lương chọn nhiều: mỗi loại có ô số riêng (ngày / giờ / tuần / %),
+   hai mục "Ăn chia + bao lương" vẫn không có ô số.
+   Bài cũ (một lựa chọn) tự đọc được theo dạng mới.
+   ============================================================ */
+Object.assign(T.vi, {seeTechs:'Xem thợ', seeJobs:'Xem việc làm', heroTitle:'Tìm việc nail, tiệm sang nhượng và dịch vụ', browseTitle:'Tìm việc nail, tiệm sang nhượng và dịch vụ'});
+Object.assign(T.en, {seeTechs:'See techs', seeJobs:'See jobs', heroTitle:'Find nail jobs, salons for sale, and services', browseTitle:'Find nail jobs, salons for sale, and services'});
+Object.assign(T.vi, {n27Other:'Khác', n27AmtDay:'Lương ngày ($)', n27AmtHour:'Lương giờ ($)', n27AmtWeek:'Lương tuần ($)',
+  n27AmtDayT:'Muốn lương ngày ($)', n27AmtHourT:'Muốn lương giờ ($)', n27AmtWeekT:'Muốn lương tuần ($)'});
+Object.assign(T.en, {n27Other:'Other', n27AmtDay:'Daily pay ($)', n27AmtHour:'Hourly pay ($)', n27AmtWeek:'Weekly pay ($)',
+  n27AmtDayT:'Daily pay wanted ($)', n27AmtHourT:'Hourly pay wanted ($)', n27AmtWeekT:'Weekly pay wanted ($)'});
+
+const N27_AMT = {per_day:'amtDay', per_hour:'amtHour', per_week:'amtWeek'};
+const N27_GROUPS = ['jobType', 'experience', 'payType'];
+const N27_PRIV = typeof N26_PRIV !== 'undefined' ? N26_PRIV : ['commission_guarantee', 'commission_week'];
+function n27A(v){
+  if (v == null || v === '') return [];
+  return (Array.isArray(v) ? v : [v]).flat(Infinity).filter(x => x != null && x !== '');
+}
+function n27X(v){ return String(v).indexOf('x:') === 0; }
+function n27Num(v){ const n = Number(String(v == null ? '' : v).replace(/[^\d.]/g, '')); return n > 0 ? n : null; }
+function n27Has(d, v){ return n27A(d && d.payType).includes(v); }
+
+/* ---------- dữ liệu: mọi chỗ đều đọc được cả kiểu cũ (một giá trị) lẫn kiểu mới (danh sách) ---------- */
+function n27Norm(type, d){
+  if (!d || (type !== 'hiring' && type !== 'profile')) return;
+  d.jobType = n27A(d.jobType);
+  if (type === 'hiring') d.experience = n27A(d.experience);
+  d.payType = n27A(d.payType);
+  const hasAmt = Object.values(N27_AMT).some(k => n27Num(d[k]));
+  if (!hasAmt && n27Num(d.amount)){
+    const first = d.payType.find(x => N27_AMT[x]);
+    if (first) d[N27_AMT[first]] = d.amount;
+  }
+}
+const n27Fix0 = fixFormData;
+fixFormData = function(type, fs){
+  n27Fix0(type, fs);
+  if (fs && fs.data) n27Norm(type, fs.data);
+};
+function n27Amts(d){
+  const o = {amtDay:n27Num(d.amtDay), amtHour:n27Num(d.amtHour), amtWeek:n27Num(d.amtWeek)};
+  const pt = n27A(d.payType), first = pt.find(x => N27_AMT[x]);
+  o.amount = first ? o[N27_AMT[first]] : null;             /* giữ ô "amount" cũ cho chỗ nào còn đọc nó */
+  if (!n27Has(d, 'per_day')) o.amtDay = null;
+  if (!n27Has(d, 'per_hour')) o.amtHour = null;
+  if (!n27Has(d, 'per_week')) o.amtWeek = null;
+  return o;
+}
+const n27PVO0 = previewObject;
+previewObject = function(type, fs){
+  if (fs && fs.data) n27Norm(type, fs.data);
+  const o = n27PVO0(type, fs);
+  if (!o || !fs || !fs.data) return o;
+  const d = fs.data, a = n27Amts(d), pct = n27Has(d, 'commission') ? n27Num(d.commissionPct) : null;
+  if (type === 'hiring' && o.hiring){
+    Object.assign(o.hiring, {jobType:n27A(d.jobType), experience:n27A(d.experience), payType:n27A(d.payType), commissionPct:pct}, a);
+  }
+  if (type === 'profile'){
+    o.jobType = n27A(d.jobType);
+    o.payWanted = n27A(d.payType).length ? Object.assign({type:n27A(d.payType), pct}, a) : null;
+  }
+  return o;
+};
+
+/* ---------- form ---------- */
+['hiring', 'profile'].forEach(fk => {
+  const F = FORMS[fk];
+  if (!F) return;
+  const salon = fk === 'hiring';
+  (F.steps || []).forEach(st => {
+    const fl = st.fields || [];
+    const pt = fl.find(f => f.k === 'payType');
+    if (pt) pt.type = 'multi';
+    const cp = fl.find(f => f.k === 'commissionPct');
+    if (cp) cp.show = d => n27Has(d, 'commission');
+    if (salon) ['jobType', 'experience'].forEach(k => { const f = fl.find(x => x.k === k); if (f) f.type = 'multi'; });
+    const ai = fl.findIndex(f => f.k === 'amount');
+    if (ai >= 0){
+      const req = salon ? 1 : 0, sfx = salon ? '' : 'T';
+      const mk = (k, v, key) => ({k, type:'number', prefix:'$', req, show:d => n27Has(d, v), label:{vi:T.vi[key + sfx], en:T.en[key + sfx]}});
+      fl.splice(ai, 1, mk('amtDay', 'per_day', 'n27AmtDay'), mk('amtHour', 'per_hour', 'n27AmtHour'), mk('amtWeek', 'per_week', 'n27AmtWeek'));
+    }
+  });
+});
+/* nút "Khác" dùng lại cơ chế mục tự viết của n114 */
+N27_GROUPS.forEach(g => { if (N14_FREE.indexOf(g) < 0) N14_FREE.push(g); });
+const n27RF0 = renderField;
+renderField = function(type, f, fs){
+  if ((type === 'hiring' || type === 'profile') && fs && fs.data && N27_GROUPS.includes(f.k) && f.type === 'multi' && !Array.isArray(fs.data[f.k]))
+    fs.data[f.k] = n27A(fs.data[f.k]);
+  const h = n27RF0(type, f, fs);
+  if (!N27_GROUPS.includes(f.opt)) return h;
+  return h.replace(`+ ${esc(t('n14Add'))}</button>`, `+ ${esc(t('n27Other'))}</button>`);
+};
+
+/* ---------- hiển thị ---------- */
+const n27Opt0 = opt;
+opt = function(g, v){
+  if (!Array.isArray(v)) return n27Opt0(g, v);
+  let a = n27A(v);
+  if (g === 'experience'){
+    if (a.length > 1) a = a.filter(x => x !== 'any');
+    if (a.length === 1 && a[0] === 'any') return '';
+  }
+  return a.map(x => n27Opt0(g, x)).filter(Boolean).join(' / ');
+};
+function n27AmtOf(p, x){
+  const k = N27_AMT[x], v = n27Num(p[k]);
+  if (v) return v;
+  const first = n27A(p.payType).find(y => N27_AMT[y]);
+  return x === first ? n27Num(p.amount) : null;
+}
+payText = function(p){
+  if (!p || p.payPublic === false) return '';
+  const vi = lang === 'vi', U = {per_day:vi ? 'ngày' : 'day', per_hour:vi ? 'giờ' : 'hr', per_week:vi ? 'tuần' : 'week'};
+  return n27A(p.payType).map(x => {
+    if (n27X(x)) return String(x).slice(2);
+    if (x === 'commission'){ const c = n27Num(p.commissionPct); return c ? (vi ? `Ăn chia ${c}% cho thợ` : `${c}% commission`) : opt('payType', x); }
+    if (N27_PRIV.includes(x)) return opt('payType', x);
+    if (N27_AMT[x]){ const a = n27AmtOf(p, x); return a ? `${money(a)}/${U[x]}` : opt('payType', x); }
+    return opt('payType', x);
+  }).filter(Boolean).join(' · ');
+};
+techPay = function(pw){
+  return pw ? payText({payType:pw.type, commissionPct:pw.pct, amount:pw.amount, amtDay:pw.amtDay, amtHour:pw.amtHour, amtWeek:pw.amtWeek}) : '';
+};
+payLines = function(h){
+  const out = [], pct = n27Num(h.commissionPct), r = pct && pct % 10 === 0 ? `${pct / 10}/${10 - pct / 10}` : '';
+  n27A(h.payType).forEach(x => {
+    if (n27X(x)) out.push(String(x).slice(2));
+    else if (x === 'commission') out.push(pct ? t('pl_comm', pct, r) : opt('payType', x));
+    else if (N27_PRIV.includes(x)) out.push(opt('payType', x));
+    else if (x === 'per_day'){ const a = n27AmtOf(h, x); out.push(a ? t('pl_day', money(a)) : opt('payType', x)); }
+    else if (x === 'per_hour'){ const a = n27AmtOf(h, x); out.push(a ? t('pl_hour', money(a)) : opt('payType', x)); }
+    else if (x === 'per_week'){ const a = n27AmtOf(h, x); out.push(a ? t('pl_wk', money(a)) : opt('payType', x)); }
+  });
+  const day = n27A(h.payType).includes('per_day') ? n27AmtOf(h, 'per_day') : null;
+  let nd = 0;
+  try { nd = dayOn(schedOf(h)).length; } catch (e) {}
+  if (day && nd) out.push(t('minWeek', money(day * nd)));
+  return out;
+};
+
+/* ---------- so khớp: tiệm chọn nhiều thì thợ trùng một cái là đủ ---------- */
+if (typeof matchPair === 'function'){
+  const n27Match0 = matchPair;
+  matchPair = function(ad, tc){
+    const h = ad && ad.hiring;
+    if (!h) return n27Match0(ad, tc);
+    const real = v => n27A(v).filter(x => !n27X(x));
+    const hj = real(h.jobType), tj = real(tc && tc.jobType);
+    const hp = real(h.payType), pw = tc && tc.payWanted, tp = real(pw && pw.type);
+    const jt = hj.find(x => tj.includes(x)) || hj[0] || '';
+    const pick = hp.find(x => tp.includes(x)) || hp.find(x => tp.some(y => /^commission/.test(y) && /^commission/.test(x))) || hp[0] || '';
+    const pwt = tp.find(x => x === pick) || tp.find(x => /^commission/.test(x) && /^commission/.test(pick)) || tp[0] || '';
+    const h2 = Object.assign({}, h, {jobType:jt, payType:pick, experience:real(h.experience)[0] || 'any', amount:N27_AMT[pick] ? n27AmtOf(h, pick) : null});
+    const tc2 = pw ? Object.assign({}, tc, {payWanted:Object.assign({}, pw, {type:pwt, amount:N27_AMT[pwt] ? n27AmtOf(Object.assign({payType:pw.type}, pw), pwt) : null})}) : tc;
+    return n27Match0(Object.assign({}, ad, {hiring:h2}), tc2);
+  };
+}
+
+/* ---------- nhập dữ liệu: cho phép nhiều mã cách nhau dấu phẩy ---------- */
+if (typeof n13Parse === 'function'){
+  const n27Parse0 = n13Parse;
+  const list = s => String(s || '').split(/[,;|]/).map(x => x.trim()).filter(Boolean);
+  n13Parse = function(txt){
+    const blocks = String(txt || '').split(/^[ \t]*-{3,}[ \t]*$/m).map(b => b.trim()).filter(Boolean);
+    const extra = [];
+    const first = blocks.map(b => b.split(/\r?\n/).map(l => {
+      const m = l.match(/^(\s*)(loaiviec|tracong|kinhnghiem)(\s*:\s*)(.*)$/i);
+      if (!m) return l;
+      return m[1] + m[2] + m[3] + (list(m[4])[0] || '');
+    }).join('\n'));
+    blocks.forEach(b => {
+      const o = {};
+      b.split(/\r?\n/).forEach(l => { const m = l.match(/^\s*(loaiviec|tracong|kinhnghiem)\s*:\s*(.*)$/i); if (m) o[m[1].toLowerCase()] = list(m[2]); });
+      extra.push(o);
+    });
+    const rows = n27Parse0(first.join('\n---\n'));
+    rows.forEach((r, i) => {
+      const o = extra[i] || {};
+      if (o.loaiviec && o.loaiviec.length){
+        const bad = o.loaiviec.filter(x => N13_JOB.indexOf(x) < 0);
+        if (bad.length) r.err.push('loaiviec: ' + bad.join(', ')); else r.jobType = o.loaiviec;
+      }
+      if (o.tracong && o.tracong.length){
+        const bad = o.tracong.filter(x => N13_PAY.indexOf(x) < 0);
+        if (bad.length) r.err.push('tracong: ' + bad.join(', ')); else r.payType = o.tracong;
+      }
+      if (o.kinhnghiem && o.kinhnghiem.length){
+        const ok = (OPTS.experience || []).map(x => x.v);
+        const bad = o.kinhnghiem.filter(x => ok.indexOf(x) < 0);
+        if (bad.length) r.err.push('kinhnghiem: ' + bad.join(', ')); else r.experience = o.kinhnghiem;
+      }
+      r.err = Array.from(new Set(r.err));
+    });
+    return rows;
+  };
+}
+if (typeof n13Prompt === 'function'){
+  const n27Pr0 = n13Prompt;
+  n13Prompt = function(){
+    return n27Pr0()
+      .replace('loaiviec: <full_time hoặc part_time hoặc weekends>', 'loaiviec: <một hoặc nhiều mã, cách nhau dấu phẩy: full_time, part_time, weekends>')
+      .replace('tracong: <một mã trả công>', 'tracong: <một hoặc nhiều mã trả công, cách nhau dấu phẩy>')
+      .replace('sotien: <số, chỉ khi tracong bắt đầu bằng per_>', 'sotien: <số, cho mã per_ đầu tiên trong tracong>');
+  };
+}
+
+/* nhập dữ liệu → bản nháp: mang theo kinh nghiệm nếu có */
+if (typeof imBuild === 'function'){
+  const n27Build0 = imBuild;
+  imBuild = function(r){
+    const out = n27Build0(r);
+    if (out && r && r.kind !== 'tho' && n27A(r.experience).length){
+      const ex = n27A(r.experience);
+      if (out.ad && out.ad.hiring) out.ad.hiring.experience = ex;
+      if (out.form) out.form.experience = ex;
+    }
+    return out;
+  };
+}
+
+/* tiêu đề bài chỉ dùng lựa chọn có sẵn, chữ tự gõ ở nút "Khác" chỉ hiện trong chi tiết bài */
+if (typeof n26AutoTitle === 'function'){
+  const n27Title0 = n26AutoTitle;
+  n26AutoTitle = function(ad, lg){
+    const h = ad && ad.hiring;
+    if (!h) return n27Title0(ad, lg);
+    const jt = n27A(h.jobType).filter(x => !n27X(x));
+    return n27Title0(Object.assign({}, ad, {hiring:Object.assign({}, h, {jobType:jt})}), lg);
+  };
+}
+
 render();
 })();
 </script>
