@@ -11338,7 +11338,7 @@ n1None = function(txt){
   if (!kind) return n30None0(txt);
   const area = state.n26 && state.n26.area, v = kind === 'T' ? state.n28.sortT : state.n28.sortJ, vi = lang === 'vi';
   let s;
-  if (kind === 'T') s = v === 'ready' ? (vi ? 'Chưa có thợ nào đang bật “Sẵn sàng đi làm”' : 'No techs are marked ready to go') : (vi ? 'Chưa có thợ nào' : 'No techs yet');
+  if (kind === 'T') s = v === 'ready' ? (vi ? 'Chưa có thợ nào đang bật “Sẵn sàng đi làm”' : 'No techs are marked ready to go') : (n30Role() === 'tech' ? (vi ? 'Chưa có thợ nào khác' : 'No other techs yet') : (vi ? 'Chưa có thợ nào' : 'No techs yet'));
   else s = v === 'urgent' ? (vi ? 'Chưa có tin nào đang bật “Cần gấp”' : 'No urgent posts right now') : (vi ? 'Chưa có tin tuyển nào' : 'No job posts yet');
   s += (area ? (vi ? ` ở ${area}` : ` in ${area}`) : '') + '.';
   const fl = area || v === 'ready' || v === 'urgent';
@@ -11566,6 +11566,36 @@ render = function(){ try { n30SortAll(); } catch (e) {} return n30Render0(); };
 .n1pg img{background:#EFE6E8;min-height:90px;object-fit:cover}`;
   document.head.appendChild(st);
 })();
+
+/* ---------- nút Quay lại: một đường đi duy nhất ----------
+   Trước đây có hai kiểu nút: link cứng (thêm trang mới vào lịch sử) và
+   history.back() (lùi lịch sử). Trộn hai kiểu thì hai trang đá qua đá lại.
+   Giờ mọi nút "Quay lại" đều lùi theo danh sách trang đã đi qua. */
+state.n30b = {stk:[location.hash || '#home'], going:false};
+window.addEventListener('hashchange', () => {
+  const b = state.n30b, s = b.stk, h = location.hash || '#home';
+  if (b.going){ b.going = false; return; }
+  if (s.length > 1 && s[s.length - 2] === h) s.pop();
+  else if (s[s.length - 1] !== h) s.push(h);
+  if (s.length > 50) s.splice(0, s.length - 50);
+});
+function n30Back(fallback){
+  const b = state.n30b, s = b.stk, cur = location.hash || '#home';
+  while (s.length && s[s.length - 1] === cur) s.pop();
+  while (s.length && (/^#(post-|login)/.test(s[s.length - 1]) || s[s.length - 1] === cur)) s.pop();
+  let target = s.length ? s[s.length - 1] : (fallback && fallback !== cur && !/^#(post-|login)/.test(fallback) ? fallback : '#home');
+  if (target === cur) target = '#home';
+  if (!s.length) s.push(target);
+  if (target === cur) return;
+  b.going = true;
+  location.hash = target;
+}
+document.addEventListener('click', e => {
+  const el = e.target && e.target.closest ? e.target.closest('a.back, button.back, [data-act="n26back"]') : null;
+  if (!el) return;
+  e.preventDefault(); e.stopPropagation();
+  n30Back(el.getAttribute('href'));
+}, true);
 
 /* ---------- live ---------- */
 function n30Live(c){
