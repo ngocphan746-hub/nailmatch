@@ -11096,6 +11096,700 @@ n1TechCard = function(tc, o){ return n29Add(n29Tech0(tc, o), tc); };
   document.head.appendChild(st);
 })();
 
+/* ============================================================
+   n130 — sửa lỗi sau buổi test 2 vai (18/11 tối)
+   C1  một tên duy nhất: tên lúc đăng ký = tên trên bài, chỉ sửa ở Tài khoản
+   C2  tiêu đề tin theo nhóm dịch vụ (hết "Bột & Bột")
+   C3  tên dịch vụ giống nhau ở mọi màn hình + dòng mô tả ở trang chi tiết
+   C4  Mong muốn (thợ) dùng chung danh sách với Quyền lợi (tiệm)
+   C5  độ khớp hiện ở cả hai bên
+   C6  email: muốn nhận báo thì nhập email (D2 = A, gửi qua Trigger Email)
+   C7  nút Đã tuyển xong / Đã có việc rõ là nút, có hỏi lại
+   C8  ZIP bắt buộc (không hiện công khai) + số dặm khi lọc Gần nhất
+   C9  câu báo trống đúng theo bộ lọc + nút Xoá bộ lọc
+   C10 "Muốn ăn chia từ 50%"
+   C11 bỏ chữ lặp, không lẫn hai ngôn ngữ
+   C12 điều khoản mục 1 gộp còn một ý
+   T1  (D1 = B) không chặn kết nối vì thiếu ảnh tiệm; nhãn "Chưa có ảnh tiệm"
+   T2  xem người ứng tuyển ngay trên tin
+   T3  không mời lại thợ đã ứng tuyển / đã mời
+   T4  trang Cần thợ gấp không hiện câu "Bạn là thợ?" cho tiệm
+   T5  (D3 = A) bỏ ô "Hiện địa chỉ tiệm trên tin"
+   T6  cảnh báo nhẹ khi lương bất thường
+   T7  tiêu đề "Sửa tin" khi đang sửa
+   T8  "Tiệm khác" không có tiệm mình, "Thợ khác" không có mình
+   T9  câu gợi ý ảnh tiệm thống nhất
+   N1  thợ mở lại / rút hồ sơ đã gửi, báo khi tiệm im quá 7 ngày
+   N2  Sẵn sàng tính theo giờ Texas, tự tắt đúng giờ đã chọn
+   N3  khoá chat với tài khoản đã xoá
+   N4  bật Sẵn sàng khi đang "Đã có việc" thì hỏi lại
+   N5  "Xoá hồ sơ" thay cho "Xoá tin" ở hồ sơ thợ
+   N6  ô ảnh xám trong lúc chờ tải
+   ============================================================ */
+Object.assign(T.vi, {
+  n30NameHint:'Nhập đúng tên bạn muốn mọi người thấy. Tên này sẽ hiện trên tin tuyển thợ hoặc hồ sơ thợ của bạn. Chủ tiệm: nhập tên tiệm. Thợ: nhập tên hoặc nickname.',
+  n30NameRO:'Tên lấy từ tài khoản của bạn.', n30NameEdit:'Đổi tên ở trang Tài khoản',
+  n30ZipHint:'Không hiện công khai. Chỉ dùng để tính khoảng cách.',
+  filledBtn:'Đánh dấu đã tuyển xong', hiredBtn:'Tôi đã có việc',
+  n30FillQ:'Đóng tin này? Thợ sẽ không ứng tuyển được nữa.\n\nBạn mở lại được bất cứ lúc nào bằng nút “Mở lại tin”.',
+  n30HireQ:'Ẩn hồ sơ của bạn? Tiệm sẽ không mời bạn được nữa và “Sẵn sàng đi làm” sẽ tắt.\n\nBạn bật lại được bằng nút “Đang tìm việc”.',
+  n30Closed:'Đã đóng. Bấm nút bên dưới nếu bấm nhầm.',
+  n30HiredReady:'Bạn đang để “Tôi đã có việc” nên hồ sơ đang ẩn.\n\nBật Sẵn sàng sẽ hiện lại hồ sơ cho các tiệm. Tiếp tục?',
+  n30BadHours:'Giờ bắt đầu phải trước giờ kết thúc.', n30Moved:'Giờ hôm nay đã qua (giờ Texas) nên đã chuyển sang ngày mai.', n30Past:'Khung giờ này đã qua.',
+  n30TxTime:'giờ Texas',
+  n30Want:s => `Mong muốn: ${s}`, n30WantPct:p => `Muốn ăn chia từ ${p}%`,
+  n30NoPics:'Chưa có ảnh tiệm',
+  n30PicsNudge:'Tiệm chưa có ảnh. Thêm 3 ảnh thật của tiệm để thợ tin tưởng hơn.', n30PicsBtn:'Thêm ảnh tiệm',
+  n30Apps:n => `Người ứng tuyển & đã mời (${n})`, n30AppsNone:'Chưa có ai ứng tuyển tin này.',
+  n30StApply:'Muốn làm ở tiệm bạn', n30StOffer:'Bạn đã mời · chờ thợ trả lời', n30StAcc:'Đã kết nối', n30StDec:'Đã từ chối',
+  n30Answer:'Đã ứng tuyển · Trả lời', n30Offered:'Đã mời ✓', n30GotOffer:'Tiệm đã mời bạn · Trả lời',
+  n30Already:'Bạn và thợ này đã có cuộc trò chuyện. Mở Tin nhắn để trả lời.',
+  n30Withdraw:'Rút hồ sơ', n30WithdrawO:'Huỷ lời mời', n30WithdrawQ:'Rút lại? Bên kia sẽ không thấy yêu cầu này nữa.', n30WithdrawDone:'Đã rút lại.',
+  n30Stale:'Bên kia chưa trả lời sau 7 ngày. Bạn thử tin khác nhé.',
+  n30Gone:'Tài khoản đã xoá', n30GoneLock:'Người này đã xoá tài khoản. Không gửi tin nhắn được nữa.',
+  n30Clear:'Xoá bộ lọc',
+  n30PayQ:(lbl, v, lo, hi) => `${lbl} ${v} nằm ngoài mức thường gặp (${lo}–${hi}).\n\nVẫn đăng?`,
+  n30Hour:'Lương giờ', n30Day:'Lương ngày', n30Week:'Lương tuần', n30Pct:'Mức ăn chia',
+  n30EditAd:'Sửa tin tuyển thợ', n30EditProf:'Sửa hồ sơ thợ',
+  n30DelProf:'Xoá hồ sơ', n30DelProfQ:'Xoá hồ sơ thợ này? Không khôi phục được.',
+  n30Fit:(a, b) => `Làm được ${a}/${b} dịch vụ`, n30FitLic:'Có bằng TX', n30FitDays:(a, b) => `Rảnh ${a}/${b} ngày`,
+  emailLbl:'Email', emailHint:'Muốn nhận thông báo qua email thì nhập email. Không hiện công khai.',
+  n30EmailHintT:'Muốn nhận thông báo qua email khi tiệm mời hoặc nhắn tin thì nhập email. Không hiện công khai.',
+  emailAskD:'Muốn nhận thông báo qua email khi có người ứng tuyển, mời làm hoặc nhắn tin thì nhập email. Không hiện công khai.',
+  msgsNote:'🔔 Muốn nhận thông báo qua email khi có tin mới, thêm email ở trang Tài khoản.',
+  spicsHint:'Nên đăng 3 ảnh thật của tiệm (bên trong, ghế pedi, quầy). Thợ thấy ảnh sau khi hai bên kết nối.',
+  salonPhotoHint:'Nên đăng 3 ảnh thật của tiệm (bên trong, ghế pedi, quầy). Thợ tin tưởng hơn khi thấy tiệm.',
+  needAdD:'Bạn cần có một tin tuyển trước khi mời thợ.'
+});
+Object.assign(T.en, {
+  n30NameHint:'Enter the name you want people to see. It will appear on your job post or tech profile. Salon owners: enter the salon name. Techs: your name or nickname.',
+  n30NameRO:'This name comes from your account.', n30NameEdit:'Change it on the Account page',
+  n30ZipHint:'Not shown publicly. Only used to work out distance.',
+  filledBtn:'Mark position filled', hiredBtn:'I found a job',
+  n30FillQ:'Close this post? Techs will no longer be able to apply.\n\nYou can reopen it any time with “Reopen post”.',
+  n30HireQ:'Hide your profile? Salons won’t be able to offer you a job and “Ready to work” turns off.\n\nTurn it back on with “Looking again”.',
+  n30Closed:'Closed. Use the button below if that was a mistake.',
+  n30HiredReady:'Your profile is hidden because you marked “I found a job”.\n\nTurning on Ready will show it to salons again. Continue?',
+  n30BadHours:'The start time must be before the end time.', n30Moved:'Today’s hours have already passed (Texas time), so this is set for tomorrow.', n30Past:'Those hours have already passed.',
+  n30TxTime:'Texas time',
+  n30Want:s => `Wants: ${s}`, n30WantPct:p => `Wants ${p}%+ commission`,
+  n30NoPics:'No salon photos yet',
+  n30PicsNudge:'Your salon has no photos yet. Add 3 real photos so techs trust you more.', n30PicsBtn:'Add salon photos',
+  n30Apps:n => `Applicants & offers (${n})`, n30AppsNone:'No one has applied to this post yet.',
+  n30StApply:'Wants to work at your salon', n30StOffer:'You sent an offer · waiting for the tech', n30StAcc:'Connected', n30StDec:'Declined',
+  n30Answer:'Applied · Respond', n30Offered:'Offer sent ✓', n30GotOffer:'This salon invited you · Respond',
+  n30Already:'You already have a conversation with this tech. Open Messages to reply.',
+  n30Withdraw:'Withdraw', n30WithdrawO:'Cancel offer', n30WithdrawQ:'Withdraw this? The other side won’t see it any more.', n30WithdrawDone:'Withdrawn.',
+  n30Stale:'No reply after 7 days. Try another post.',
+  n30Gone:'Deleted account', n30GoneLock:'This person deleted their account. You can’t send messages any more.',
+  n30Clear:'Clear filters',
+  n30PayQ:(lbl, v, lo, hi) => `${lbl} ${v} is outside the usual range (${lo}–${hi}).\n\nPost anyway?`,
+  n30Hour:'Hourly pay', n30Day:'Daily pay', n30Week:'Weekly pay', n30Pct:'Commission',
+  n30EditAd:'Edit job post', n30EditProf:'Edit tech profile',
+  n30DelProf:'Delete profile', n30DelProfQ:'Delete this tech profile? This can’t be undone.',
+  n30Fit:(a, b) => `Can do ${a}/${b} services`, n30FitLic:'TX license', n30FitDays:(a, b) => `Free ${a}/${b} days`,
+  emailLbl:'Email', emailHint:'Add an email if you want alerts by email. Never shown publicly.',
+  n30EmailHintT:'Add an email if you want an alert when a salon invites or messages you. Never shown publicly.',
+  emailAskD:'Add an email if you want an alert when someone applies, offers you a job, or messages you. Never shown publicly.',
+  msgsNote:'🔔 Want email alerts for new messages? Add your email on the Account page.',
+  spicsHint:'Add 3 real photos of the salon (inside, pedi chairs, front desk). Techs see them once you connect.',
+  salonPhotoHint:'Add 3 real photos of the salon (inside, pedi chairs, front desk). Techs trust a salon they can see.',
+  needAdD:'You need a job post before you can offer a job.'
+});
+
+const N30_GONE = 'Tài khoản đã xoá · Deleted account';
+const N30_TZ = 'America/Chicago';
+const n30Role = () => (typeof n3Role === 'function' ? n3Role() : '');
+const n30Adm = () => !!(state.adm && (state.adm.on || state.adm.creating));
+const n30Ms = x => (typeof n28Ms === 'function' ? n28Ms(x) : 0);
+
+/* ---------- C3: một danh mục dịch vụ ---------- */
+const N30_SVC_ORDER = SERVICES.map(s => s.v);
+const N30_SVC_DESC = {
+  acrylic_full:['Làm bộ bột mới', 'New full set'], acrylic_fill:['Dặm phần móng mọc ra', 'Refill grown-out nails'],
+  dip:['Nhúng bột (SNS)', 'Dip powder (SNS)'], gelx:['Móng úp soft gel', 'Soft gel extensions'],
+  hard_gel:['Gel cứng / builder gel', 'Hard / builder gel'], art_basic:['Vẽ móng cơ bản', 'Basic nail art'],
+  art_advanced:['Vẽ móng nâng cao', 'Advanced nail art']
+};
+const N30_SVC_GROUP = {
+  acrylic_full:['bột', 'Acrylic'], acrylic_fill:['bột', 'Acrylic'], dip:['dip', 'Dip'], gelx:['Gel-X', 'Gel-X'],
+  hard_gel:['gel cứng', 'Hard gel'], gel_polish:['sơn gel', 'Gel polish'], manicure:['tay nước', 'Manicure'],
+  pedicure:['chân nước', 'Pedicure'], ombre_french:['ombre/French', 'Ombre/French'], art_basic:['vẽ móng', 'Nail art'],
+  art_advanced:['vẽ móng', 'Nail art'], waxing:['wax', 'Waxing'], lashes:['nối mi', 'Lash']
+};
+function n30SvcIdx(id){ const i = N30_SVC_ORDER.indexOf(id); return i < 0 ? 99 : i; }
+function n30SortSvc(list){
+  if (!Array.isArray(list) || list.length < 2) return list;
+  return list.sort((a, b) => n30SvcIdx(typeof a === 'string' ? a : a && a.id) - n30SvcIdx(typeof b === 'string' ? b : b && b.id));
+}
+function n30SortAll(){
+  ADS.forEach(a => { if (a && a.hiring && Array.isArray(a.hiring.services)) n30SortSvc(a.hiring.services); });
+  TECHS.forEach(x => { if (x && Array.isArray(x.services)) n30SortSvc(x.services); });
+}
+svcCardsStatic = function(list){
+  const vi = lang === 'vi';
+  return `<div class="svc-cards">${n30SortSvc(list.slice()).map(s => { const d = N30_SVC_DESC[s.id];
+    return `<div class="svc-card${s.need ? ' ' + s.need : ''}">${svcArt(s.id)}<span class="nm">${esc(svcShort(s.id))}${d ? `<small class="n30desc">${esc(d[vi ? 0 : 1])}</small>` : ''}</span></div>`; }).join('')}</div>`;
+};
+const n30Fix0 = fixFormData;
+fixFormData = function(type, fs){
+  n30Fix0(type, fs);
+  if (fs && fs.data && Array.isArray(fs.data.services)) n30SortSvc(fs.data.services);
+  if (type === 'profile' && fs && fs.data && Array.isArray(fs.data.wants)) fs.data.wants = fs.data.wants.filter(x => x !== 'guarantee');
+};
+
+/* ---------- C2: tiêu đề theo nhóm ---------- */
+const n30Title0 = autoTitle;
+autoTitle = function(type, d){
+  if (type !== 'hiring') return n30Title0(type, d);
+  const vi = lang === 'vi', seen = [];
+  Object.keys(d.services || {}).filter(k => d.services[k] === 'must').sort((a, b) => n30SvcIdx(a) - n30SvcIdx(b)).forEach(k => {
+    const g = N30_SVC_GROUP[k], nm = g ? g[vi ? 0 : 1] : svcShort(k);
+    if (seen.indexOf(nm) < 0) seen.push(nm);
+  });
+  const m = seen.slice(0, 2), n = Number(d.techsNeeded) || 1;
+  const jt = n27A(d.jobType).filter(x => !n27X(x)).map(x => opt('jobType', x)).filter(Boolean).join(' / ');
+  if (vi) return `Cần ${n > 1 ? n + ' ' : ''}thợ ${m.join(' & ') || 'nail'}${jt ? ' – ' + jt : ''}`;
+  return `${n > 1 ? n + ' ' : ''}${m.join(' & ') || 'Nail'} Tech${n > 1 ? 's' : ''} Needed${jt ? ' – ' + jt : ''}`;
+};
+
+/* ---------- C4: Mong muốn = Quyền lợi ---------- */
+const N30_WANT_OLD = (OPTS.wants || []).find(o => o.v === 'guarantee') || {v:'guarantee', vi:'Có bao lương', en:'Guaranteed pay'};
+OPTS.wants = OPTS.perks.map(o => ({v:o.v, vi:o.vi, en:o.en}));
+const n30Opt0 = opt;
+opt = function(group, v){
+  if (group === 'wants' && String(v) === 'guarantee') return L(N30_WANT_OLD);
+  return n30Opt0(group, v);
+};
+
+/* ---------- C10: lương thợ muốn ---------- */
+const n30TechPay0 = techPay;
+techPay = function(pw){
+  const s = n30TechPay0(pw);
+  if (!s) return s;
+  const p = pw && n27A(pw.type).length === 1 && n27A(pw.type)[0] === 'commission' ? n27Num(pw.pct) : null;
+  return p ? t('n30WantPct', p) : t('n30Want', s);
+};
+
+/* ---------- C5: độ khớp ---------- */
+function n30Fit(ad, tc, techSide){
+  if (!ad || !tc || !ad.hiring) return '';
+  const h = ad.hiring, need = (h.services || []).filter(x => x.need === 'must' || !x.need).map(x => x.id);
+  const has = (tc.services || []).map(x => x.id);
+  const out = [];
+  if (need.length){ const n = need.filter(x => has.indexOf(x) >= 0).length; if (n) out.push(t('n30Fit', n, need.length)); }
+  if (tc.license === 'have' && (!techSide || h.license === 'required' || h.license === true)) out.push(t('n30FitLic'));
+  const sc = typeof schedOf === 'function' ? schedOf(h) : {}, open = Object.keys(sc || {}).filter(k => sc[k]);
+  if (open.length && Array.isArray(tc.days) && tc.days.length){ const n = open.filter(d => tc.days.indexOf(d) >= 0).length; if (n) out.push(t('n30FitDays', n, open.length)); }
+  return out.length ? `<div class="n30fit">✓ ${out.map(esc).join(' · ')}</div>` : '';
+}
+function n30MyAd(){ return (typeof n1MyAds === 'function' ? n1MyAds() : []).find(a => !a.filled && a.mod !== 'rejected' && a.mod !== 'draft') || null; }
+
+/* ---------- C8: ZIP bắt buộc + số dặm ---------- */
+[FORMS.hiring, FORMS.profile].forEach(F => {
+  const fl = F && F.steps[0].fields; if (!fl) return;
+  const i = fl.findIndex(f => f.k === 'zip'); if (i < 0) return;
+  const z = fl.splice(i, 1)[0]; delete z.more; z.req = 1; z.hintKey = 'n30ZipHint';
+  const c = fl.findIndex(f => f.k === 'city'); fl.splice(c < 0 ? 1 : c + 1, 0, z);
+});
+function n30Miles(o){
+  const kind = typeof n28Ctx === 'function' ? n28Ctx() : '';
+  const v = kind === 'T' ? state.n28.sortT : kind === 'J' ? state.n28.sortJ : '';
+  if (v !== 'near') return '';
+  const r = n1Ready(o), oz = (r && r.zip) || o.zip, role = n30Role();
+  const hz = role === 'salon' ? (n30MyAd() || {}).zip : role === 'tech' ? (state.myProfile || {}).zip : '';
+  if (!ZIPS[oz] || !ZIPS[hz]) return '';
+  const home = typeof n28Home === 'function' ? n28Home() : null, d = home ? n28Dist(o, home) : 99999;
+  return d < 9999 ? ` · ${esc(t('milesAway', Math.max(1, Math.round(d))))}` : '';
+}
+function n30AddLoc(h, extra){ return extra ? h.replace(/(<div class="n1loc">[\s\S]*?)(<\/div>)/, `$1${extra}$2`) : h; }
+
+/* ---------- cards ---------- */
+const n30Job0 = n1JobCard;
+n1JobCard = function(ad){
+  let h = n30AddLoc(n30Job0(ad), n30Miles(ad));
+  if (n30Role() === 'tech' && state.myProfile){ const f = n30Fit(ad, state.myProfile, true); if (f) h = h.replace(/(<div class="n1loc">)/, f + '$1'); }
+  if (ad && ad.live && ad.spicsN === 0) h = h.replace(/(<div class="n1top">[\s\S]*?<\/div>)/, `$1<span class="n30nopic">${esc(t('n30NoPics'))}</span>`);
+  return h;
+};
+const n30Tech0 = n1TechCard;
+n1TechCard = function(tc, o){
+  let h = n30AddLoc(n30Tech0(tc, o), n30Miles(tc));
+  if (n30Role() === 'salon' && !(tc && n2Mine(tc))){ const f = n30Fit(n30MyAd(), tc); if (f) h = h.replace(/(<div class="n1loc">)/, f + '$1'); }
+  return h;
+};
+
+/* ---------- T8: danh sách "khác" không có mình ---------- */
+const n30Jobs0 = n2Jobs;
+n2Jobs = function(){
+  let l = n30Jobs0();
+  if (n30Role() === 'salon') l = l.filter(a => !n2Mine(a));
+  if (state.n28.sortJ === 'all') l = l.filter(a => a.spicsN !== 0).concat(l.filter(a => a.spicsN === 0));
+  return l;
+};
+const n30Techs0 = n2TechList;
+n2TechList = function(){ const l = n30Techs0(); return n30Role() === 'tech' ? l.filter(x => !n2Mine(x)) : l; };
+
+/* ---------- C9: câu báo trống ---------- */
+const n30None0 = n1None;
+n1None = function(txt){
+  if (state.n1f && state.n1f.svc) return n30None0(txt);
+  const kind = typeof n28Ctx === 'function' ? n28Ctx() : '';
+  if (!kind) return n30None0(txt);
+  const area = state.n26 && state.n26.area, v = kind === 'T' ? state.n28.sortT : state.n28.sortJ, vi = lang === 'vi';
+  let s;
+  if (kind === 'T') s = v === 'ready' ? (vi ? 'Chưa có thợ nào đang bật “Sẵn sàng đi làm”' : 'No techs are marked ready to go') : (vi ? 'Chưa có thợ nào' : 'No techs yet');
+  else s = v === 'urgent' ? (vi ? 'Chưa có tin nào đang bật “Cần gấp”' : 'No urgent posts right now') : (vi ? 'Chưa có tin tuyển nào' : 'No job posts yet');
+  s += (area ? (vi ? ` ở ${area}` : ` in ${area}`) : '') + '.';
+  const fl = area || v === 'ready' || v === 'urgent';
+  return `<div class="card n1empty"><p>${esc(s)}</p>${fl ? `<button class="btn btn-ghost" type="button" data-act="n30fclear">${t('n30Clear')}</button>` : ''}</div>`;
+};
+ACT.n30fclear = function(){ state.n26.area = ''; state.n28.sortT = 'all'; state.n28.sortJ = 'all'; render(); };
+
+/* ---------- T4: trang Cần thợ gấp ---------- */
+const n30Ready0 = viewReady;
+viewReady = function(){
+  const h = n30Ready0();
+  return n30Role() === 'salon' ? h.replace(/<p class="hint" style="text-align:center;margin-top:16px">[\s\S]*?<\/p>/, '') : h;
+};
+
+/* ---------- T5 (D3 = A): bỏ địa chỉ công khai ---------- */
+(() => {
+  const fl = FORMS.hiring.steps[0].fields;
+  ['addrShow', 'addrPub', 'mapUrl'].forEach(k => { const i = fl.findIndex(f => f.k === k); if (i >= 0) fl.splice(i, 1); });
+  Object.assign(DEFAULTS.hiring, {addrShow:false, addrPub:'', mapUrl:''});
+  const s = fl.find(f => f.k === 'spics'); if (s) s.label = {vi:'Ảnh tiệm (nên có 3 ảnh)', en:'Salon photos (3 recommended)'};
+  const e = fl.find(f => f.k === 'email'); if (e) e.label = {vi:'Email', en:'Email'};
+  const pe = FORMS.profile.steps[0].fields.find(f => f.k === 'email'); if (pe){ pe.label = {vi:'Email', en:'Email'}; pe.hintKey = 'n30EmailHintT'; }
+})();
+
+/* ---------- C1: tên trong form lấy từ tài khoản ---------- */
+function n30NameField(type, f){ return (type === 'hiring' && f.k === 'businessName') || (type === 'profile' && f.k === 'name'); }
+const n30Field0 = renderField;
+renderField = function(type, f, fs){
+  if (n30NameField(type, f) && state.user && state.user.name && !n30Adm()){
+    fs.data[f.k] = state.user.name;
+    return `<div class="fq n30ro" data-q="${f.k}"><span class="flabel">${esc(fieldLabel(f, fs.data))}</span>
+      <div class="n30rov">${esc(state.user.name)}</div><p class="hint" style="margin:4px 0 0">${t('n30NameRO')} <a href="#account">${t('n30NameEdit')} →</a></p></div>`;
+  }
+  return n30Field0(type, f, fs);
+};
+const n30Login0 = viewLogin;
+viewLogin = function(){
+  return n30Login0().replace(/(<input id="au-name"[^>]*>)/, `$1<p class="hint" style="margin:6px 0 0">${t('n30NameHint')}</p>`);
+};
+
+/* ---------- T7: tiêu đề khi sửa ---------- */
+const n30Form0 = viewForm;
+viewForm = function(type){
+  let h = n30Form0(type);
+  const fs = state.forms[type];
+  if (fs && fs.editId && !fs.done && FORMS[type]){
+    const old = esc(L(FORMS[type].title)), nw = esc(t(type === 'hiring' ? 'n30EditAd' : 'n30EditProf'));
+    h = h.replace(new RegExp(`(<h1[^>]*>)\\s*${old.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*(</h1>)`), `$1${nw}$2`);
+  }
+  return h;
+};
+
+/* ---------- C7: nút đóng tin / ẩn hồ sơ ---------- */
+const n30Status0 = n2Status;
+n2Status = function(o){
+  const h = n30Status0(o);
+  if (!h || !o) return h;
+  const closed = TECHS.includes(o) ? o.hired : o.filled;
+  return closed ? h : h.replace(/class="btn btn-ghost" type="button" data-act="n2close"/, 'class="btn-link n30close" type="button" data-act="n2close"');
+};
+/* T2: số người ứng tuyển bấm được */
+n2Stats = function(o){
+  if (!n2Mine(o) || TECHS.includes(o)) return '';
+  const n = n1Threads().filter(x => x.adId === o.id && x.kind === 'apply' && ['withdrawn', 'blocked'].indexOf(x.status) < 0).length;
+  const s = esc(t('statApply', n));
+  return `<p class="n2stats">${n ? `<a href="#ad-${esc(o.id)}">${s} →</a>` : s} · ${esc(t('statView', o.views || 0))}</p>`;
+};
+
+/* ---------- T2: danh sách người ứng tuyển trên tin + T5 bỏ địa chỉ công khai ---------- */
+function n30TechName(th){
+  const tc = TECHS.find(x => x.id === th.techId);
+  return (tc && tc.name) || (th.names || {})[th.techId] || '—';
+}
+function n30Apps(ad){
+  const list = n1Threads().filter(x => x.adId === ad.id && (x.kind === 'apply' || x.kind === 'offer') && ['withdrawn', 'blocked'].indexOf(x.status) < 0)
+    .sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || n30Ms(b.lastAt) - n30Ms(a.lastAt));
+  const row = x => {
+    const nm = n30TechName(x), gone = (x.names || {})[x.techId] === N30_GONE;
+    let st, btns = '';
+    if (x.status === 'accepted'){ st = t('n30StAcc'); btns = `<a class="btn btn-ghost" href="#inbox-${esc(x.id)}">${t('btnChat')}</a>`; }
+    else if (x.status === 'declined'){ st = t('n30StDec'); }
+    else if (x.kind === 'apply'){ st = t('n30StApply'); btns = `<button class="btn btn-primary" type="button" data-act="n1acc" data-v="${esc(x.id)}">${t('accept')}</button><button class="btn btn-ghost" type="button" data-act="n1dec" data-v="${esc(x.id)}">${t('decline')}</button>`; }
+    else st = t('n30StOffer');
+    return `<div class="n30app"><a class="n30appn" href="#tech-${esc(x.techId)}"><b>${esc(gone ? t('n30Gone') : nm)}</b><small>${esc(st)}</small></a>
+      ${x.note ? `<p class="note">“${esc(x.note)}”</p>` : ''}${btns && !gone ? `<div class="row">${btns}</div>` : ''}</div>`;
+  };
+  return `<section class="jd-sec n30apps" id="n30apps"><h2>${esc(t('n30Apps', list.length))}</h2>${list.length ? list.map(row).join('') : `<p class="hint" style="margin:0">${t('n30AppsNone')}</p>`}</section>`;
+}
+const n30Ad0 = viewAd;
+viewAd = function(id){
+  let h = n30Ad0(id).replace(/<p class="n13-addr">[\s\S]*?<\/p>/, '');
+  const ad = ADS.find(a => a.id === id);
+  if (!ad || ad.type !== 'hiring' || !h) return h;
+  if (ad.live && ad.spicsN === 0) h = h.replace(/(<h1>[\s\S]*?<\/h1>)/, `$1<span class="n30nopic">${esc(t('n30NoPics'))}</span>`);
+  if (n2Mine(ad)) h = h.replace(/(<div class="card n2box">)/, n30Apps(ad) + '$1');
+  if (h.indexOf('n30apps') < 0 && n2Mine(ad)) h = h.replace(/<\/div>\s*$/, n30Apps(ad) + '</div>');
+  return h;
+};
+
+/* ---------- T3 + N1: nút hành động theo cuộc trò chuyện đã có ---------- */
+function n30Visible(fn){
+  const L0 = state.live;
+  if (!L0 || !Array.isArray(L0.threads)) return fn();
+  const all = L0.threads;
+  L0.threads = all.filter(x => x.status !== 'withdrawn');
+  try { return fn(); } finally { L0.threads = all; }
+}
+function n30PairThread(it){
+  const u = n1Me(); if (!u || !it) return null;
+  const isTech = TECHS.includes(it);
+  return n1Threads().find(x => (x.members || []).indexOf(u) >= 0 && ['pending', 'accepted'].indexOf(x.status) >= 0 &&
+    (isTech ? x.techId === it.id : (x.adId === it.id && x.techId === u))) || null;
+}
+const n30Act0 = n1Action;
+n1Action = function(it, o){
+  const h = n30Visible(() => n30Act0(it, o));
+  if (!/data-act="n1(offer|apply)"/.test(h)) return h;
+  const th = n30PairThread(it), u = n1Me();
+  if (!th) return h;
+  if (th.status === 'accepted') return `<a class="btn btn-ghost" href="#inbox-${esc(th.id)}">${t('btnChat')}</a>`;
+  if (th.from === u) return `<button class="btn btn-ghost" type="button" disabled>${t(TECHS.includes(it) ? 'n30Offered' : 'btnSent')}</button>`;
+  return `<a class="btn btn-primary" href="#inbox">${t(TECHS.includes(it) ? 'n30Answer' : 'n30GotOffer')}</a>`;
+};
+
+/* ---------- N2: giờ Texas ---------- */
+function n30TxParts(ms0){
+  const p = {};
+  new Intl.DateTimeFormat('en-US', {timeZone:N30_TZ, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23'})
+    .formatToParts(new Date(ms0)).forEach(x => { p[x.type] = x.value; });
+  return p;
+}
+function n30TxEpoch(date, hm){
+  const [y, m, d] = String(date).split('-').map(Number), [hh, mi] = String(hm || '00:00').split(':').map(Number);
+  const want = Date.UTC(y, m - 1, d, hh, mi);
+  let g = want;
+  for (let i = 0; i < 3; i++){ const p = n30TxParts(g); g += want - Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute); }
+  return g;
+}
+n1Today = function(k){
+  const p = n30TxParts(Date.now()), base = Date.UTC(+p.year, +p.month - 1, +p.day) + (k || 0) * 86400000, d = new Date(base);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+};
+const n30RBox0 = n1ReadyBox;
+n1ReadyBox = function(){
+  let h = n30RBox0();
+  const mp = state.myProfile, r = mp && n1Ready(mp);
+  if (!r) return h;
+  const loc = lang === 'vi' ? 'vi-VN' : 'en-US', o = {weekday:'short', day:'numeric', month:'numeric', hour:'numeric', minute:'2-digit'};
+  const old = new Date(r.until).toLocaleString(loc, o), nw = new Date(r.until).toLocaleString(loc, Object.assign({timeZone:N30_TZ}, o)) + ` (${t('n30TxTime')})`;
+  return h.replace(esc(t('readyIsOn', old)), esc(t('readyIsOn', nw)));
+};
+
+/* ---------- C12: điều khoản ---------- */
+(() => {
+  const sec = LEGAL && LEGAL.terms && LEGAL.terms.secs && LEGAL.terms.secs[0];
+  if (!sec || !Array.isArray(sec.li) || sec.li.length < 2) return;
+  if (String(sec.li[0].vi || '').indexOf('chủ lao động') < 0 || String(sec.li[1].vi || '').indexOf('chủ thuê') < 0) return;
+  sec.li.splice(0, 2, {
+    vi:'Nail101 chỉ là nơi kết nối tiệm nail và thợ nail ở Texas. Chúng tôi <b>không phải</b> chủ lao động, công ty giới thiệu việc làm hay bên môi giới: không thuê người, không trả lương và không tham gia thỏa thuận giữa hai bên. Tiệm và thợ tự thỏa thuận và tự trả cho nhau. Hiện đang là bản thử nghiệm và có thể thay đổi.',
+    en:'Nail101 only connects nail salons and nail techs in Texas. We are <b>not</b> an employer, staffing agency or broker: we don’t hire anyone, pay anyone or take part in what the two sides agree. Salons and techs make their own arrangements and pay each other directly. This is a beta and may change.'});
+})();
+
+/* ---------- N5: Xoá hồ sơ ---------- */
+const n30Acc0 = viewAccount;
+viewAccount = function(){
+  return n30Acc0().replace(/(data-act="livedel" data-k="techs"[^>]*>)🗑 [^<]*/, `$1🗑 ${t('n30DelProf')}`);
+};
+
+/* ---------- N3 + C11: tài khoản đã xoá ---------- */
+const n30Gone = s => String(s || '').split(esc(N30_GONE)).join(esc(t('n30Gone')));
+const n30Inbox0 = viewInbox;
+viewInbox = function(){ return n30Gone(n30Inbox0()); };
+const n30Thread0 = viewThread;
+viewThread = function(id){
+  let h = n30Thread0(id);
+  if (!h || !state.user) return n30Gone(h);
+  const th = n1Threads().find(x => x.id === id), u = state.user.uid;
+  if (th){
+    const other = (th.members || []).find(m => m !== u);
+    if ((th.names || {})[other] === N30_GONE || (th.gone && th.gone[other])){
+      h = h.replace(/<div class="n2q">[\s\S]*?<\/div>/, '').replace(/<p class="n1conn">[\s\S]*?<\/p>/, '').replace(/<div class="reply">[\s\S]*?<\/div>/, `<p class="n30lock">${t('n30GoneLock')}</p>`)
+        .replace(/<div class="n2sharerow"><button class="btn btn-ghost" type="button" data-act="n2block"[\s\S]*?<\/div>/, '');
+    } else if (th.techId !== u && th.adId && (((state.user.pics || {})[th.adId]) || []).length < 3){
+      const nudge = `<div class="card n30nudge"><p>${t('n30PicsNudge')}</p><button class="btn btn-ghost" type="button" data-act="liveedit" data-k="ads" data-v="${esc(th.adId)}">${t('n30PicsBtn')}</button></div>`;
+      h = h.replace(/(<div class="bubbles">)/, nudge + '$1');
+    }
+  }
+  return n30Gone(h).replace(/(<div class="n1pg">[\s\S]*?)loading="lazy"/g, '$1');
+};
+
+/* ---------- render: dịch vụ luôn theo thứ tự danh mục ---------- */
+const n30Render0 = render;
+render = function(){ try { n30SortAll(); } catch (e) {} return n30Render0(); };
+
+/* ---------- css ---------- */
+(() => {
+  const st = document.createElement('style');
+  st.textContent = `
+.n30desc{display:block;font-size:11.5px;font-weight:500;color:var(--muted);margin-top:2px;line-height:1.25}
+.n30fit{font-size:13px;color:#1F6B45;font-weight:600;margin-top:3px}
+.n30nopic{display:inline-block;width:fit-content;font-size:11px;font-weight:700;background:#EFEAEC;color:#6B5A60;border-radius:999px;padding:2px 8px;margin:2px 0 0}
+.n30ro .n30rov{border:1px solid var(--field);border-radius:12px;padding:12px 14px;background:#F6F1F2;font-weight:600}
+.btn-link.n30close{font-size:14px;color:var(--muted);text-decoration:underline;flex:0 0 auto;min-width:0;align-self:center}
+.n30apps .n30app{border-top:1px solid var(--line);padding:10px 0;display:grid;gap:6px}
+.n30apps .n30app:first-of-type{border-top:0}
+.n30appn{display:flex;flex-direction:column;color:inherit;text-decoration:none}
+.n30appn small{color:var(--muted);font-size:13px}
+.n30app .row{display:flex;gap:8px;flex-wrap:wrap}.n30app .note{margin:0;font-style:italic}
+.n30wait{display:grid;gap:8px}.n30wl{color:inherit;text-decoration:none}
+.n30wait .hint{margin:0;color:#7A5200}
+.n30lock{background:#F6F1F2;border-radius:12px;padding:12px 14px;margin:12px 0;color:var(--muted)}
+.n30nudge{display:grid;gap:8px;padding:12px 14px;margin:0 0 12px;background:#FFF8E6;border-color:#F3DFA8}
+.n30nudge p{margin:0}
+.n1pg img{background:#EFE6E8;min-height:90px;object-fit:cover}`;
+  document.head.appendChild(st);
+})();
+
+/* ---------- live ---------- */
+function n30Live(c){
+  const {db, TS, L_, errText} = c;
+  const me = () => state.user;
+  const ownerOf = it => it ? (it.ownerUid || (it.live ? it.id : null)) : null;
+  L_.privSent = L_.privSent || {};
+  const site = () => location.origin + location.pathname;
+
+  /* ---- C6 (D2 = A): email qua Trigger Email (collection "mail", toUids) ---- */
+  const MAIL = {
+    apply:n => ['Có thợ muốn làm ở tiệm bạn – Nail101', `${n} vừa ứng tuyển tin tuyển thợ của bạn trên Nail101.`, 'A nail tech applied to your job post', `${n} just applied to your job post on Nail101.`],
+    offer:n => ['Có tiệm mời bạn đi làm – Nail101', `${n} vừa mời bạn đi làm trên Nail101.`, 'A salon invited you to work', `${n} just invited you to work on Nail101.`],
+    accept:n => ['Đã kết nối – Nail101', `${n} đã đồng ý. Giờ hai bên nhắn tin được.`, 'You are connected', `${n} accepted. You can message each other now.`],
+    msg:n => ['Bạn có tin nhắn mới – Nail101', `${n} vừa nhắn tin cho bạn trên Nail101.`, 'New message on Nail101', `${n} just sent you a message on Nail101.`]
+  };
+  async function mail(toUid, kind, fromName){
+    if (!toUid || !MAIL[kind]) return;
+    const [sv, bv, se, be] = MAIL[kind](fromName || 'Nail101'), link = site() + '#inbox';
+    const text = `${bv}\nMở Nail101 để xem: ${link}\n\n${be}\nOpen Nail101: ${link}`;
+    const html = `<p>${esc(bv)}</p><p><a href="${esc(link)}">Mở Nail101 để xem</a></p><hr><p>${esc(be)}</p><p><a href="${esc(link)}">Open Nail101</a></p>`;
+    try { await db.collection('mail').add({toUids:[toUid], message:{subject:sv + ' / ' + se, text, html}, kind, from:me().uid, createdAt:TS()}); }
+    catch (e) { console.warn('n30 mail', e); }
+  }
+
+  /* ---- private details (copy of n1Live, unchanged behaviour) ---- */
+  const picsOf = adId => (((me().pics || {})[adId]) || []);
+  function myPriv(th){ const u = me();
+    if (th.techId === u.uid){ const p = u.priv || {}; return {role:'tech', portrait:p.portrait || '', licNo:u.licNo || '', pjobs:p.pjobs || '', mpics:p.mpics || [], avail:p.avail || ''}; }
+    return {role:'salon', addr:((u.addrs || {})[th.adId]) || '', pics:picsOf(th.adId)}; }
+  async function pushPriv(th){ try { await db.collection('threads').doc(th.id).collection('priv').doc(me().uid).set(myPriv(th)); L_.privSent[th.id + '|' + me().uid] = true; } catch (e) { console.warn('priv', e); } }
+
+  /* ---- T3: không mời lại ---- */
+  const offer0 = ACT.n1offer;
+  ACT.n1offer = function(el){
+    const tc = TECHS.find(x => x.id === el.dataset.v), th = tc ? n30PairThread(tc) : null;
+    if (th){ toast(t('n30Already')); location.hash = th.status === 'accepted' ? '#inbox-' + th.id : '#inbox'; return; }
+    return offer0(el);
+  };
+
+  /* ---- T1 (D1 = B): gửi không cần đủ ảnh tiệm; + email; + gắn số chủ bài (n119) ---- */
+  ACT.n1send = async function(el){
+    const m = state.n1m, u = me(); if (!m || !u) return;
+    const note = ((document.getElementById('n1-note') || {}).value || '').trim();
+    el.disabled = true; el.textContent = t('sending');
+    try {
+      let tid, doc, it;
+      if (m.kind === 'apply'){
+        const ad = ADS.find(a => a.id === m.id), owner = ownerOf(ad); it = ad;
+        tid = `${ad.id}__${u.uid}`;
+        doc = {members:[u.uid, owner], names:{[u.uid]:u.name, [owner]:adBiz(ad) || ad.ownerName || '—'}, from:u.uid, kind:'apply', status:'pending', urgent:false,
+          adId:ad.id, techId:u.uid, about:{id:ad.id, kind:'ad', title:adBiz(ad) + ' – ' + titleOf(ad)}, note,
+          lastText:note || t('btnApply'), lastAt:TS(), lastFrom:u.uid, readAt:{[u.uid]:TS()}, createdAt:TS()};
+      } else {
+        const tc = TECHS.find(z => z.id === m.id), owner = ownerOf(tc), sel = document.getElementById('n1-ad'), adId = sel ? sel.value : (m.adId || ''); it = tc;
+        const ad = adId ? ADS.find(a => a.id === adId) : null, salon = ad ? adBiz(ad) : u.name;
+        tid = `${tc.id}__${u.uid}`;
+        doc = {members:[u.uid, owner], names:{[u.uid]:salon, [owner]:tc.name}, from:u.uid, kind:'offer', status:'pending', urgent:!!m.urgent,
+          adId:adId || '', techId:tc.id, about:ad ? {id:ad.id, kind:'ad', title:salon + ' – ' + titleOf(ad)} : {id:tc.id, kind:'tech', title:salon}, note,
+          lastText:note || t('btnOffer'), lastAt:TS(), lastFrom:u.uid, readAt:{[u.uid]:TS()}, createdAt:TS()};
+      }
+      const op = it ? imDig(it.ownerPhone || '') : '';
+      if (op.length === 10){ doc.ownerPhone = '+1' + op; doc.ownerUid = it.ownerUid || ''; }
+      await db.collection('threads').doc(tid).set(doc);
+      await pushPriv({id:tid, techId:doc.techId, adId:doc.adId});
+      mail(doc.members[1], m.kind === 'apply' ? 'apply' : 'offer', doc.names[u.uid]);
+      state.modal = null; renderModal(); toast(t(m.kind === 'apply' ? 'sentApply' : 'sentOffer')); render();
+    } catch (e) { console.warn(e); el.disabled = false; el.textContent = t(m.kind === 'apply' ? 'sendBtn' : 'sendOffer'); toast(errText(e)); }
+  };
+  ACT.n1acc = async function(el){
+    const th = L_.threads.find(x => x.id === el.dataset.v), u = me(); if (!th || !u) return;
+    el.disabled = true;
+    try {
+      await db.collection('threads').doc(th.id).update({status:'accepted', acceptedAt:TS(), lastText:t('connectedMsg'), lastAt:TS(), lastFrom:u.uid, ['readAt.' + u.uid]:TS()});
+      Object.assign(th, {status:'accepted'});
+      await pushPriv(th);
+      if (th.kind === 'offer' && state.myProfile && n1Ready(state.myProfile)) await db.collection('techs').doc(u.uid).update({'ready.on':false}).catch(e => console.warn(e));
+      mail(th.from, 'accept', (th.names || {})[u.uid] || u.name);
+      location.hash = '#inbox-' + th.id;
+    } catch (e) { console.warn(e); el.disabled = false; toast(errText(e)); }
+  };
+
+  /* ---- email khi nhắn tin (tối đa 1 email / 20 phút / cuộc trò chuyện) ---- */
+  const send0 = ACT.thsend;
+  ACT.thsend = async function(el){
+    const ta = document.getElementById('th-text'), had = ta && ta.value.trim();
+    await send0(el);
+    const n = document.getElementById('th-text');
+    if (!had || (n && n.value)) return;
+    const th = L_.threads.find(x => x.id === el.dataset.v), u = me(); if (!th || !u) return;
+    const other = (th.members || []).find(x => x !== u.uid), key = 'n30m_' + th.id;
+    let last = 0; try { last = Number(localStorage.getItem(key)) || 0; } catch (e) {}
+    if (Date.now() - last < 20 * 60000) return;
+    try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
+    mail(other, 'msg', (th.names || {})[u.uid] || u.name);
+  };
+
+  /* ---- N1: rút hồ sơ / huỷ lời mời ---- */
+  ACT.n30wd = async function(el){
+    if (!confirm(t('n30WithdrawQ'))) return;
+    el.disabled = true;
+    try { await db.collection('threads').doc(el.dataset.v).update({status:'withdrawn', withdrawnAt:TS()}); const th = L_.threads.find(x => x.id === el.dataset.v); if (th) th.status = 'withdrawn'; toast(t('n30WithdrawDone')); render(); }
+    catch (e) { console.warn(e); el.disabled = false; toast(errText(e)); }
+  };
+  const inbox1 = viewInbox;
+  viewInbox = function(){
+    let h = inbox1();
+    const u = me(); if (!u || !h) return h;
+    L_.threads.filter(x => x.status === 'pending' && x.from === u.uid).forEach(x => {
+      const who = (x.names || {})[(x.members || []).find(m => m !== u.uid)] || '—', title = esc((x.about || {}).title || '');
+      const old = `<div class="card n1wait">⏳ ${esc(t('out_wait', who))}<br><small>${title}</small></div>`;
+      const old2 = n30Gone(old);
+      const link = x.kind === 'apply' ? `#ad-${esc(x.adId)}` : `#tech-${esc(x.techId)}`;
+      const stale = Date.now() - (n30Ms(x.createdAt) || n30Ms(x.lastAt) || Date.now()) > 7 * 86400000;
+      const nw = `<div class="card n1wait n30wait"><a class="n30wl" href="${link}">⏳ ${esc(t('out_wait', who))}<br><small>${title}</small></a>
+        ${stale ? `<p class="hint">${t('n30Stale')}</p>` : ''}<div><button class="btn-link" type="button" data-act="n30wd" data-v="${esc(x.id)}">${t(x.kind === 'apply' ? 'n30Withdraw' : 'n30WithdrawO')}</button></div></div>`;
+      h = h.split(old).join(n30Gone(nw)).split(old2).join(n30Gone(nw));
+    });
+    return h;
+  };
+
+  /* ---- C7: hỏi lại trước khi đóng tin / ẩn hồ sơ ---- */
+  const close0 = ACT.n2close;
+  ACT.n2close = async function(el){
+    if (el.dataset.on === '1' && !confirm(t(el.dataset.k === 'ads' ? 'n30FillQ' : 'n30HireQ'))) return;
+    await close0(el);
+    if (el.dataset.on === '1') toast(t('n30Closed'));
+  };
+
+  /* ---- N2 + N4: Sẵn sàng theo giờ Texas ---- */
+  ACT.n1ready = async function(){
+    const u = me(), mp = state.myProfile; if (!u || !mp) return;
+    const on = !!n1Ready(mp);
+    try {
+      if (on){ await db.collection('techs').doc(u.uid).update({'ready.on':false}); mp.ready = Object.assign({}, mp.ready, {on:false}); toast(t('readyOffT')); }
+      else {
+        n1KeepTimes();
+        const r = state.n1r, from = r.from || '10:00', to = r.to || '19:00';
+        if (from >= to){ toast(t('n30BadHours')); return; }
+        if (mp.hired){ if (!confirm(t('n30HiredReady'))) return; await db.collection('techs').doc(u.uid).update({hired:false}); mp.hired = false; }
+        let day = r.day, dFrom = '', dTo = '', until, moved = false;
+        if (r.dFrom){
+          dFrom = r.dFrom; dTo = r.dTo || r.dFrom;
+          if (dFrom < n1Today(0) || dTo < dFrom || dTo > n1Today(13)){ toast(t('readyBadDates')); return; }
+          until = n30TxEpoch(dTo, to); day = 'range';
+          if (until <= Date.now()){ toast(t('n30Past')); return; }
+        } else {
+          until = n30TxEpoch(n1Today(day === 'tomorrow' ? 1 : 0), to);
+          if (day !== 'tomorrow' && until <= Date.now()){ day = 'tomorrow'; r.day = 'tomorrow'; until = n30TxEpoch(n1Today(1), to); moved = true; }
+        }
+        const ready = {on:true, day, dFrom, dTo, from, to, note:r.note || '', city:r.city || '', zip:r.zip || '', travel:r.travel || '', until, tz:N30_TZ, at:TS(), atC:Date.now()};
+        await db.collection('techs').doc(u.uid).update({ready});
+        mp.ready = Object.assign({}, ready, {atMs:Date.now()});
+        toast(t(moved ? 'n30Moved' : 'readyOnT'));
+      }
+      render();
+    } catch (e) { console.warn(e); toast(errText(e)); }
+  };
+
+  /* ---- T6 + C1 + T5: trước khi đăng ---- */
+  const N30_PAY = {amtHour:[10, 40, 'n30Hour', '$'], amtDay:[80, 350, 'n30Day', '$'], amtWeek:[500, 2500, 'n30Week', '$'], commissionPct:[40, 75, 'n30Pct', '%']};
+  const pub0 = ACT.n1pub;
+  ACT.n1pub = function(el){
+    const type = el.dataset.ft, fs = getForm(type), d = fs.data, u = me();
+    if (u && u.name && !n30Adm()){ if (type === 'hiring') d.businessName = u.name; if (type === 'profile') d.name = u.name; }
+    if (type === 'hiring'){
+      d.addrShow = false; d.addrPub = ''; d.mapUrl = '';
+      const pt = n27A(d.payType);
+      for (const k of Object.keys(N30_PAY)){
+        const [lo, hi, lbl, unit] = N30_PAY[k];
+        if (k === 'commissionPct' ? pt.indexOf('commission') < 0 : pt.indexOf({amtHour:'per_hour', amtDay:'per_day', amtWeek:'per_week'}[k]) < 0) continue;
+        const v = n27Num(d[k]); if (v == null || (v >= lo && v <= hi)) continue;
+        const f = x => unit === '$' ? '$' + x : x + '%';
+        if (!confirm(t('n30PayQ', t(lbl), f(v), f(lo), f(hi)))) return;
+      }
+    }
+    return pub0(el);
+  };
+  /* sau khi đăng: ghi số ảnh tiệm lên tin (để hiện nhãn "Chưa có ảnh tiệm") */
+  const fpub0 = ACT.fpublish;
+  ACT.fpublish = async function(el){
+    const type = el.dataset.ft, fs = getForm(type);
+    const r = await fpub0(el);
+    if (type === 'hiring' && fs.done && fs.liveId && !(state.adm && state.adm.creating)){
+      const n = (fs.data.spics || []).length;
+      db.collection('ads').doc(fs.liveId).update({'ad.spicsN':n}).catch(e => console.warn('n30 spicsN', e));
+    }
+    return r;
+  };
+
+  /* ---- N5: hỏi đúng chữ khi xoá hồ sơ ---- */
+  const del0 = ACT.livedel;
+  if (typeof del0 === 'function') ACT.livedel = async function(el){
+    if (el.dataset.k !== 'techs') return del0(el);
+    const keep = T.vi.confirmDel, keepE = T.en.confirmDel;
+    T.vi.confirmDel = T.vi.n30DelProfQ; T.en.confirmDel = T.en.n30DelProfQ;
+    try { return await del0(el); } finally { T.vi.confirmDel = keep; T.en.confirmDel = keepE; }
+  };
+
+  /* ---- C1: một tên – đồng bộ tên tài khoản sang tin, hồ sơ, tin nhắn ---- */
+  let synced = '';
+  async function sync(force){
+    const u = me();
+    if (!u || !u.uid || !u.name || n30Adm()) return;
+    if (!L_.threadsReady || !ADS.some(a => a.live) && !TECHS.some(x => x.live)) return;
+    const key = u.uid + '|' + u.name;
+    if (!force && synced === key) return;
+    synced = key;
+    const warn = e => console.warn('n30 sync', e), nm = u.name;
+    for (const a of ADS.filter(x => x.live && x.ownerUid === u.uid)){
+      const upd = {};
+      if (a.businessName !== nm){ upd['ad.businessName'] = nm; upd['form.businessName'] = nm; upd.ownerName = nm; a.businessName = nm; if (a._form) a._form.businessName = nm; }
+      const n = ((u.pics || {})[a.id] || []).length;
+      if (a.spicsN !== n){ upd['ad.spicsN'] = n; a.spicsN = n; }
+      if (Object.keys(upd).length) await db.collection('ads').doc(a.id).update(upd).catch(warn);
+    }
+    for (const x of TECHS.filter(z => z.live && (z.id === u.uid || z.ownerUid === u.uid))){
+      if (x.name === nm) continue;
+      await db.collection('techs').doc(x.id).update({'ad.name':nm, 'form.name':nm, ownerName:nm}).catch(warn);
+      x.name = nm; if (x._form) x._form.name = nm;
+    }
+    for (const th of L_.threads.filter(z => (z.members || []).indexOf(u.uid) >= 0)){
+      if ((th.names || {})[u.uid] === nm) continue;
+      await db.collection('threads').doc(th.id).update({['names.' + u.uid]:nm}).catch(warn);
+      th.names = Object.assign({}, th.names, {[u.uid]:nm});
+    }
+    render();
+  }
+  setInterval(() => { sync(false); }, 2500);
+  const nm0 = ACT.nmsave;
+  if (typeof nm0 === 'function') ACT.nmsave = async function(el){ await nm0(el); synced = ''; sync(true); };
+
+}
+if (state.n1ctx) n30Live(state.n1ctx);
+
 render();
 })();
 </script>
