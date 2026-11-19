@@ -12522,6 +12522,273 @@ Object.entries({
   '78023':[29.583,-98.721, 'Helotes'], '78015':[29.744,-98.646, 'Fair Oaks Ranch']
 }).forEach(([z, v]) => { if (!ZIPS[z]) ZIPS[z] = [v[0], v[1], v[2] || 'San Antonio']; });
 
+/* ============================================================
+   n131 — form tạo tin / hồ sơ gọn hơn (19/11)
+   - mỗi mục một khung, cạnh tên mục ghi "· chọn được nhiều" / "· chọn 1"
+   - mục nhiều lựa chọn chỉ hiện vài cái hay dùng + "Xem thêm (n)"
+   - "✏️ Tự ghi" nằm cuối danh sách đã mở
+   - lương 2 bước: chọn Ăn chia / Lương cố định trước, rồi mới hiện kiểu và ô số
+   - dòng xem trước "Tin sẽ hiện: ..."
+   - mục không bắt buộc gom vào "Thêm chi tiết"
+   - thợ: khung Lịch làm (loại việc + ngày rảnh, có nút chọn nhanh)
+   - thợ đăng xong: nhắc thêm ảnh chân dung + số bằng
+   Dữ liệu lưu y như cũ, không bỏ lựa chọn nào.
+   ============================================================ */
+Object.assign(T.vi, {
+  n33Many:'chọn được nhiều', n33One:'chọn 1', n33More:n => `Xem thêm (${n})`, n33Less:'Thu gọn', n33Own:'Tự ghi',
+  n33FamC:'Ăn chia', n33FamF:'Lương cố định', n33SubC:'Kiểu ăn chia', n33SubF:'Trả theo',
+  n33OwnQ:'Kiểu khác?', n33PvAd:'Tin sẽ hiện:', n33PvTech:'Hồ sơ sẽ hiện:', n33PvNone:'chọn kiểu lương ở trên',
+  n33Sched:'Lịch làm', n33All:'Cả tuần', n33Wk:'T2–T6', n33We:'Cuối tuần',
+  n33RemT:'Thêm ảnh chân dung và số bằng để tiệm tin bạn hơn', n33RemB:'Thêm ngay',
+  moreDetails:'Thêm chi tiết (không bắt buộc)'
+});
+Object.assign(T.en, {
+  n33Many:'pick any', n33One:'pick one', n33More:n => `More (${n})`, n33Less:'Show less', n33Own:'Write your own',
+  n33FamC:'Commission', n33FamF:'Fixed pay', n33SubC:'Commission type', n33SubF:'Paid by',
+  n33OwnQ:'Something else?', n33PvAd:'Your post will show:', n33PvTech:'Your profile will show:', n33PvNone:'pick a pay type above',
+  n33Sched:'Schedule', n33All:'All week', n33Wk:'Mon–Fri', n33We:'Weekends',
+  n33RemT:'Add a portrait photo and your license number so salons trust you more', n33RemB:'Add now',
+  moreDetails:'More details (optional)'
+});
+
+const N33_FAM = {c:['commission', 'commission_guarantee', 'commission_week'], f:['per_day', 'per_hour', 'per_week']};
+const N33_AMT = {commission:'commissionPct', per_day:'amtDay', per_hour:'amtHour', per_week:'amtWeek'};
+const N33_PAYK = ['commissionPct', 'amtDay', 'amtHour', 'amtWeek'];
+const N33_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+/* những lựa chọn hiện sẵn; mục không có ở đây thì hiện hết */
+const N33_SHOW = {
+  hiring:{services:['acrylic_full', 'acrylic_fill', 'dip', 'gelx', 'pedicure'], experience:['new_ok', '1', '3'],
+    perks:['tips100', 'regulars', 'walkin_busy', 'paid_weekly', 'flexible'], reqs:['en_basic', 'clean_pedi', 'weekend', 'reliable', 'own_car']},
+  profile:{services:['acrylic_full', 'acrylic_fill', 'dip', 'gelx', 'pedicure'],
+    wants:['tips100', 'regulars', 'walkin_busy', 'paid_weekly', 'flexible']}
+};
+/* thứ tự mục; mục trong "more" vào Thêm chi tiết */
+const N33_ORDER = {
+  hiring:{main:['businessName', 'city', 'zip', 'urgent', 'phone', 'services', 'jobType', 'experience', 'payType', 'commissionPct', 'amtDay', 'amtHour', 'amtWeek', '_n33pv', 'schedule', 'license'],
+    more:['perks', 'reqs', '_h1', 'address', 'spics', 'email', 'cover', 'techsNeeded', 'extras']},
+  profile:{main:['name', 'city', 'zip', 'phone', 'services', 'years', 'jobType', 'days', 'license', 'payType', 'commissionPct', 'amtDay', 'amtHour', 'amtWeek', '_n33pv', 'photos'],
+    more:['wants', 'travel', 'about', '_h1', 'portrait', 'licNo', 'pjobs', 'mpics', 'avail', 'email']}
+};
+
+(() => {
+  ['hiring', 'profile'].forEach(type => {
+    const F = FORMS[type]; if (!F) return;
+    const fl = F.steps[0].fields, O = N33_ORDER[type];
+    if (!fl.some(f => f.k === '_n33pv')){
+      const at = fl.findIndex(f => f.k === 'amtWeek');
+      fl.splice(at < 0 ? fl.length : at + 1, 0, {k:'_n33pv', type:'n33pv', label:{vi:'', en:''}, show:d => n27A(d.payType).length > 0});
+    }
+    const by = {}; fl.forEach(f => { by[f.k] = f; });
+    const out = [];
+    O.main.forEach(k => { const f = by[k]; if (!f) return; delete f.more; out.push(f); delete by[k]; });
+    O.more.forEach(k => { const f = by[k]; if (!f) return; if (!f.req) f.more = 1; delete f.fold; out.push(f); delete by[k]; });
+    fl.forEach(f => { if (by[f.k]) out.push(f); });   /* mục lạ: giữ nguyên, để cuối */
+    fl.length = 0; out.forEach(f => fl.push(f));
+  });
+})();
+
+function n33St(fs){
+  if (fs.n33d !== fs.data){ fs.n33d = fs.data; fs.n33x = {}; fs.n33pay = {}; fs.n33more = undefined; }
+  fs.n33x = fs.n33x || {}; fs.n33pay = fs.n33pay || {};
+  return fs;
+}
+function n33FamOn(fs, fam){
+  const arr = n27A(fs.data.payType);
+  return !!fs.n33pay[fam] || arr.some(v => N33_FAM[fam].indexOf(v) >= 0);
+}
+function n33Btns(s){ return s.match(/<button\b[^>]*>[\s\S]*?<\/button>/g) || []; }
+function n33On(b){ return /aria-pressed="true"/.test(b) || /class="[^"]*\bon\b/.test(b); }
+function n33V(b){ const m = b.match(/data-v="([^"]*)"/); return m ? m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&') : null; }
+function n33Hint(h, many){
+  const tag = `<span class="n33h">· ${esc(t(many ? 'n33Many' : 'n33One'))}</span>`;
+  return h.replace(/(<(label|span) class="flabel"[^>]*>)([\s\S]*?)(<\/\2>)/, (m, a, b, c, d) => {
+    const i = c.search(/<span class="(req|opt)"/);
+    return a + (i < 0 ? c + ' ' + tag : c.slice(0, i) + tag + ' ' + c.slice(i)) + d;
+  });
+}
+function n33OwnBtn(b){ return b.replace(/>\s*\+\s*[^<]*<\/button>$/, `>✏️ ${esc(t('n33Own'))}</button>`); }
+function n33PvText(type, fs){
+  try {
+    const o = previewObject(type, fs);
+    const s = type === 'hiring' ? payText(o.hiring || {}) : techPay(o.payWanted);
+    return s || t('n33PvNone');
+  } catch (e) { return t('n33PvNone'); }
+}
+
+const n33Field0 = renderField;
+renderField = function(type, f, fs){
+  if (type !== 'hiring' && type !== 'profile') return n33Field0(type, f, fs);
+  n33St(fs);
+  if (f.type === 'n33pv'){
+    return `<div class="fq n33sub n33pv" data-q="_n33pv"><span class="n33pvl">${esc(t(type === 'hiring' ? 'n33PvAd' : 'n33PvTech'))}</span> <b class="n33pvt" data-ft="${type}">${esc(n33PvText(type, fs))}</b></div>`;
+  }
+  let h = n33Field0(type, f, fs);
+  if (N33_PAYK.indexOf(f.k) >= 0) return h.replace(/^<div class="fq/, '<div class="fq n33sub');
+  if (f.type !== 'multi' && f.type !== 'chips') return h;
+  h = n33Hint(h, f.type === 'multi');
+  if (type === 'profile' && f.k === 'days') return n33Days(h, type).replace(/^<div class="fq/, '<div class="fq n33sub');
+  if (type === 'profile' && f.k === 'jobType') h = h.replace(/^(<div class="fq[^"]*"[^>]*>)/, `$1<p class="n33cardt">🗓 ${esc(t('n33Sched'))}</p>`);
+  const re = /(<div class="chipset" role="group"[^>]*>)([\s\S]*?)(<\/div>)/;
+  if (!re.test(h)) return h;
+  if (f.k === 'payType') return n33Pay(h, re, type, fs);
+  const show = (N33_SHOW[type] || {})[f.k];
+  return h.replace(re, (m, a, body, c) => {
+    const btns = n33Btns(body), own = btns.filter(b => /n14-add/.test(b)), rest = btns.filter(b => !/n14-add/.test(b));
+    if (!show){ return a + rest.join('') + own.map(n33OwnBtn).join('') + c; }
+    const open = !!fs.n33x[f.k];
+    const hid = rest.filter(b => !/n14-x/.test(b) && !n33On(b) && show.indexOf(n33V(b)) < 0);
+    if (!hid.length) return a + rest.join('') + own.map(n33OwnBtn).join('') + c;
+    if (open){
+      return a + rest.join('') + own.map(n33OwnBtn).join('') +
+        `<button type="button" class="choice n33less" data-act="n33more" data-ft="${type}" data-fk="${esc(f.k)}">${esc(t('n33Less'))}</button>` + c;
+    }
+    const vis = rest.filter(b => hid.indexOf(b) < 0);
+    return a + vis.join('') + `<button type="button" class="choice n33more" data-act="n33more" data-ft="${type}" data-fk="${esc(f.k)}">+ ${esc(t('n33More', hid.length))}</button>` + c;
+  });
+};
+function n33Days(h, type){
+  const q = [['all', 'n33All'], ['wk', 'n33Wk'], ['we', 'n33We']].map(([v, k]) =>
+    `<button type="button" class="n33q" data-act="n33days" data-ft="${type}" data-v="${v}">${esc(t(k))}</button>`).join('');
+  return h.replace(/(<div class="chipset" role="group"[^>]*>[\s\S]*?<\/div>)/, `<div class="n33qs">${q}</div>$1`);
+}
+function n33Pay(h, re, type, fs){
+  return h.replace(re, (m, a, body, c) => {
+    const btns = n33Btns(body);
+    const pick = fam => btns.filter(b => N33_FAM[fam].indexOf(n33V(b)) >= 0);
+    const own = btns.filter(b => /n14-x/.test(b)), add = btns.filter(b => /n14-add/.test(b));
+    const other = btns.filter(b => !/n14-/.test(b) && N33_FAM.c.indexOf(n33V(b)) < 0 && N33_FAM.f.indexOf(n33V(b)) < 0);
+    const on = {c:n33FamOn(fs, 'c'), f:n33FamOn(fs, 'f')};
+    const fam = ['c', 'f'].map(k => `<button type="button" class="n33famb${on[k] ? ' on' : ''}" aria-pressed="${on[k]}" data-act="n33fam" data-ft="${type}" data-v="${k}"><i>${on[k] ? '✓' : '+'}</i>${esc(t(k === 'c' ? 'n33FamC' : 'n33FamF'))}</button>`).join('');
+    const sub = k => on[k] ? `<p class="n33subl">${esc(t(k === 'c' ? 'n33SubC' : 'n33SubF'))}</p>${a}${pick(k).join('')}${c}` : '';
+    const tail = (own.length || add.length || other.length)
+      ? `<div class="n33ownrow"><span class="n33ownq">${esc(t('n33OwnQ'))}</span>${a}${other.join('')}${own.join('')}${add.map(n33OwnBtn).join('')}${c}</div>` : '';
+    return `<div class="n33fam">${fam}</div>${sub('c')}${sub('f')}${tail}`;
+  });
+}
+
+ACT.n33more = function(el){
+  const fs = n33St(getForm(el.dataset.ft)), k = el.dataset.fk;
+  fs.n33x[k] = !fs.n33x[k];
+  render();
+  if (!fs.n33x[k]){ const q = document.querySelector(`.form-card [data-q="${k}"]`); if (q && q.getBoundingClientRect().top < 0) q.scrollIntoView({block:'start'}); }
+};
+ACT.n33fam = function(el){
+  const fs = n33St(getForm(el.dataset.ft)), fam = el.dataset.v, d = fs.data;
+  if (n33FamOn(fs, fam)){
+    fs.n33pay[fam] = false;
+    const drop = N33_FAM[fam];
+    d.payType = n27A(d.payType).filter(v => drop.indexOf(v) < 0);
+    drop.forEach(v => { const k = N33_AMT[v]; if (k && d[k] != null) delete d[k]; });
+  } else {
+    fs.n33pay[fam] = true;
+  }
+  delete fs.errors.payType;
+  render();
+};
+ACT.n33days = function(el){
+  const fs = getForm(el.dataset.ft), v = el.dataset.v;
+  const want = v === 'all' ? N33_DAYS.slice() : v === 'wk' ? N33_DAYS.slice(0, 5) : N33_DAYS.slice(5);
+  const cur = (fs.data.days || []).slice().sort().join(), same = want.slice().sort().join() === cur;
+  fs.data.days = same ? [] : want;
+  delete fs.errors.days;
+  render();
+};
+
+/* gõ số lương thì dòng xem trước đổi theo ngay, không vẽ lại cả form */
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (!el || !el.dataset || N33_PAYK.indexOf(el.dataset.fk) < 0) return;
+  const type = el.dataset.ft;
+  setTimeout(() => {
+    try {
+      const b = document.querySelector(`.n33pvt[data-ft="${type}"]`);
+      if (b) b.textContent = n33PvText(type, getForm(type));
+    } catch (e2) {}
+  }, 0);
+});
+/* nhớ người dùng mở/đóng "Thêm chi tiết" */
+document.addEventListener('toggle', e => {
+  const d = e.target;
+  if (!d || !d.matches || !d.matches('details.more[data-n33ft]')) return;
+  try { getForm(d.dataset.n33ft).n33more = d.open; } catch (e2) {}
+}, true);
+
+const n33Form0 = viewForm;
+viewForm = function(type){
+  let h = n33Form0(type);
+  if (type !== 'hiring' && type !== 'profile') return h;
+  const fs = getForm(type);
+  if (fs.done){
+    if (type === 'profile' && !n30Adm()){
+      const d = fs.data, noP = !(d.portrait && d.portrait.length), noL = String(d.licNo || '').replace(/\D/g, '').length < 6;
+      if (noP || noL){
+        const btn = fs.liveId ? `<button class="btn btn-primary" type="button" data-act="n33fix" data-v="${esc(fs.liveId)}">${esc(t('n33RemB'))}</button>` : '';
+        const card = `<div class="card n33rem"><p>📸 ${esc(t('n33RemT'))}</p>${btn}</div>`;
+        const i = h.lastIndexOf('</div>');
+        if (i > 0) h = h.slice(0, i) + card + h.slice(i);
+      }
+    }
+    return h;
+  }
+  if (fs.step !== 0) return h;
+  h = h.replace('<div class="card form-card">', '<div class="card form-card n33f">');
+  /* thành phố + ZIP chung một hàng */
+  h = h.replace(/(<div class="fq[^"]*" data-q="city">[\s\S]*?<\/select><\/div>)(<div class="fq[^"]*" data-q="zip">[\s\S]*?<\/div>)/, '<div class="n33row">$1$2</div>');
+  /* Thêm chi tiết: giữ trạng thái đóng/mở người dùng đã chọn */
+  h = h.replace(/<details class="more"( open)?>/, (m, op) => {
+    let open = !!op;
+    if (fs.n33more === true) open = true;
+    else if (fs.n33more === false){
+      const body = h.slice(h.indexOf('<details class="more"'));
+      open = /has-err/.test(body.slice(0, body.indexOf('</details>')));
+    }
+    return `<details class="more n33more-d" data-n33ft="${type}"${open ? ' open' : ''}>`;
+  });
+  return h;
+};
+ACT.n33fix = function(el){
+  const id = el.dataset.v;
+  const fake = document.createElement('button');
+  fake.dataset.k = 'techs'; fake.dataset.v = id; fake.dataset.act = 'liveedit';
+  const r = ACT.liveedit(fake);
+  const after = () => { try { const fs = getForm('profile'); n33St(fs).n33more = true; render(); window.scrollTo(0, 0); } catch (e) {} };
+  if (r && typeof r.then === 'function') r.then(after); else after();
+};
+
+(() => { const st = document.createElement('style'); st.textContent = `
+.form-card.n33f{background:transparent;border:0;box-shadow:none;padding:0;gap:12px}
+.form-card.n33f > .fq,.form-card.n33f > .n33row,.form-card.n33f .more-body > .fq{background:#fff;border:1px solid var(--line,#E7DDE0);border-radius:16px;padding:14px 14px 16px;margin:0}
+.form-card.n33f > .n33row{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.form-card.n33f > .n33row > .fq{margin:0;padding:0;border:0;background:none;min-width:0}
+.form-card.n33f > .n33row select,.form-card.n33f > .n33row input{width:100%;max-width:none !important;box-sizing:border-box}
+.form-card.n33f > .n33row .hint{font-size:12px}
+.form-card.n33f > .fq.n33sub,.form-card.n33f .more-body > .fq.n33sub{margin-top:-13px;border-top:0;border-top-left-radius:0;border-top-right-radius:0;padding-top:2px}
+.form-card.n33f > .fq:has(+ .fq.n33sub){border-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0}
+.form-card.n33f > .n1priv{margin:6px 2px 0}
+.form-card.n33f details.more{background:#fff;border:1px dashed var(--field);border-radius:16px;padding:2px 14px}
+.form-card.n33f details.more .more-body{gap:12px}
+.form-card.n33f details.more .more-body > .fq{border-color:var(--line,#E7DDE0);padding:12px}
+.n33h{font-size:12.5px;font-weight:600;color:var(--muted,#5E5458);margin-left:2px}
+.choice.n33more,.choice.n33less{border-style:dashed;color:var(--primary);background:#fff}
+.n33cardt{margin:0 0 10px;font-weight:800;font-size:15px;color:var(--primary)}
+.n33qs{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px}
+.n33q{border:1px solid var(--field);background:#FBF7F8;border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer;min-height:32px}
+.n33fam{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.n33famb{display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;border:1.5px solid var(--field);border-radius:14px;background:#fff;font:inherit;font-size:15px;font-weight:800;color:var(--ink);cursor:pointer;padding:6px 10px}
+.n33famb i{font-style:normal;font-weight:800;color:var(--primary)}
+.n33famb.on{border-color:var(--primary);background:var(--primary);color:#fff}
+.n33famb.on i{color:#fff}
+.n33subl{margin:12px 0 6px;font-size:13px;font-weight:700;color:var(--muted,#5E5458)}
+.n33ownrow{margin-top:12px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.n33ownrow .chipset{display:flex;flex-wrap:wrap;gap:8px}
+.n33ownq{font-size:13px;color:var(--muted,#5E5458)}
+.n33ownrow .choice{min-height:38px;font-size:14px}
+.fq.n33pv{font-size:14px;color:var(--muted,#5E5458);padding-bottom:14px}
+.fq.n33pv b{color:var(--ink)}
+.n33rem{display:grid;gap:10px;margin-top:14px;border:1px solid #F0C7D3;background:#FFF6F9}
+.n33rem p{margin:0;font-weight:700}
+`; document.head.appendChild(st); })();
+
 render();
 })();
 </script>
