@@ -13331,6 +13331,426 @@ document.addEventListener('click', e => {
   if (a && /#admin-over$/.test(location.hash)) { n34OverReset(); render(); }
 }, true);
 
+/* ============================================================
+   n135 — admin đợt 2 (19/11): quy trình vận hành
+   B1 Liên hệ: ẩn người vừa nhắn trong 2 ngày     B2 nút Gọi / Nhắn tin (mở thẳng app)
+   B3 tin SMS ngắn + đếm ký tự, gộp giờ làm        B4 link nháp: xác minh số (OTP) mới đăng, dùng 1 lần
+   B5 trang Nháp: chữ đúng, hỏi trước khi đăng thay, cảnh báo lương giờ
+   B6 Tài khoản: tìm, bấm xem chi tiết            B7 Nhập: ví dụ giả, nút "Xem trước", thành phố
+   B8 Nhật ký dễ đọc, ẩn công cụ sửa dữ liệu cũ, hỏi trước khi xoá admin
+   (tiền tố n35 — không trùng n130/n131/n132)
+   ============================================================ */
+Object.assign(T.vi, {
+  n35Recent:n => `Đang ẩn ${n} người vừa nhắn trong 2 ngày.`, n35ShowRecent:'Hiện cả họ', n35HideRecent:'Ẩn lại',
+  n35Call:'📞 Gọi', n35Sms:'💬 Nhắn tin',
+  n35Len:(c, n) => `${c} ký tự · ${n} tin SMS`, n35LenWarn:'Dài quá, dễ bị nhà mạng chặn. Nên tối đa 4 tin.',
+  n35EditDraft:'✏️ Sửa tin nháp',
+  n35Verify:'Để đăng, cần xác nhận số điện thoại của tiệm. Mã sẽ gửi về số này:',
+  n35VerifyBtn:'Nhận mã để đăng', n35NoPh:'Link này chưa gắn số điện thoại. Nhờ người gửi link gửi lại.',
+  n35Other:n => `Bạn đang đăng nhập số khác. Đăng xuất rồi mở lại link để xác nhận số ${n}.`,
+  n35LockPh:n => `Nhập mã gửi về số ${n} để đăng tin.`,
+  n35DraftH:'Tin nháp – đang chờ tiệm/thợ đăng', n35Made:'Tạo', n35PostQ:'Tiệm/thợ đã đồng ý nội dung tin này chưa?\n\nBấm OK để đăng thay họ.',
+  n35Hour:v => `⚠ Lương giờ $${v} – cao bất thường, kiểm tra lại`,
+  ctS_pending:'Chờ tiệm đăng', ctF_pending:'Chờ tiệm đăng',
+  n35Search:'Tìm tên hoặc số…', n35Posts:'Tin / hồ sơ', n35NoPosts:'Chưa có tin hay hồ sơ nào.', n35Ct:'Danh bạ', n35NoCt:'Chưa có trong danh bạ.',
+  n35Seen:'Vào web lần cuối', n35Made2:'Tạo tài khoản', n35Open:'Mở',
+  imRead:'Xem trước',
+  n35RepDone:'Công cụ sửa dữ liệu cũ (đã chạy xong)',
+  n35RmQ:n => `Gỡ quyền admin của ${n}?`, n35RmSelf:'Không tự gỡ quyền admin của chính mình được.',
+  n35W_mod_ok:'Duyệt', n35W_mod_no:'Từ chối', n35W_delete:'Xoá', n35W_admin_add:'Thêm admin', n35W_admin_remove:'Gỡ admin',
+  n35W_restore:'Khôi phục', n35W_publish:'Đăng thay', n35W_ban:'Chặn', n35W_unban:'Bỏ chặn',
+  n35Who:'bởi', n35TechP:'hồ sơ thợ', n35SalonP:'tin tiệm'
+});
+Object.assign(T.en, {
+  n35Recent:n => `Hiding ${n} people texted in the last 2 days.`, n35ShowRecent:'Show them', n35HideRecent:'Hide again',
+  n35Call:'📞 Call', n35Sms:'💬 Text',
+  n35Len:(c, n) => `${c} characters · ${n} SMS`, n35LenWarn:'Too long — carriers may block it. Keep it to 4 messages or fewer.',
+  n35EditDraft:'✏️ Edit the draft',
+  n35Verify:'To publish, confirm the salon’s phone number. We will text a code to:',
+  n35VerifyBtn:'Get a code to publish', n35NoPh:'This link has no phone number yet. Ask whoever sent it to send it again.',
+  n35Other:n => `You are signed in with another number. Sign out, then open the link again to confirm ${n}.`,
+  n35LockPh:n => `Enter the code sent to ${n} to publish.`,
+  n35DraftH:'Drafts – waiting for the salon/tech to publish', n35Made:'Created', n35PostQ:'Did the salon/tech agree to this post?\n\nPress OK to publish it for them.',
+  n35Hour:v => `⚠ $${v}/hour – unusually high, double-check`,
+  ctS_pending:'Waiting to publish', ctF_pending:'Waiting to publish',
+  n35Search:'Search name or number…', n35Posts:'Posts / profile', n35NoPosts:'No post or profile yet.', n35Ct:'Contacts', n35NoCt:'Not in contacts.',
+  n35Seen:'Last on the site', n35Made2:'Account created', n35Open:'Open',
+  imRead:'Preview',
+  n35RepDone:'Old-data repair tool (already run)',
+  n35RmQ:n => `Remove admin access for ${n}?`, n35RmSelf:'You can’t remove your own admin access.',
+  n35W_mod_ok:'Approved', n35W_mod_no:'Rejected', n35W_delete:'Deleted', n35W_admin_add:'Added admin', n35W_admin_remove:'Removed admin',
+  n35W_restore:'Restored', n35W_publish:'Published for them', n35W_ban:'Blocked', n35W_unban:'Unblocked',
+  n35Who:'by', n35TechP:'tech profile', n35SalonP:'salon post'
+});
+state.n35 = {recent:false, claimPh:'', q:'', acc:null, log:null, seen:false, keep:null};
+const N35_DAY = 86400000;
+
+/* ---------- B3: tóm tắt 1 dòng + gộp giờ làm ---------- */
+function n35Sched(sc){
+  if (!sc) return '';
+  const days = OPTS.days.map(d => ({d, h:sc[d.v]}));
+  const out = []; let i = 0;
+  while (i < days.length){
+    if (!days[i].h){ i++; continue; }
+    let j = i;
+    while (j + 1 < days.length && days[j + 1].h && days[j + 1].h.join() === days[i].h.join()) j++;
+    const lab = i === j ? L(days[i].d) : `${L(days[i].d)}–${L(days[j].d)}`;
+    out.push(`${lab} ${fmtTime(days[i].h[0])}–${fmtTime(days[i].h[1])}`);
+    i = j + 1;
+  }
+  return out.join(', ');
+}
+function n35Short(o){
+  if (!o) return '';
+  try {
+    if (TECHS.includes(o)){
+      const sv = (o.services || []).slice(0, 3).map(s => svcShort(s.id || s)).join(', ');
+      return [o.name, sv].filter(Boolean).join(' · ');
+    }
+    const h = o.hiring || {};
+    const pay = (typeof payText === 'function' ? payText(h) : '') || '';
+    const jt = n27A(h.jobType).filter(v => !/^x:/.test(v)).map(v => opt('jobType', v)).filter(Boolean).join('/');
+    const sv = (h.services || []).slice(0, 3).map(s => svcShort(s.id || s)).join(', ');
+    const sc = n35Sched(h.schedule || (typeof schedOf === 'function' ? schedOf(h) : null));
+    return [pay, jt, sv, sc].filter(Boolean).join(' · ');
+  } catch (e) { console.warn('n35short', e); return ''; }
+}
+const n35Ctx0 = tplCtx;
+tplCtx = function(c, o, link){ const x = n35Ctx0(c, o, link); x.baiShort = n35Short(o); return x; };
+const n35Fill0 = tplFill;
+tplFill = function(tpl, lg, ctx){
+  if (!tpl || tpl.ch !== 'sms') return n35Fill0(tpl, lg, ctx);
+  const c = Object.assign({}, ctx || {});
+  if (c._o){
+    const keep = lang;
+    try { lang = lg === 'en' ? 'en' : 'vi'; const sh = n35Short(c._o); if (sh) c.bai = sh; } finally { lang = keep; }
+    c._o = null;   /* để lớp cũ không dựng lại cả bài dài */
+  } else if (c.baiShort) c.bai = c.baiShort;
+  const t2 = Object.assign({}, tpl);
+  /* chỉ giữ 1 lời kêu gọi: link nay phải xác minh số, nên bỏ "không cần đăng nhập" */
+  t2.vi = String(t2.vi || '').replace(/,?\s*không cần đăng nhập/gi, '');
+  t2.en = String(t2.en || '').replace(/,?\s*no login needed/gi, '');
+  return n35Fill0(t2, lg, c);
+};
+(() => {
+  const m = TPL_DEF.find(x => x.id === 'moibai');
+  if (m){
+    m.vi = 'Chào {nguoi}, em là {toi} bên Nail101. Em soạn sẵn tin tuyển thợ cho {ten}: {bai}\n👉 Bấm link để xem và đăng: {link}';
+    m.en = 'Hello {nguoi}, this is {toi} from Nail101. I wrote a job post for {ten}: {bai}\n👉 Tap the link to review and publish: {link}';
+  }
+})();
+function n35Seg(s){
+  const txt = String(s || '');
+  const gsm = /^[\x0A\x0D\x20-\x7E£¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ¡ÄÖÑÜ§¿äöñüà€]*$/.test(txt);
+  const n = Array.from(txt).length;
+  const one = gsm ? 160 : 70, part = gsm ? 153 : 67;
+  return {chars:n, parts:n <= one ? 1 : Math.ceil(n / part)};
+}
+
+/* ---------- B1 + B2 + B3 + B5 ở tab Liên hệ ---------- */
+const n35Recent = it => { const c = it.c || ctGet(it.ph); const m = c ? n34Ms(c.lastAt) : 0; return !!m && Date.now() - m < 2 * N35_DAY; };
+const n35List0 = sendList;
+let n35Hidden = 0;
+sendList = function(){
+  const L0 = n35List0();
+  /* người đang được giữ lại nằm đúng chỗ cũ, không nhảy vị trí sau khi copy */
+  const keep = state.n35.keep;
+  const isRec = it => it.id === keep ? !!state.n35.keepRec : n35Recent(it);
+  const fresh = L0.filter(it => !isRec(it)), rec = L0.filter(isRec);
+  n35Hidden = rec.length;
+  return state.n35.recent ? fresh.concat(rec) : fresh;
+};
+/* người vừa copy tin vẫn ở lại trên màn hình để bấm trạng thái; bấm Sau → mới ẩn */
+(() => {
+  const c0 = ACT.sdcopy;
+  ACT.sdcopy = async function(el){
+    const L1 = sendList(), it = L1[Math.min(Math.max(state.sq.i, 0), L1.length - 1)];
+    if (it && state.n35.keep !== it.id){ state.n35.keepRec = n35Recent(it); state.n35.keep = it.id; }
+    return c0.call(this, el);
+  };
+  const g0 = ACT.sdgo;
+  if (g0) ACT.sdgo = function(el){
+    const L1 = sendList(), it = L1[Math.min(Math.max(state.sq.i, 0), L1.length - 1)];
+    const k = state.n35.keep; state.n35.keep = null;
+    if (k && it && it.id === k && n35Recent(it) && !state.n35.recent && Number(el.dataset.v) > 0){ render(); return; }
+    return g0.call(this, el);
+  };
+})();
+window.addEventListener('hashchange', () => { if (!/#admin-send/.test(location.hash)) state.n35.keep = null; });
+ACT.n35recent = function(){ state.n35.recent = !state.n35.recent; state.sq.i = 0; render(); };
+function n35Draft(ph){
+  const p = n34D(ph);
+  return (typeof admAll === 'function' ? admAll() : []).find(o => o.mod === 'draft' && (n34D(admContact(o.id)) === p || n34D(o.ownerPhone) === p)) || null;
+}
+const n35Send0 = admSend;
+admSend = function(){
+  let h = n35Send0();
+  const bar = n35Hidden || state.n35.recent
+    ? `<p class="hint n35rec">${esc(t('n35Recent', n35Hidden))} <button class="btn-link" type="button" data-act="n35recent">${t(state.n35.recent ? 'n35HideRecent' : 'n35ShowRecent')}</button></p>` : '';
+  const list = sendList(), it = list[Math.min(Math.max(state.sq.i, 0), list.length - 1)];
+  if (!it) return bar ? h.replace(/(<p class="empty-s">)/, bar + '$1') : h;
+  const ph = n34D(it.ph);
+  let msg = '';
+  try { msg = sendMsg(it, 'vi'); } catch (e) {}
+  const sg = n35Seg(msg);
+  const acts = ph ? `<div class="n35acts"><a class="btn btn-ghost" href="tel:+1${ph}">${t('n35Call')}</a>
+    <button class="btn btn-ghost" type="button" data-act="n35sms" data-v="${ph}">${t('n35Sms')}</button></div>` : '';
+  h = h.replace(/(<button class="sq-ph" type="button" data-act="n16call"[\s\S]*?<\/button>(?:<span class="n34(?:reg|bad)">[^<]*<\/span>)?)/, `$1${acts}`);
+  h = h.replace(/(<pre class="sq-prev">[\s\S]*?<\/pre><\/details>)/, `$1<p class="hint n35len${sg.parts > 4 ? ' n35bad' : ''}">${esc(t('n35Len', sg.chars, sg.parts))}${sg.parts > 4 ? ' · ' + esc(t('n35LenWarn')) : ''}</p>`);
+  const d = it.k === 'd' ? it.o : n35Draft(ph);
+  if (d) h = h.replace(/<button class="btn btn-ghost btn-block n16-mk" type="button" data-act="n16make"[^>]*>[^<]*<\/button>/,
+    `<button class="btn btn-ghost btn-block n16-mk" type="button" data-act="liveedit" data-k="${TECHS.includes(d) ? 'techs' : 'ads'}" data-v="${esc(d.id)}">${t('n35EditDraft')}</button>`);
+  return h.replace(/(<div class="card adm-card sq-card">)/, bar + '$1');
+};
+ACT.n35sms = async function(el){
+  const ph = el.dataset.v;
+  const list = sendList(), it = list[Math.min(Math.max(state.sq.i, 0), list.length - 1)];
+  let msg = '';
+  try { msg = sendMsg(it, 'vi'); } catch (e) {}
+  /* ghi nhận như bấm Copy (đếm tin, trạng thái, lịch sử), rồi mở app nhắn tin */
+  const href = `sms:+1${ph}?&body=${encodeURIComponent(msg)}`;
+  try { await ACT.sdcopy({dataset:{l:'vi'}}); } catch (e) { console.warn('n35sms', e); }
+  location.href = href;
+};
+
+/* thành phố: lấy từ tin nháp nếu danh bạ để trống */
+const n35Row0 = ctRow;
+ctRow = function(c){
+  const h = n35Row0(c);
+  if (c.city) return h;
+  const d = n35Draft(c.phone), city = d && (d.city || (d.hiring || {}).city);
+  return city ? h.replace(/(<td class="ct-num">[^<]*<\/td>\s*)<td><\/td>/, `$1<td>${esc(city)}</td>`) : h;
+};
+
+/* ---------- B4: link nháp – xác minh số trước khi đăng ---------- */
+function n35ClaimGate(){
+  const p = state.cl && state.cl.page;
+  if (!p || p.state !== 'ok') return false;
+  const need = n34D(p.phone);
+  if (!need){ toast(t('n35NoPh')); return true; }
+  const u = state.user;
+  if (u && n34D(u.phone) === need) return false;
+  if (u){ toast(t('n35Other', admPretty(need))); return true; }
+  state.n35.claimPh = need;
+  const back = location.hash;
+  try { if (state.n1ctx && state.n1ctx.setAfter) state.n1ctx.setAfter({hash:back}); else state.after = {hash:back}; } catch (e) { state.after = {hash:back}; }
+  location.hash = '#login';
+  return true;
+}
+['fpublish', 'n16pub'].forEach(k => {
+  const f0 = ACT[k];
+  if (!f0) return;
+  ACT[k] = function(el){
+    const r = route(), p = state.cl && state.cl.page;
+    if (r.view === 'claim' && p && p.state === 'ok' && n35ClaimGate()) return;
+    return f0.call(this, el);
+  };
+});
+const n35Claim0 = viewClaim;
+viewClaim = function(tok){
+  let h = n35Claim0(tok);
+  const p = state.cl && state.cl.page;
+  if (!p || p.tok !== tok || p.state !== 'ok') return h;
+  const need = n34D(p.phone), u = state.user;
+  if (u && n34D(u.phone) === need){ state.n35.claimPh = ''; return h; }
+  const note = need ? `<div class="n35ver"><p>${esc(t('n35Verify'))} <b>${esc(admPretty(need))}</b></p></div>` : `<p class="n35ver">${esc(t('n35NoPh'))}</p>`;
+  return h.replace(/(<button class="btn btn-primary[^"]*" type="button" data-act="(?:n16pub|fpublish|n1pub)")/, note + '$1');
+};
+const n35Login0 = viewLogin;
+viewLogin = function(){
+  if (state.n35.claimPh && state.auth && !state.user && (state.auth.step === 'start' || !state.auth.step)) state.auth.method = 'phone';
+  let h = n35Login0();
+  const ph = state.n35.claimPh, a = state.auth || {};
+  if (!ph || state.user || (a.step && a.step !== 'start')) return h;
+  if (/id="au-phone"/.test(h)){
+    h = h.replace(/<button class="gbtn"[\s\S]*?<\/button>/, '').replace(/<div class="or-sep">[\s\S]*?<\/div>/, '')
+      .replace(/<div class="seg" role="radiogroup">[\s\S]*?<\/div>/, '')
+      .replace(/(<input id="au-phone"[^>]*?)( value="[^"]*")?(\s*\/?>)/, `$1 value="${esc(admPretty(ph))}" readonly$3`);
+    h = h.replace(/(<div class="fq"><label class="flabel" for="au-phone">)/, `<p class="n35ver">${esc(t('n35LockPh', admPretty(ph)))}</p>$1`);
+  }
+  return h;
+};
+/* đăng xong / rời trang thì thôi khoá số */
+window.addEventListener('hashchange', () => {
+  const hs = location.hash || '';
+  if (!/^#(login|claim-)/.test(hs)) state.n35.claimPh = '';
+});
+
+/* ---------- B5: trang Nháp ---------- */
+T.vi.admGrpDraft = T.vi.n35DraftH; T.en.admGrpDraft = T.en.n35DraftH;
+function n35HourOf(o){
+  const h = (o && o.hiring) || {};
+  const v = Number(h.amtHour || (n27A(h.payType).indexOf('per_hour') >= 0 ? h.amount : 0)) || 0;
+  return v;
+}
+const n35Draft0 = admDraft;
+admDraft = function(){
+  let h = n35Draft0();
+  /* nháp chưa đăng: "Tạo X ngày trước" chứ không phải "Đăng" */
+  h = h.replace(/<div class="n29date">(Đăng|Posted)\b/g, `<div class="n29date">${t('n35Made')}`);
+  /* cảnh báo lương giờ cao */
+  (typeof admAll === 'function' ? admAll() : []).forEach(o => {
+    const v = n35HourOf(o);
+    if (o.mod !== 'draft' || v <= 30) return;
+    const id = o.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    h = h.replace(new RegExp(`(<button class="btn btn-primary" type="button" data-act="admpost" data-k="[a-z]+" data-v="${id}">)`), `<p class="n35warn">${esc(t('n35Hour', v))}</p>$1`);
+  });
+  return h;
+};
+const n35Post0 = ACT.admpost;
+T.vi.admPostQ = T.vi.n35PostQ; T.en.admPostQ = T.en.n35PostQ;
+ACT.admpost = async function(el){
+  let ok = false; const c0 = window.confirm;
+  window.confirm = m => (ok = c0.call(window, m));
+  let r;
+  try { r = await n35Post0.call(this, el); } finally { window.confirm = c0; }
+  if (!ok) return r;
+  try {
+    const c = state.n1ctx, o = (typeof admAll === 'function' ? admAll() : []).find(x => x.id === el.dataset.v);
+    const ph = n34D((o && (o.ownerPhone || admContact(o.id))) || '');
+    if (c && ph) await c.db.collection('contacts').doc(ph).collection('log').add({at:c.TS(), by:(state.user || {}).uid || '', byName:(state.user || {}).name || '', kind:'note', outcome:t('n35W_publish')});
+    if (c) await c.db.collection('audit').add({at:c.TS(), by:(state.user || {}).uid || '', byName:(state.user || {}).name || '', what:'publish', target:el.dataset.v});
+  } catch (e) { console.warn('n35post', e); }
+  return r;
+};
+
+/* ---------- B6: Tài khoản – tìm, bấm xem chi tiết ---------- */
+const n35Acc0 = n24Card;
+n24Card = function(){
+  let h = n35Acc0();
+  const q = state.n35.q.trim().toLowerCase(), qd = q.replace(/\D/g, '');
+  const rows = state.n24.rows || [];
+  const search = `<input class="n35q" id="n35-q" type="search" placeholder="${esc(t('n35Search'))}" value="${esc(state.n35.q)}">`;
+  h = h.replace(/(<nav class="ct-fs chipset">)/, search + '$1');
+  /* mỗi dòng: bấm được, lọc theo ô tìm */
+  let i = 0;
+  const shown = n34AccList();
+  h = h.replace(/<tr><td><b>/g, () => {
+    const u = shown[i++]; if (!u) return '<tr><td><b>';
+    const hit = !q || String(u.name || '').toLowerCase().indexOf(q) >= 0 || (qd && n34D(u.phone).indexOf(qd) >= 0);
+    return `<tr class="n35acc${hit ? '' : ' n35hide'}${state.n35.acc === u.id ? ' on' : ''}" data-act="n35acc" data-v="${esc(u.id)}"><td><b>`;
+  });
+  if (state.n35.acc){
+    const u = rows.find(x => x.id === state.n35.acc);
+    if (u){
+      const id = u.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      h = h.replace(new RegExp(`(<tr class="n35acc[^"]*" data-act="n35acc" data-v="${id}">[\\s\\S]*?<\\/tr>)`), `$1<tr class="n35det"><td colspan="4">${n35AccDetail(u)}</td></tr>`);
+    }
+  }
+  return h;
+};
+function n35AccDetail(u){
+  const ph = n34D(u.phone);
+  const mine = o => o && o.live && (o.ownerUid === u.id || (ph && n34D(o.ownerPhone) === ph));
+  const posts = ADS.filter(mine).map(o => `<li><a href="#ad-${esc(o.id)}">${esc(admName(o))}</a> <span class="hint">· ${esc(t('n35SalonP'))}${o.mod === 'draft' ? ' · ' + esc(t('admT_draft')) : ''}</span></li>`)
+    .concat(TECHS.filter(mine).map(o => `<li><a href="#tech-${esc(o.id)}">${esc(o.name || u.name || '')}</a> <span class="hint">· ${esc(t('n35TechP'))}</span></li>`));
+  const c = ph ? ctGet(ph) : null;
+  const ct = c ? `<a href="javascript:void 0" role="button" data-act="n34goct" data-v="${ph}">${esc(c.name || admPretty(ph))}</a> · ${esc(t('ctS_' + ctStat(Object.assign({}, c, {phone:ph}))))}` : esc(t('n35NoCt'));
+  const seen = n34Ms(u.lastSeen);
+  return `<div class="n35d"><p><b>${esc(t('n35Posts'))}:</b></p>${posts.length ? `<ul>${posts.join('')}</ul>` : `<p class="hint">${esc(t('n35NoPosts'))}</p>`}
+    <p><b>${esc(t('n35Ct'))}:</b> ${ct}</p>
+    <p><b>${esc(t('n35Made2'))}:</b> ${esc(n34When(n34Ms(u.createdAt)))}${seen ? ` · <b>${esc(t('n35Seen'))}:</b> ${esc(n34When(seen))}` : ''}</p></div>`;
+}
+ACT.n35acc = function(el){ state.n35.acc = state.n35.acc === el.dataset.v ? null : el.dataset.v; render(); };
+document.addEventListener('input', e => {
+  if (!e.target || e.target.id !== 'n35-q') return;
+  state.n35.q = e.target.value;
+  const q = state.n35.q.trim().toLowerCase(), qd = q.replace(/\D/g, '');
+  const rows = state.n24.rows || [];
+  document.querySelectorAll('tr.n35acc').forEach(tr => {
+    const u = rows.find(x => x.id === tr.dataset.v); if (!u) return;
+    const hit = !q || String(u.name || '').toLowerCase().indexOf(q) >= 0 || (qd && n34D(u.phone).indexOf(qd) >= 0);
+    tr.classList.toggle('n35hide', !hit);
+  });
+});
+/* ghi lần cuối vào web (1 lần mỗi phiên) — chỉ lúc chuyển trang, để không xoá chữ đang gõ dở */
+function n35Seen(){
+  const u = state.user, c = state.n1ctx;
+  if (!u || !c || state.n35.seen) return;
+  const a = document.activeElement;
+  if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+  state.n35.seen = true;
+  c.db.collection('users').doc(u.uid).set({lastSeen:c.TS()}, {merge:true}).catch(e => console.warn('n35seen', e));
+}
+window.addEventListener('hashchange', () => setTimeout(n35Seen, 0));
+
+/* ---------- B7: Nhập – ví dụ giả ---------- */
+const n35Fake = s => String(s || '').replace(/101 Nail Salon/g, 'ABC Nails').replace(/2108542311/g, '2105550000').replace(/\(210\) 854-2311/g, '(210) 555-0000');
+['vi', 'en'].forEach(l => { if (T[l].n13ImPh) T[l].n13ImPh = n35Fake(T[l].n13ImPh); });
+if (typeof n13Prompt === 'function'){ const p0 = n13Prompt; n13Prompt = function(){ return n35Fake(p0()); }; }
+if (typeof admImp === 'function'){ const i0 = admImp; admImp = function(){ return n35Fake(i0()); }; }
+
+/* ---------- B8: Nhật ký dễ đọc, Cài đặt ---------- */
+function n35Target(x){
+  const id = x.target || '';
+  const o = (typeof admAll === 'function' ? admAll() : []).find(z => z.id === id) || ADS.find(z => z.id === id) || TECHS.find(z => z.id === id);
+  if (o) return (TECHS.includes(o) ? t('n35TechP') + ' ' : t('n35SalonP') + ' ') + (TECHS.includes(o) ? (o.name || '') : admName(o));
+  const u = (state.n34.users || []).find(z => z.id === id);
+  if (u) return u.name || '';
+  if (/^\d{10}$/.test(id)) return admPretty(id);
+  return id.length > 14 ? '' : id;
+}
+function n35LogHtml(){
+  const L0 = state.n35.log;
+  if (!L0) return null;
+  return `<table class="adm-tbl"><tbody>${L0.slice(0, 40).map(x => {
+    const k = 'n35W_' + x.what, w = T[lang][k] ? t(k) : x.what;
+    return `<tr><td>${esc(n34When(x.atMs))}</td><td><b>${esc(w)}</b> ${esc(n35Target(x))}</td><td class="hint">${x.byName ? esc(t('n35Who') + ' ' + x.byName) : ''}</td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+const n35Set0 = admSet;
+admSet = function(){
+  let h = n35Set0();
+  const log = n35LogHtml();
+  if (log) h = h.replace(/<table class="adm-tbl"><tbody>(?:<tr><td>[^<]*<\/td><td>[a-z_]+<\/td><td>[^<]*<\/td><\/tr>)+<\/tbody><\/table>/, log);
+  let done = false; try { done = localStorage.getItem('n35rep') === '1'; } catch (e) {}
+  if (done) h = h.replace(/<div class="card adm-card"><h2 class="sec" style="margin-top:0">[^<]*<\/h2>\s*<p class="hint">[^<]*<\/p>\s*<button class="btn btn-ghost btn-block" type="button" data-act="n20fix"[\s\S]*?<\/div>/,
+    m => `<details class="card adm-card n35rep"><summary>${esc(t('n35RepDone'))}</summary>${m}</details>`);
+  return h;
+};
+if (ACT.n20fix){
+  const f0 = ACT.n20fix;
+  ACT.n20fix = async function(el){ const r = await f0.call(this, el); try { localStorage.setItem('n35rep', '1'); } catch (e) {} render(); return r; };
+}
+const n35Rm0 = ACT.admrm;
+ACT.admrm = function(el){
+  const ph = n34D(el.dataset.v), me = n34D((state.user || {}).phone);
+  if (ph && ph === me){ toast(t('n35RmSelf')); return; }
+  if (!confirm(t('n35RmQ', admPretty(ph)))) return;
+  return n35Rm0.call(this, el);
+};
+
+function n35Live(c){
+  const {db} = c;
+  let on = false;
+  setInterval(() => {
+    if (!(state.adm && state.adm.on)){ on = false; return; }
+    if (on) return; on = true;
+    db.collection('audit').orderBy('at', 'desc').limit(60).onSnapshot(s => {
+      state.n35.log = s.docs.map(d => { const x = d.data(); return {what:x.what, target:x.target, byName:x.byName || '', atMs:n34Ms(x.at) || Date.now()}; });
+      if (typeof softRender === 'function') softRender(); else render();
+    }, e => { console.warn('n35log', e); on = false; });
+  }, 1500);
+}
+if (state.n1ctx) n35Live(state.n1ctx);
+else { const iv = setInterval(() => { if (state.n1ctx){ clearInterval(iv); n35Live(state.n1ctx); } }, 300); }
+
+(() => { const st = document.createElement('style'); st.textContent = `
+.n35acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 4px}
+.n35acts .btn{min-height:44px;text-decoration:none;display:flex;align-items:center;justify-content:center}
+.n35len{margin:6px 0 0;font-size:13px}.n35len.n35bad{color:#A8201A;font-weight:700}
+.n35rec{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 10px}
+.n35ver{background:#FFF6E5;border:1px solid #F3D49B;border-radius:12px;padding:10px 12px;margin:0 0 10px;font-size:14px}
+.n35ver p{margin:0}
+.n35warn{margin:0 0 8px;color:#A8201A;font-weight:700;font-size:13px}
+.n35q{width:100%;box-sizing:border-box;margin:6px 0 10px;padding:10px 12px;border:1.5px solid var(--field);border-radius:12px;font:inherit;font-size:15px;background:#fff}
+tr.n35acc{cursor:pointer}tr.n35acc:hover,tr.n35acc.on{background:#faf2f5}
+tr.n35hide{display:none}
+tr.n35det td{background:#FBF7F8}
+.n35d p{margin:4px 0}.n35d ul{margin:2px 0 6px;padding-left:18px}
+details.n35rep summary{cursor:pointer;font-weight:700;color:var(--muted)}
+`; document.head.appendChild(st); })();
+
 render();
 })();
 </script>
