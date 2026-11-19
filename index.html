@@ -12805,214 +12805,214 @@ ACT.n33fix = function(el){
    A7 Tổng quan: khung "Hôm nay cần làm"
    ============================================================ */
 Object.assign(T.vi, {
-  n32Adm:'Admin', n32UAdm:'— Admin', n32UOther:'— Chưa chọn vai', n32None:'Chưa có tin/hồ sơ',
-  n32Reg:(n, r) => `Đã đăng ký: ${n} (${r})`, n32Bad:(n, r, w) => `⚠ ${n} đăng ký là ${r}, nhưng ở đây là ${w}`,
-  n32Salon:'Tiệm', n32Tech:'Thợ',
-  n32Lock:r => `Số này đã có tin ${r === 'salon' ? 'của tiệm' : 'hồ sơ thợ'} nên tài khoản sẽ là ${r === 'salon' ? 'Tiệm' : 'Thợ'}.`,
-  n32Hist:'Lịch sử', n32HistHide:'Ẩn lịch sử', n32HistNone:'Chưa có lần liên hệ nào được ghi.', n32HistLoad:'Đang tải…',
-  n32HistErr:'Không đọc được lịch sử. Cần cập nhật Firestore rules.',
-  n32K_sms:'Nhắn tin', n32K_invite:'Gửi link', n32K_call:'Gọi', n32K_note:'Đổi trạng thái', n32K_status:'Đổi trạng thái',
-  n32Offer:'Lời mời', n32Apply:'Ứng tuyển', n32Older:n => `Xem ${n} lần trước`, n32OlderHide:'Ẩn các lần trước',
-  n32Gone:'Tài khoản đã xoá',
-  n32Today:'Hôm nay cần làm', n32TodayNone:'Hôm nay chưa có việc gì tới hạn.',
-  n32TCall:(n) => `Gọi lại: ${n}`, n32TLate:(a, b, d) => `${a} → ${b}: chưa trả lời ${d} ngày`,
-  n32TExp:(n, d) => `Link nháp ${n}: còn ${d}`, n32TNoPost:n => `${n} đã đăng ký nhưng chưa có tin/hồ sơ`,
-  n32TReady:(n, h) => `${n} bật Sẵn sàng đã ${h}, chưa tiệm nào hỏi`,
-  n32Hrs:h => h < 24 ? `${h} giờ` : `${Math.round(h / 24)} ngày`,
-  n32Trash:'Đã xoá gần đây (giữ 30 ngày)', n32TrashD:'Tin hoặc hồ sơ bị xoá (do chủ tự xoá hay admin xoá) được giữ bản sao 30 ngày để khôi phục.',
-  n32TrashNone:'Không có gì bị xoá trong 30 ngày qua.', n32Restore:'Khôi phục', n32Restored:'Đã khôi phục.',
-  n32RestoreQ:n => `Khôi phục "${n}" lên web?`, n32Exists:'Tin này vẫn còn trên web.',
-  n32By:'xoá bởi', n32Profile:'Hồ sơ thợ', n32Post:'Tin tiệm'
+  n34Adm:'Admin', n34UAdm:'— Admin', n34UOther:'— Chưa chọn vai', n34None:'Chưa có tin/hồ sơ',
+  n34Reg:(n, r) => `Đã đăng ký: ${n} (${r})`, n34Bad:(n, r, w) => `⚠ ${n} đăng ký là ${r}, nhưng ở đây là ${w}`,
+  n34Salon:'Tiệm', n34Tech:'Thợ',
+  n34Lock:r => `Số này đã có tin ${r === 'salon' ? 'của tiệm' : 'hồ sơ thợ'} nên tài khoản sẽ là ${r === 'salon' ? 'Tiệm' : 'Thợ'}.`,
+  n34Hist:'Lịch sử', n34HistHide:'Ẩn lịch sử', n34HistNone:'Chưa có lần liên hệ nào được ghi.', n34HistLoad:'Đang tải…',
+  n34HistErr:'Không đọc được lịch sử. Cần cập nhật Firestore rules.',
+  n34K_sms:'Nhắn tin', n34K_invite:'Gửi link', n34K_call:'Gọi', n34K_note:'Đổi trạng thái', n34K_status:'Đổi trạng thái',
+  n34Offer:'Lời mời', n34Apply:'Ứng tuyển', n34Older:n => `Xem ${n} lần trước`, n34OlderHide:'Ẩn các lần trước',
+  n34Gone:'Tài khoản đã xoá',
+  n34Today:'Hôm nay cần làm', n34TodayNone:'Hôm nay chưa có việc gì tới hạn.',
+  n34TCall:(n) => `Gọi lại: ${n}`, n34TLate:(a, b, d) => `${a} → ${b}: chưa trả lời ${d} ngày`,
+  n34TExp:(n, d) => `Link nháp ${n}: còn ${d}`, n34TNoPost:n => `${n} đã đăng ký nhưng chưa có tin/hồ sơ`,
+  n34TReady:(n, h) => `${n} bật Sẵn sàng đã ${h}, chưa tiệm nào hỏi`,
+  n34Hrs:h => h < 24 ? `${h} giờ` : `${Math.round(h / 24)} ngày`,
+  n34Trash:'Đã xoá gần đây (giữ 30 ngày)', n34TrashD:'Tin hoặc hồ sơ bị xoá (do chủ tự xoá hay admin xoá) được giữ bản sao 30 ngày để khôi phục.',
+  n34TrashNone:'Không có gì bị xoá trong 30 ngày qua.', n34Restore:'Khôi phục', n34Restored:'Đã khôi phục.',
+  n34RestoreQ:n => `Khôi phục "${n}" lên web?`, n34Exists:'Tin này vẫn còn trên web.',
+  n34By:'xoá bởi', n34Profile:'Hồ sơ thợ', n34Post:'Tin tiệm'
 });
 Object.assign(T.en, {
-  n32Adm:'Admin', n32UAdm:'— Admins', n32UOther:'— No role yet', n32None:'No post/profile yet',
-  n32Reg:(n, r) => `Signed up: ${n} (${r})`, n32Bad:(n, r, w) => `⚠ ${n} signed up as ${r}, but this is a ${w}`,
-  n32Salon:'Salon', n32Tech:'Tech',
-  n32Lock:r => `This number already has a ${r === 'salon' ? 'salon post' : 'tech profile'}, so the account will be a ${r === 'salon' ? 'Salon' : 'Tech'}.`,
-  n32Hist:'History', n32HistHide:'Hide history', n32HistNone:'Nothing logged yet.', n32HistLoad:'Loading…',
-  n32HistErr:'Could not read the history. The Firestore rules need updating.',
-  n32K_sms:'Text', n32K_invite:'Link sent', n32K_call:'Call', n32K_note:'Status change', n32K_status:'Status change',
-  n32Offer:'Offer', n32Apply:'Application', n32Older:n => `Show ${n} earlier`, n32OlderHide:'Hide earlier',
-  n32Gone:'Deleted account',
-  n32Today:'Due today', n32TodayNone:'Nothing is due today.',
-  n32TCall:(n) => `Call back: ${n}`, n32TLate:(a, b, d) => `${a} → ${b}: no reply for ${d} days`,
-  n32TExp:(n, d) => `Draft link for ${n}: ${d} left`, n32TNoPost:n => `${n} signed up but has no post/profile`,
-  n32TReady:(n, h) => `${n} has been Ready for ${h} and no salon has asked`,
-  n32Hrs:h => h < 24 ? `${h} h` : `${Math.round(h / 24)} days`,
-  n32Trash:'Recently deleted (kept 30 days)', n32TrashD:'Posts and profiles that were deleted (by the owner or an admin) are kept for 30 days so you can restore them.',
-  n32TrashNone:'Nothing deleted in the last 30 days.', n32Restore:'Restore', n32Restored:'Restored.',
-  n32RestoreQ:n => `Put "${n}" back on the site?`, n32Exists:'This post is still on the site.',
-  n32By:'deleted by', n32Profile:'Tech profile', n32Post:'Salon post'
+  n34Adm:'Admin', n34UAdm:'— Admins', n34UOther:'— No role yet', n34None:'No post/profile yet',
+  n34Reg:(n, r) => `Signed up: ${n} (${r})`, n34Bad:(n, r, w) => `⚠ ${n} signed up as ${r}, but this is a ${w}`,
+  n34Salon:'Salon', n34Tech:'Tech',
+  n34Lock:r => `This number already has a ${r === 'salon' ? 'salon post' : 'tech profile'}, so the account will be a ${r === 'salon' ? 'Salon' : 'Tech'}.`,
+  n34Hist:'History', n34HistHide:'Hide history', n34HistNone:'Nothing logged yet.', n34HistLoad:'Loading…',
+  n34HistErr:'Could not read the history. The Firestore rules need updating.',
+  n34K_sms:'Text', n34K_invite:'Link sent', n34K_call:'Call', n34K_note:'Status change', n34K_status:'Status change',
+  n34Offer:'Offer', n34Apply:'Application', n34Older:n => `Show ${n} earlier`, n34OlderHide:'Hide earlier',
+  n34Gone:'Deleted account',
+  n34Today:'Due today', n34TodayNone:'Nothing is due today.',
+  n34TCall:(n) => `Call back: ${n}`, n34TLate:(a, b, d) => `${a} → ${b}: no reply for ${d} days`,
+  n34TExp:(n, d) => `Draft link for ${n}: ${d} left`, n34TNoPost:n => `${n} signed up but has no post/profile`,
+  n34TReady:(n, h) => `${n} has been Ready for ${h} and no salon has asked`,
+  n34Hrs:h => h < 24 ? `${h} h` : `${Math.round(h / 24)} days`,
+  n34Trash:'Recently deleted (kept 30 days)', n34TrashD:'Posts and profiles that were deleted (by the owner or an admin) are kept for 30 days so you can restore them.',
+  n34TrashNone:'Nothing deleted in the last 30 days.', n34Restore:'Restore', n34Restored:'Restored.',
+  n34RestoreQ:n => `Put "${n}" back on the site?`, n34Exists:'This post is still on the site.',
+  n34By:'deleted by', n34Profile:'Tech profile', n34Post:'Salon post'
 });
 T.vi.trDays = n => n <= 0 ? 'Hôm nay' : `${n} ngày`;
 T.en.trDays = n => n <= 0 ? 'Today' : (n === 1 ? '1 day' : `${n} days`);
 
-state.n32 = {users:null, hist:{}, open:{}, trOpen:{}, trash:null, lock:'', lockFor:''};
-const N32_DAY = 86400000, N32_KEEP = 30 * N32_DAY;
-const n32D = p => String(p || '').replace(/\D/g, '').slice(-10);
-const n32Ms = x => !x ? 0 : typeof x === 'number' ? x : x.toMillis ? x.toMillis() : x.seconds ? x.seconds * 1000 : 0;
-function n32TxDay(ms0){ return new Date(ms0 || Date.now()).toLocaleDateString('en-CA', {timeZone:'America/Chicago'}); }
-function n32When(ms0){
+state.n34 = {users:null, hist:{}, open:{}, trOpen:{}, trash:null, lock:'', lockFor:''};
+const N34_DAY = 86400000, N34_KEEP = 30 * N34_DAY;
+const n34D = p => String(p || '').replace(/\D/g, '').slice(-10);
+const n34Ms = x => !x ? 0 : typeof x === 'number' ? x : x.toMillis ? x.toMillis() : x.seconds ? x.seconds * 1000 : 0;
+function n34TxDay(ms0){ return new Date(ms0 || Date.now()).toLocaleDateString('en-CA', {timeZone:'America/Chicago'}); }
+function n34When(ms0){
   if (!ms0) return '—';
   try { return new Date(ms0).toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US', {timeZone:admTZ(), month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}); }
   catch (e) { return new Date(ms0).toLocaleString(); }
 }
-const n32Nm = s => s === N30_GONE ? t('n32Gone') : (s || '—');
+const n34Nm = s => s === N30_GONE ? t('n34Gone') : (s || '—');
 
 /* ---------- A1: ai là admin ---------- */
-function n32AdmSet(){
-  const s = new Set((typeof ADM_BOOT !== 'undefined' ? ADM_BOOT : []).map(n32D));
-  ((state.adm && state.adm.admins) || []).forEach(a => s.add(n32D(a.id || a.phone)));
+function n34AdmSet(){
+  const s = new Set((typeof ADM_BOOT !== 'undefined' ? ADM_BOOT : []).map(n34D));
+  ((state.adm && state.adm.admins) || []).forEach(a => s.add(n34D(a.id || a.phone)));
   return s;
 }
-function n32Role(u){
+function n34Role(u){
   if (!u) return '';
-  if (n32AdmSet().has(n32D(u.phone))) return 'admin';
+  if (n34AdmSet().has(n34D(u.phone))) return 'admin';
   return u.role === 'salon' || u.role === 'tech' ? u.role : 'other';
 }
-const n32RoleLb = r => r === 'admin' ? t('n32Adm') : r === 'salon' ? t('n32Salon') : r === 'tech' ? t('n32Tech') : t('n24Other');
-function n32Counts(rows){
+const n34RoleLb = r => r === 'admin' ? t('n34Adm') : r === 'salon' ? t('n34Salon') : r === 'tech' ? t('n34Tech') : t('n24Other');
+function n34Counts(rows){
   const c = {all:rows.length, sal:0, tech:0, adm:0, other:0};
-  rows.forEach(u => { const r = n32Role(u); if (r === 'admin') c.adm++; else if (r === 'salon') c.sal++; else if (r === 'tech') c.tech++; else c.other++; });
+  rows.forEach(u => { const r = n34Role(u); if (r === 'admin') c.adm++; else if (r === 'salon') c.sal++; else if (r === 'tech') c.tech++; else c.other++; });
   return c;
 }
 (() => {
   let raw = state.n22 ? state.n22.users : null;
   Object.defineProperty(state.n22, 'users', {configurable:true, enumerable:true,
-    get(){ return state.n32.users ? n32Counts(state.n32.users) : raw; },
+    get(){ return state.n34.users ? n34Counts(state.n34.users) : raw; },
     set(v){ raw = v; }});
 })();
 
 /* tài khoản đã có tin/hồ sơ chưa (kể cả nháp đã gắn) */
-function n32Owns(u){
+function n34Owns(u){
   if (!u) return false;
-  const ph = n32D(u.phone);
-  const hit = o => o && o.live && (o.ownerUid === u.id || (ph && n32D(o.ownerPhone) === ph));
+  const ph = n34D(u.phone);
+  const hit = o => o && o.live && (o.ownerUid === u.id || (ph && n34D(o.ownerPhone) === ph));
   return ADS.some(hit) || TECHS.some(hit);
 }
 
 /* ---------- A2: nối mọi thứ theo số điện thoại ---------- */
-function n32UserOf(ph){
-  const p = n32D(ph); if (!p || !state.n32.users) return null;
-  return state.n32.users.find(u => n32D(u.phone) === p) || null;
+function n34UserOf(ph){
+  const p = n34D(ph); if (!p || !state.n34.users) return null;
+  return state.n34.users.find(u => n34D(u.phone) === p) || null;
 }
 /* want: 'salon' | 'tech' | '' — vai trò mà chỗ đang xem mong đợi */
-function n32Badge(ph, want){
-  const u = n32UserOf(ph); if (!u) return '';
-  const r = n32Role(u), nm = u.name || t('n24NoName');
+function n34Badge(ph, want){
+  const u = n34UserOf(ph); if (!u) return '';
+  const r = n34Role(u), nm = u.name || t('n24NoName');
   if (want && (r === 'salon' || r === 'tech') && r !== want)
-    return `<span class="n32bad">${esc(t('n32Bad', nm, n32RoleLb(r), n32RoleLb(want)))}</span>`;
-  return `<span class="n32reg">${esc(t('n32Reg', nm, n32RoleLb(r)))}</span>`;
+    return `<span class="n34bad">${esc(t('n34Bad', nm, n34RoleLb(r), n34RoleLb(want)))}</span>`;
+  return `<span class="n34reg">${esc(t('n34Reg', nm, n34RoleLb(r)))}</span>`;
 }
-const n32WantOfContact = ph => { const c = ctGet(ph); return c ? (c.kind === 'tho' ? 'tech' : 'salon') : ''; };
+const n34WantOfContact = ph => { const c = ctGet(ph); return c ? (c.kind === 'tho' ? 'tech' : 'salon') : ''; };
 
 /* Danh bạ: dòng nào có tài khoản thì ghi rõ */
-const n32Row0 = ctRow;
+const n34Row0 = ctRow;
 ctRow = function(c){
-  const h = n32Row0(c), b = n32Badge(c.phone, c.kind === 'tho' ? 'tech' : 'salon');
+  const h = n34Row0(c), b = n34Badge(c.phone, c.kind === 'tho' ? 'tech' : 'salon');
   return b ? h.replace(/(<span class="ct-p">[^<]*<\/span>)/, `$1${b}`) : h;
 };
 
 /* ---------- A3: trạng thái tự chuyển (chỉ đi lên, admin vẫn đổi tay được) ---------- */
-function n32ClaimOf(ph){
-  const p = n32D(ph), m = state.cl && state.cl.map || {};
-  return Object.keys(m).map(k => m[k]).filter(c => n32D(c.phone) === p);
+function n34ClaimOf(ph){
+  const p = n34D(ph), m = state.cl && state.cl.map || {};
+  return Object.keys(m).map(k => m[k]).filter(c => n34D(c.phone) === p);
 }
-const n32Stat0 = ctStat;
+const n34Stat0 = ctStat;
 ctStat = function(c){
-  const s = n32Stat0(c);
+  const s = n34Stat0(c);
   if (!c || (s !== 'new' && s !== 'contacted')) return s;
-  if (n32ClaimOf(c.phone).some(x => x.openedAt && !x.used)) return 'pending';
+  if (n34ClaimOf(c.phone).some(x => x.openedAt && !x.used)) return 'pending';
   if (s === 'new' && ((c.msgCount || 0) + (c.callCount || 0)) > 0) return 'contacted';
   return s;
 };
 
 /* ---------- A4 + A3: Lịch sử ngay dưới thẻ ở tab Liên hệ ---------- */
-function n32HistHtml(ph){
-  const p = n32D(ph), L = state.n32.hist[p];
+function n34HistHtml(ph){
+  const p = n34D(ph), L = state.n34.hist[p];
   let body;
-  if (L === undefined) body = `<p class="hint">${t('n32HistLoad')}</p>`;
-  else if (L === 'err') body = `<p class="hint">${esc(t('n32HistErr'))}</p>`;
-  else if (!L.length) body = `<p class="hint">${t('n32HistNone')}</p>`;
-  else body = `<ul class="n32hl">${L.map(r => {
-    const k = 'n32K_' + (r.kind || 'note'), kind = T[lang][k] ? t(k) : (r.kind || '');
+  if (L === undefined) body = `<p class="hint">${t('n34HistLoad')}</p>`;
+  else if (L === 'err') body = `<p class="hint">${esc(t('n34HistErr'))}</p>`;
+  else if (!L.length) body = `<p class="hint">${t('n34HistNone')}</p>`;
+  else body = `<ul class="n34hl">${L.map(r => {
+    const k = 'n34K_' + (r.kind || 'note'), kind = T[lang][k] ? t(k) : (r.kind || '');
     const what = r.outcome || r.tplName || (r.text ? String(r.text).replace(/\s+/g, ' ').slice(0, 70) + (String(r.text).length > 70 ? '…' : '') : '');
-    return `<li><b>${esc(n32When(n32Ms(r.at)))}</b> · ${esc(kind)}${what ? ` · ${esc(what)}` : ''}${r.byName ? ` <span class="hint">· ${esc(r.byName)}</span>` : ''}</li>`;
+    return `<li><b>${esc(n34When(n34Ms(r.at)))}</b> · ${esc(kind)}${what ? ` · ${esc(what)}` : ''}${r.byName ? ` <span class="hint">· ${esc(r.byName)}</span>` : ''}</li>`;
   }).join('')}</ul>`;
-  return `<div class="n32hist">${body}</div>`;
+  return `<div class="n34hist">${body}</div>`;
 }
-async function n32LoadHist(ph){
-  const p = n32D(ph), c = state.n1ctx; if (!c || !p) return;
+async function n34LoadHist(ph){
+  const p = n34D(ph), c = state.n1ctx; if (!c || !p) return;
   try {
     const s = await c.db.collection('contacts').doc(p).collection('log').orderBy('at', 'desc').limit(40).get();
-    state.n32.hist[p] = s.docs.map(d => d.data());
-  } catch (e) { console.warn('n32hist', e); state.n32.hist[p] = 'err'; }
+    state.n34.hist[p] = s.docs.map(d => d.data());
+  } catch (e) { console.warn('n34hist', e); state.n34.hist[p] = 'err'; }
   render();
 }
-ACT.n32hist = function(el){
-  const p = n32D(el.dataset.v);
-  state.n32.open[p] = !state.n32.open[p];
-  if (state.n32.open[p]){ delete state.n32.hist[p]; n32LoadHist(p); }
+ACT.n34hist = function(el){
+  const p = n34D(el.dataset.v);
+  state.n34.open[p] = !state.n34.open[p];
+  if (state.n34.open[p]){ delete state.n34.hist[p]; n34LoadHist(p); }
   render();
 };
-const n32Send0 = admSend;
+const n34Send0 = admSend;
 admSend = function(){
-  let h = n32Send0();
-  h = h.replace(/(<button class="sq-ph" type="button" data-act="n16call" data-v="(\d+)">[\s\S]*?<\/button>)/, (m, b, ph) => b + n32Badge(ph, n32WantOfContact(ph) || n32DraftWant(ph)));
+  let h = n34Send0();
+  h = h.replace(/(<button class="sq-ph" type="button" data-act="n16call" data-v="(\d+)">[\s\S]*?<\/button>)/, (m, b, ph) => b + n34Badge(ph, n34WantOfContact(ph) || n34DraftWant(ph)));
   h = h.replace(/<button class="btn-link" type="button" data-act="ctopen" data-v="(\d+)">[^<]*<\/button>/, (m, ph) => {
-    const p = n32D(ph), on = !!state.n32.open[p];
-    return `<button class="btn-link" type="button" data-act="n32hist" data-v="${p}" aria-expanded="${on}">${t(on ? 'n32HistHide' : 'n32Hist')}</button>${on ? n32HistHtml(p) : ''}`;
+    const p = n34D(ph), on = !!state.n34.open[p];
+    return `<button class="btn-link" type="button" data-act="n34hist" data-v="${p}" aria-expanded="${on}">${t(on ? 'n34HistHide' : 'n34Hist')}</button>${on ? n34HistHtml(p) : ''}`;
   });
   return h;
 };
 /* copy tin ở Liên hệ: Chưa liên hệ → Đã liên hệ (không kéo lùi trạng thái khác) */
-const n32Copy0 = ACT.sdcopy;
+const n34Copy0 = ACT.sdcopy;
 ACT.sdcopy = async function(el){
-  await n32Copy0(el);
+  await n34Copy0(el);
   try {
-    const ph = n32D((document.querySelector('.sq-ph[data-act=n16call]') || {}).dataset ? document.querySelector('.sq-ph[data-act=n16call]').dataset.v : '');
+    const ph = n34D((document.querySelector('.sq-ph[data-act=n16call]') || {}).dataset ? document.querySelector('.sq-ph[data-act=n16call]').dataset.v : '');
     if (!ph) return;
-    const st = n32Stat0(Object.assign({}, ctGet(ph) || {}, {phone:ph}));
+    const st = n34Stat0(Object.assign({}, ctGet(ph) || {}, {phone:ph}));
     if (st === 'new') await window.ctTouch(ph, {status:'contacted', n15set:1});
-    if (state.n32.open[ph]) n32LoadHist(ph);
+    if (state.n34.open[ph]) n34LoadHist(ph);
     render();
-  } catch (e) { console.warn('n32copy', e); }
+  } catch (e) { console.warn('n34copy', e); }
 };
 
 /* ---------- nháp: vai trò mong đợi theo loại tin ---------- */
-function n32DraftWant(ph){
-  const p = n32D(ph);
-  const d = (typeof admAll === 'function' ? admAll() : []).find(o => o.mod === 'draft' && (n32D(admContact(o.id)) === p || n32D(o.ownerPhone) === p));
+function n34DraftWant(ph){
+  const p = n34D(ph);
+  const d = (typeof admAll === 'function' ? admAll() : []).find(o => o.mod === 'draft' && (n34D(admContact(o.id)) === p || n34D(o.ownerPhone) === p));
   return d ? (TECHS.includes(d) ? 'tech' : 'salon') : '';
 }
-const n32Draft0 = typeof admDraft === 'function' ? admDraft : null;
-if (n32Draft0) admDraft = function(){
-  return n32Draft0().replace(/(<p class="n1sub" style="padding:0 14px">📞 [^<]*?\(?(\d{3})\)?[\s-]*(\d{3})-(\d{4})<\/p>)/g, (m, all, a, b, c) => {
+const n34Draft0 = typeof admDraft === 'function' ? admDraft : null;
+if (n34Draft0) admDraft = function(){
+  return n34Draft0().replace(/(<p class="n1sub" style="padding:0 14px">📞 [^<]*?\(?(\d{3})\)?[\s-]*(\d{3})-(\d{4})<\/p>)/g, (m, all, a, b, c) => {
     const ph = a + b + c;
-    return all + `<p class="n32drow">${n32Badge(ph, n32DraftWant(ph))}</p>`;
+    return all + `<p class="n34drow">${n34Badge(ph, n34DraftWant(ph))}</p>`;
   });
 };
 
 /* ---------- A2: khoá vai trò khi đăng ký nếu số đã có tin ---------- */
-const n32Claim0 = viewClaim;
+const n34Claim0 = viewClaim;
 viewClaim = function(tok){
   try {
     const pg = state.cl && state.cl.page;
-    const ph = pg && n32D(pg.phone || (pg.claim || {}).phone || '');
-    if (pg && pg.tok === tok && pg.coll && ph) localStorage.setItem('n32claim', JSON.stringify({coll:pg.coll, phone:ph, at:Date.now()}));
+    const ph = pg && n34D(pg.phone || (pg.claim || {}).phone || '');
+    if (pg && pg.tok === tok && pg.coll && ph) localStorage.setItem('n34claim', JSON.stringify({coll:pg.coll, phone:ph, at:Date.now()}));
   } catch (e) {}
-  return n32Claim0(tok);
+  return n34Claim0(tok);
 };
-async function n32FindLock(){
+async function n34FindLock(){
   const p = state.pendingUser, c = state.n1ctx;
   if (!p || !c) return;
-  const ph = n32D(p.phone), key = p.uid + ph;
-  if (state.n32.lockFor === key) return;
-  state.n32.lockFor = key; state.n32.lock = '';
+  const ph = n34D(p.phone), key = p.uid + ph;
+  if (state.n34.lockFor === key) return;
+  state.n34.lockFor = key; state.n34.lock = '';
   let lock = '';
   try {
-    const cl = JSON.parse(localStorage.getItem('n32claim') || 'null');
-    if (cl && cl.coll && cl.phone === ph && Date.now() - (cl.at || 0) < 14 * N32_DAY) lock = cl.coll === 'techs' ? 'tech' : 'salon';
+    const cl = JSON.parse(localStorage.getItem('n34claim') || 'null');
+    if (cl && cl.coll && cl.phone === ph && Date.now() - (cl.at || 0) < 14 * N34_DAY) lock = cl.coll === 'techs' ? 'tech' : 'salon';
   } catch (e) {}
   if (ph){
     try {
@@ -13021,57 +13021,57 @@ async function n32FindLock(){
         c.db.collection('techs').where('ownerPhone', '==', own).limit(3).get()]);
       if (!a.empty && b.empty) lock = 'salon';
       else if (b.empty === false && a.empty) lock = 'tech';
-    } catch (e) { console.warn('n32lock', e); }
+    } catch (e) { console.warn('n34lock', e); }
   }
-  state.n32.lock = lock;
+  state.n34.lock = lock;
   if (lock) state.auth.role = lock;
   render();
 }
-const n32Login0 = viewLogin;
+const n34Login0 = viewLogin;
 viewLogin = function(){
-  let h = n32Login0();
+  let h = n34Login0();
   const a = state.auth || {};
   if (a.step !== 'profile' || !state.pendingUser) return h;
-  n32FindLock();
-  const lk = state.n32.lock;
+  n34FindLock();
+  const lk = state.n34.lock;
   if (!lk) return h;
   a.role = lk;
   h = h.replace(/<button[^>]*data-act="aurole" data-v="(salon|tech|other)"[^>]*>[\s\S]*?<\/button>/g, (m, v) => v === lk ? m : '');
-  return h.replace(/(<div class="seg[^"]*" role="radiogroup">[\s\S]*?<\/div>)/, `$1<p class="hint n32lock">${esc(t('n32Lock', lk))}</p>`);
+  return h.replace(/(<div class="seg[^"]*" role="radiogroup">[\s\S]*?<\/div>)/, `$1<p class="hint n34lock">${esc(t('n34Lock', lk))}</p>`);
 };
-const n32Role0 = ACT.aurole;
+const n34Role0 = ACT.aurole;
 ACT.aurole = function(el){
-  if (state.n32.lock && el.dataset.v !== state.n32.lock) return;
-  return n32Role0.call(this, el);
+  if (state.n34.lock && el.dataset.v !== state.n34.lock) return;
+  return n34Role0.call(this, el);
 };
-const n32Done0 = ACT.audone;
+const n34Done0 = ACT.audone;
 ACT.audone = function(el){
-  if (state.n32.lock) state.auth.role = state.n32.lock;
-  return n32Done0.call(this, el);
+  if (state.n34.lock) state.auth.role = state.n34.lock;
+  return n34Done0.call(this, el);
 };
 /* ---------- A1 + A2: danh sách Tài khoản ---------- */
-function n32AccList(){
+function n34AccList(){
   const all = state.n24.rows || [], f = state.n24.f;
-  if (f === 'none') return all.filter(u => { const r = n32Role(u); return r !== 'admin' && !n32Owns(u); });
-  if (f === 'adm') return all.filter(u => n32Role(u) === 'admin');
-  if (f === 'sal') return all.filter(u => n32Role(u) === 'salon');
-  if (f === 'tech') return all.filter(u => n32Role(u) === 'tech');
+  if (f === 'none') return all.filter(u => { const r = n34Role(u); return r !== 'admin' && !n34Owns(u); });
+  if (f === 'adm') return all.filter(u => n34Role(u) === 'admin');
+  if (f === 'sal') return all.filter(u => n34Role(u) === 'salon');
+  if (f === 'tech') return all.filter(u => n34Role(u) === 'tech');
   return all;
 }
-function n32AccWarn(u){
-  const r = n32Role(u), ph = n32D(u.phone);
+function n34AccWarn(u){
+  const r = n34Role(u), ph = n34D(u.phone);
   if (r !== 'salon' && r !== 'tech') return '';
-  const ownsAd = ADS.some(o => o.live && (o.ownerUid === u.id || (ph && n32D(o.ownerPhone) === ph)));
-  const ownsTech = TECHS.some(o => o.live && (o.ownerUid === u.id || (ph && n32D(o.ownerPhone) === ph)));
+  const ownsAd = ADS.some(o => o.live && (o.ownerUid === u.id || (ph && n34D(o.ownerPhone) === ph)));
+  const ownsTech = TECHS.some(o => o.live && (o.ownerUid === u.id || (ph && n34D(o.ownerPhone) === ph)));
   const c = ph ? ctGet(ph) : null;
   const want = ownsAd && !ownsTech ? 'salon' : ownsTech && !ownsAd ? 'tech' : c ? (c.kind === 'tho' ? 'tech' : 'salon') : '';
   if (!want || want === r) return '';
   const where = c && c.name ? c.name : '';
-  return `<span class="n32bad">${esc(t('n32Bad', u.name || '', n32RoleLb(r), n32RoleLb(want)))}${where ? ` · ${esc(where)}` : ''}</span>`;
+  return `<span class="n34bad">${esc(t('n34Bad', u.name || '', n34RoleLb(r), n34RoleLb(want)))}${where ? ` · ${esc(where)}` : ''}</span>`;
 }
 n24Card = function(){
-  const all = state.n24.rows || [], l = n32AccList();
-  const n = k => { const keep = state.n24.f; state.n24.f = k; const x = n32AccList().length; state.n24.f = keep; return x; };
+  const all = state.n24.rows || [], l = n34AccList();
+  const n = k => { const keep = state.n24.f; state.n24.f = k; const x = n34AccList().length; state.n24.f = keep; return x; };
   const chip = (k, lb) => `<button type="button" class="choice${state.n24.f === k ? ' on' : ''}" data-act="n24pick" data-v="${k}">${lb} (${n(k)})</button>`;
   let body;
   if (state.n24.err) body = `<p class="empty-s">${esc(t('n24Err'))}</p>`;
@@ -13079,67 +13079,67 @@ n24Card = function(){
   else if (!l.length) body = `<p class="empty-s">${t('n24Empty')}</p>`;
   else body = `<div class="im-wrap"><table class="im-tbl ct-tbl">
     <thead><tr><th>${t('n24Name')}</th><th>${t('n24Ph')}</th><th>${t('n24Kind')}</th><th>${t('n24When')}</th></tr></thead>
-    <tbody>${l.map(x => `<tr><td><b>${esc(x.name || t('n24NoName'))}</b>${n32AccWarn(x)}</td>
-      <td>${esc(admPretty(n32D(x.phone)) || '—')}</td>
-      <td>${esc(n32RoleLb(n32Role(x)))}</td><td>${esc(n32When(n32Ms(x.createdAt)))}</td></tr>`).join('')}</tbody></table></div>`;
+    <tbody>${l.map(x => `<tr><td><b>${esc(x.name || t('n24NoName'))}</b>${n34AccWarn(x)}</td>
+      <td>${esc(admPretty(n34D(x.phone)) || '—')}</td>
+      <td>${esc(n34RoleLb(n34Role(x)))}</td><td>${esc(n34When(n34Ms(x.createdAt)))}</td></tr>`).join('')}</tbody></table></div>`;
   return `<div class="card adm-card"><button class="btn-link" type="button" data-act="n24close">${t('n24Back')}</button>
     <h2 class="sec">${t('n24UH')}</h2><p class="hint">${esc(t('n24UD'))}</p>
-    <nav class="ct-fs chipset">${chip('all', t('n24All'))}${chip('sal', t('n24Sal'))}${chip('tech', t('n24Tech'))}${chip('adm', t('n32Adm'))}${chip('none', t('n32None'))}</nav>
+    <nav class="ct-fs chipset">${chip('all', t('n24All'))}${chip('sal', t('n24Sal'))}${chip('tech', t('n24Tech'))}${chip('adm', t('n34Adm'))}${chip('none', t('n34None'))}</nav>
     ${body}</div>`;
 };
-const n32Go0 = ACT.n24go;
+const n34Go0 = ACT.n24go;
 ACT.n24go = function(el){
   const v = el.dataset.v;
   if (v === 'u-adm' || v === 'u-none'){
-    const fake = {dataset:{v:'u-all'}}; n32Go0(fake);
+    const fake = {dataset:{v:'u-all'}}; n34Go0(fake);
     state.n24.f = v === 'u-adm' ? 'adm' : 'none'; render(); return;
   }
-  return n32Go0(el);
+  return n34Go0(el);
 };
 
 /* ---------- A5: Theo dõi – đúng chiều, đúng loại, gộp theo cặp ---------- */
-function n32ReqCard(){
+function n34ReqCard(){
   const all = (state.tr && state.tr.threads || []).filter(x => x.kind === 'apply' || x.kind === 'offer');
   const groups = {};
   all.forEach(x => { const k = (x.members || []).slice().sort().join('|'); (groups[k] = groups[k] || []).push(x); });
-  const lastMs = x => n32Ms(x.lastAt) || n32Ms(x.createdAt);
+  const lastMs = x => n34Ms(x.lastAt) || n34Ms(x.createdAt);
   const keys = Object.keys(groups).sort((a, b) => Math.max(...groups[b].map(lastMs)) - Math.max(...groups[a].map(lastMs)));
   const row = (x, sub) => {
-    const nm = x.names || {}, from = n32Nm(nm[x.from]), to = n32Nm(nm[(x.members || []).find(m => m !== x.from)]);
+    const nm = x.names || {}, from = n34Nm(nm[x.from]), to = n34Nm(nm[(x.members || []).find(m => m !== x.from)]);
     const offer = x.kind === 'offer';
     const st = x.status === 'accepted' ? t('trOk') : x.status === 'declined' ? t('trNo') : x.status === 'blocked' ? t('trBlock') : x.status === 'withdrawn' ? (lang === 'vi' ? 'Đã rút' : 'Withdrawn') : t('trPend');
-    const d = Math.max(0, Math.floor((Date.now() - lastMs(x)) / N32_DAY));
-    const late = (!x.status || x.status === 'pending') && Date.now() - lastMs(x) >= N32_DAY;
-    return `<tr class="${late ? 'tr-late' : ''}${sub ? ' n32sub' : ''}"><td>${esc(from)}</td><td>${esc(to)}</td>
-      <td>${esc(t(offer ? 'n32Offer' : 'n32Apply'))}</td><td>${esc(st)}${late ? ` <b class="im-x">${t('trLate')}</b>` : ''}</td>
+    const d = Math.max(0, Math.floor((Date.now() - lastMs(x)) / N34_DAY));
+    const late = (!x.status || x.status === 'pending') && Date.now() - lastMs(x) >= N34_DAY;
+    return `<tr class="${late ? 'tr-late' : ''}${sub ? ' n34sub' : ''}"><td>${esc(from)}</td><td>${esc(to)}</td>
+      <td>${esc(t(offer ? 'n34Offer' : 'n34Apply'))}</td><td>${esc(st)}${late ? ` <b class="im-x">${t('trLate')}</b>` : ''}</td>
       <td>${esc(t('trDays', d))}</td><td>${late && !sub ? `<button class="btn-link" type="button" data-act="trnudge" data-v="${offer ? 'tech' : 'salon'}" data-t="${esc((x.about || {}).title || '')}">${t('trNudge')}</button>` : ''}</td></tr>`;
   };
   const rows = keys.map(k => {
-    const g = groups[k].slice().sort((a, b) => lastMs(b) - lastMs(a)), open = !!state.n32.trOpen[k];
-    const more = g.length > 1 ? `<tr class="n32more"><td colspan="6"><button class="btn-link" type="button" data-act="n32tr" data-v="${esc(k)}">${esc(open ? t('n32OlderHide') : t('n32Older', g.length - 1))}</button></td></tr>` : '';
+    const g = groups[k].slice().sort((a, b) => lastMs(b) - lastMs(a)), open = !!state.n34.trOpen[k];
+    const more = g.length > 1 ? `<tr class="n34more"><td colspan="6"><button class="btn-link" type="button" data-act="n34tr" data-v="${esc(k)}">${esc(open ? t('n34OlderHide') : t('n34Older', g.length - 1))}</button></td></tr>` : '';
     return row(g[0]) + more + (open ? g.slice(1).map(x => row(x, true)).join('') : '');
   }).join('');
   return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('trReq')} (${keys.length})</h2>
       <p class="hint">${esc(t('trOnly'))}</p>
       ${keys.length ? `<div class="im-wrap"><table class="im-tbl"><thead><tr><th>${t('trWho')}</th><th>${t('trTo')}</th><th>${t('trKind')}</th><th>${t('trSt')}</th><th>${t('trAge')}</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : `<p class="empty-s">${esc(t('trNoReq') || '')}</p>`}</div>`;
 }
-ACT.n32tr = function(el){ const k = el.dataset.v; state.n32.trOpen[k] = !state.n32.trOpen[k]; render(); };
-const n32Track0 = admTrack;
+ACT.n34tr = function(el){ const k = el.dataset.v; state.n34.trOpen[k] = !state.n34.trOpen[k]; render(); };
+const n34Track0 = admTrack;
 admTrack = function(){
-  const h = n32Track0();
+  const h = n34Track0();
   const head = `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('trReq')} (`;
   const i = h.indexOf(head);
   if (i < 0) return h;
   const rest = h.slice(i);
   const m = rest.match(/^[\s\S]*?(<\/tbody><\/table><\/div><\/div>|<p class="empty-s">[^<]*<\/p><\/div>)/);
   if (!m) return h;
-  return h.slice(0, i) + n32ReqCard() + rest.slice(m[0].length);
+  return h.slice(0, i) + n34ReqCard() + rest.slice(m[0].length);
 };
 
 /* ---------- A6: xoá thì giữ bản sao 30 ngày ---------- */
-state.n32.noTrash = false;
-function n32WrapDb(db){
-  if (!db || db.__n32) return;
+state.n34.noTrash = false;
+function n34WrapDb(db){
+  if (!db || db.__n34) return;
   const C = db.collection.bind(db);
   db.collection = function(name){
     const col = C(name);
@@ -13148,15 +13148,15 @@ function n32WrapDb(db){
     col.doc = function(id){
       const ref = D(id), del = ref.delete.bind(ref);
       ref.delete = async function(){
-        if (!state.n32.noTrash){
+        if (!state.n34.noTrash){
           try {
             const s = await ref.get();
             if (s.exists){
               const u = state.user || {}, data = s.data(), a = data.ad || {};
               await C('trash').add({coll:name, docId:ref.id, data, name:a.businessName || a.name || data.ownerName || '',
-                phone:n32D(data.ownerPhone || ''), by:u.uid || '', byName:u.name || '', at:firebase.firestore.FieldValue.serverTimestamp(), atMs:Date.now()});
+                phone:n34D(data.ownerPhone || ''), by:u.uid || '', byName:u.name || '', at:firebase.firestore.FieldValue.serverTimestamp(), atMs:Date.now()});
             }
-          } catch (e) { console.warn('n32trash', e); }
+          } catch (e) { console.warn('n34trash', e); }
         }
         return del();
       };
@@ -13164,119 +13164,119 @@ function n32WrapDb(db){
     };
     return col;
   };
-  db.__n32 = true;
+  db.__n34 = true;
 }
 if (ACT.n28delacc){
-  const n32Acc0 = ACT.n28delacc;
-  ACT.n28delacc = async function(el){ state.n32.noTrash = true; try { return await n32Acc0.call(this, el); } finally { state.n32.noTrash = false; } };
+  const n34Acc0 = ACT.n28delacc;
+  ACT.n28delacc = async function(el){ state.n34.noTrash = true; try { return await n34Acc0.call(this, el); } finally { state.n34.noTrash = false; } };
 }
-function n32TrashCard(){
-  const L = (state.n32.trash || []).filter(x => Date.now() - (x.atMs || n32Ms(x.at)) < N32_KEEP)
+function n34TrashCard(){
+  const L = (state.n34.trash || []).filter(x => Date.now() - (x.atMs || n34Ms(x.at)) < N34_KEEP)
     .sort((a, b) => (b.atMs || 0) - (a.atMs || 0));
-  if (state.n32.trash === null) return '';
+  if (state.n34.trash === null) return '';
   const rows = L.map(x => {
     const live = (x.coll === 'ads' ? ADS : TECHS).some(o => o.live && o.id === x.docId);
-    return `<tr><td><b>${esc(x.name || '—')}</b><span class="ct-p">${esc(t(x.coll === 'techs' ? 'n32Profile' : 'n32Post'))}</span></td>
-      <td>${esc(n32When(x.atMs || n32Ms(x.at)))}</td><td>${esc(t('n32By'))} ${esc(x.byName || '—')}</td>
-      <td>${live ? `<span class="hint">${esc(t('n32Exists'))}</span>` : `<button class="btn-link" type="button" data-act="n32restore" data-v="${esc(x.id)}">${t('n32Restore')}</button>`}</td></tr>`;
+    return `<tr><td><b>${esc(x.name || '—')}</b><span class="ct-p">${esc(t(x.coll === 'techs' ? 'n34Profile' : 'n34Post'))}</span></td>
+      <td>${esc(n34When(x.atMs || n34Ms(x.at)))}</td><td>${esc(t('n34By'))} ${esc(x.byName || '—')}</td>
+      <td>${live ? `<span class="hint">${esc(t('n34Exists'))}</span>` : `<button class="btn-link" type="button" data-act="n34restore" data-v="${esc(x.id)}">${t('n34Restore')}</button>`}</td></tr>`;
   }).join('');
-  return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">🗑 ${t('n32Trash')}</h2><p class="hint">${esc(t('n32TrashD'))}</p>
-    ${L.length ? `<div class="im-wrap"><table class="im-tbl ct-tbl"><tbody>${rows}</tbody></table></div>` : `<p class="empty-s">${t('n32TrashNone')}</p>`}</div>`;
+  return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">🗑 ${t('n34Trash')}</h2><p class="hint">${esc(t('n34TrashD'))}</p>
+    ${L.length ? `<div class="im-wrap"><table class="im-tbl ct-tbl"><tbody>${rows}</tbody></table></div>` : `<p class="empty-s">${t('n34TrashNone')}</p>`}</div>`;
 }
-ACT.n32restore = async function(el){
-  const x = (state.n32.trash || []).find(z => z.id === el.dataset.v), c = state.n1ctx;
+ACT.n34restore = async function(el){
+  const x = (state.n34.trash || []).find(z => z.id === el.dataset.v), c = state.n1ctx;
   if (!x || !c) return;
-  if (!confirm(t('n32RestoreQ', x.name || x.docId))) return;
+  if (!confirm(t('n34RestoreQ', x.name || x.docId))) return;
   el.disabled = true;
   try {
     const ref = c.db.collection(x.coll).doc(x.docId), s = await ref.get();
-    if (s.exists){ toast(t('n32Exists')); el.disabled = false; return; }
+    if (s.exists){ toast(t('n34Exists')); el.disabled = false; return; }
     await ref.set(x.data);
     await c.db.collection('trash').doc(x.id).delete();
     try { await c.db.collection('audit').add({at:c.TS(), by:(state.user || {}).uid || '', byName:(state.user || {}).name || '', what:'restore', target:x.docId}); } catch (e) {}
-    toast(t('n32Restored'));
-  } catch (e) { console.warn('n32restore', e); toast(c.errText ? c.errText(e) : String(e)); el.disabled = false; }
+    toast(t('n34Restored'));
+  } catch (e) { console.warn('n34restore', e); toast(c.errText ? c.errText(e) : String(e)); el.disabled = false; }
 };
 
 /* ---------- A7: Hôm nay cần làm ---------- */
-function n32TodayItems(){
-  const out = [], now = Date.now(), today = n32TxDay(now);
+function n34TodayItems(){
+  const out = [], now = Date.now(), today = n34TxDay(now);
   /* 1. tới ngày gọi lại */
   (typeof ctAll === 'function' ? ctAll() : []).forEach(c => {
     if (!c.nextAt || c.nextAt > today) return;
     const st = ctStat(Object.assign({}, c, {phone:c.phone || ''}));
     if (['refused', 'unreach', 'posted'].indexOf(st) >= 0) return;
-    out.push({ic:'📞', txt:t('n32TCall', c.name || admPretty(c.phone)), act:`data-act="n32goct" data-v="${esc(n32D(c.phone))}"`});
+    out.push({ic:'📞', txt:t('n34TCall', c.name || admPretty(c.phone)), act:`data-act="n34goct" data-v="${esc(n34D(c.phone))}"`});
   });
   /* 2. lời mời / ứng tuyển quá 7 ngày chưa trả lời */
   (state.tr && state.tr.threads || []).forEach(x => {
     if ((x.kind !== 'apply' && x.kind !== 'offer') || (x.status && x.status !== 'pending')) return;
-    const age = now - (n32Ms(x.createdAt) || n32Ms(x.lastAt));
-    if (age < 7 * N32_DAY) return;
+    const age = now - (n34Ms(x.createdAt) || n34Ms(x.lastAt));
+    if (age < 7 * N34_DAY) return;
     const nm = x.names || {}, to = (x.members || []).find(m => m !== x.from);
-    out.push({ic:'⏳', txt:t('n32TLate', n32Nm(nm[x.from]), n32Nm(nm[to]), Math.floor(age / N32_DAY)), act:'href="#admin-track"'});
+    out.push({ic:'⏳', txt:t('n34TLate', n34Nm(nm[x.from]), n34Nm(nm[to]), Math.floor(age / N34_DAY)), act:'href="#admin-track"'});
   });
   /* 3. link nháp còn ≤ 2 ngày */
   const m = state.cl && state.cl.map || {};
   Object.keys(m).map(k => m[k]).forEach(c => {
     const left = (c.expMs || 0) - now;
-    if (c.used || left <= 0 || left > 2 * N32_DAY) return;
+    if (c.used || left <= 0 || left > 2 * N34_DAY) return;
     const o = (typeof admAll === 'function' ? admAll() : []).find(z => z.id === c.docId);
     if (!o || o.mod !== 'draft') return;
-    out.push({ic:'⌛', txt:t('n32TExp', admName(o), t('n32Hrs', Math.max(1, Math.round(left / 3600000)))), act:'href="#admin-draft"'});
+    out.push({ic:'⌛', txt:t('n34TExp', admName(o), t('n34Hrs', Math.max(1, Math.round(left / 3600000)))), act:'href="#admin-draft"'});
   });
   /* 4. đăng ký mà chưa có tin/hồ sơ */
-  (state.n32.users || []).forEach(u => {
-    const r = n32Role(u);
-    if (r === 'admin' || r === 'other' || n32Owns(u)) return;
-    out.push({ic:'🆕', txt:t('n32TNoPost', u.name || admPretty(n32D(u.phone))), act:'data-act="n24go" data-v="u-none"'});
+  (state.n34.users || []).forEach(u => {
+    const r = n34Role(u);
+    if (r === 'admin' || r === 'other' || n34Owns(u)) return;
+    out.push({ic:'🆕', txt:t('n34TNoPost', u.name || admPretty(n34D(u.phone))), act:'data-act="n24go" data-v="u-none"'});
   });
   /* 5. thợ bật Sẵn sàng > 24 giờ mà chưa ai hỏi */
   TECHS.forEach(x => {
     const r = x.ready; if (!x.live || !r || !r.on) return;
-    const since = r.atC || n32Ms(r.at) || 0, until = r.until || 0;
-    if (!since || now - since < N32_DAY || (until && until < now)) return;
-    const asked = (state.tr && state.tr.threads || []).some(th => th.techId === x.id && (n32Ms(th.createdAt) || 0) >= since);
+    const since = r.atC || n34Ms(r.at) || 0, until = r.until || 0;
+    if (!since || now - since < N34_DAY || (until && until < now)) return;
+    const asked = (state.tr && state.tr.threads || []).some(th => th.techId === x.id && (n34Ms(th.createdAt) || 0) >= since);
     if (asked) return;
-    out.push({ic:'⚡', txt:t('n32TReady', x.name || '', t('n32Hrs', Math.floor((now - since) / 3600000))), act:`href="#tech-${esc(x.id)}"`});
+    out.push({ic:'⚡', txt:t('n34TReady', x.name || '', t('n34Hrs', Math.floor((now - since) / 3600000))), act:`href="#tech-${esc(x.id)}"`});
   });
   return out;
 }
-function n32TodayCard(){
-  const L = n32TodayItems();
-  return `<div class="card adm-card n32today"><h2 class="sec" style="margin-top:0">📋 ${t('n32Today')}${L.length ? ` (${L.length})` : ''}</h2>
-    ${L.length ? `<ul class="n32tl">${L.map(x => `<li><a ${x.act}${x.act.indexOf('href') === 0 ? '' : ' href="javascript:void 0" role="button"'}>${x.ic} ${esc(x.txt)}</a></li>`).join('')}</ul>`
-      : `<p class="empty-s">${t('n32TodayNone')}</p>`}</div>`;
+function n34TodayCard(){
+  const L = n34TodayItems();
+  return `<div class="card adm-card n34today"><h2 class="sec" style="margin-top:0">📋 ${t('n34Today')}${L.length ? ` (${L.length})` : ''}</h2>
+    ${L.length ? `<ul class="n34tl">${L.map(x => `<li><a ${x.act}${x.act.indexOf('href') === 0 ? '' : ' href="javascript:void 0" role="button"'}>${x.ic} ${esc(x.txt)}</a></li>`).join('')}</ul>`
+      : `<p class="empty-s">${t('n34TodayNone')}</p>`}</div>`;
 }
-ACT.n32goct = function(el){
+ACT.n34goct = function(el){
   const ph = el.dataset.v;
   location.hash = '#admin-ct';
   setTimeout(() => { try { ACT.ctopen({dataset:{v:ph}}); } catch (e) { console.warn(e); } }, 50);
 };
 
-const n32Over0 = admOver;
+const n34Over0 = admOver;
 admOver = function(){
-  let h = n32Over0();
+  let h = n34Over0();
   if ((state.n22 && state.n22.rev) || (state.n24 && state.n24.view)) return h;
-  const u = state.n32.users ? n32Counts(state.n32.users) : null;
+  const u = state.n34.users ? n34Counts(state.n34.users) : null;
   if (u){
-    const extra = `<tr class="n24-row" data-act="n24go" data-v="u-adm"><td>${t('n32UAdm')}</td><td><b>${u.adm}</b></td></tr>`
-      + (u.other ? `<tr><td>${t('n32UOther')}</td><td><b>${u.other}</b></td></tr>` : '');
+    const extra = `<tr class="n24-row" data-act="n24go" data-v="u-adm"><td>${t('n34UAdm')}</td><td><b>${u.adm}</b></td></tr>`
+      + (u.other ? `<tr><td>${t('n34UOther')}</td><td><b>${u.other}</b></td></tr>` : '');
     h = h.replace(/(<tr class="n24-row" data-act="n24go" data-v="u-tech">[\s\S]*?<\/tr>)/, `$1${extra}`);
   }
-  return n32TodayCard() + h + n32TrashCard();
+  return n34TodayCard() + h + n34TrashCard();
 };
 
 /* ---------- dữ liệu cho admin ---------- */
-function n32Live(c){
+function n34Live(c){
   const {db} = c;
-  n32WrapDb(db);
+  n34WrapDb(db);
   let on = false, last = 0;
   async function users(){
     try {
       const s = await db.collection('users').limit(500).get();
-      state.n32.users = s.docs.map(d => Object.assign({id:d.id}, d.data() || {}));
-    } catch (e) { console.warn('n32users', e); }
+      state.n34.users = s.docs.map(d => Object.assign({id:d.id}, d.data() || {}));
+    } catch (e) { console.warn('n34users', e); }
     if (typeof softRender === 'function') softRender(); else render();
   }
   setInterval(() => {
@@ -13284,12 +13284,12 @@ function n32Live(c){
     if (!on){
       on = true;
       db.collection('trash').limit(200).onSnapshot(s => {
-        state.n32.trash = s.docs.map(d => Object.assign({id:d.id}, d.data()));
+        state.n34.trash = s.docs.map(d => Object.assign({id:d.id}, d.data()));
         /* dọn bản sao quá 30 ngày */
-        state.n32.trash.filter(x => Date.now() - (x.atMs || n32Ms(x.at) || Date.now()) > N32_KEEP)
+        state.n34.trash.filter(x => Date.now() - (x.atMs || n34Ms(x.at) || Date.now()) > N34_KEEP)
           .forEach(x => db.collection('trash').doc(x.id).delete().catch(() => {}));
         if (typeof softRender === 'function') softRender(); else render();
-      }, e => { console.warn('n32trash', e); state.n32.trash = []; });
+      }, e => { console.warn('n34trash', e); state.n34.trash = []; });
     }
     if (Date.now() - last > 60000){ last = Date.now(); users(); }
   }, 1500);
@@ -13297,38 +13297,38 @@ function n32Live(c){
   const g = ACT.n24go;
   ACT.n24go = function(el){ last = 0; return g(el); };
 }
-if (state.n1ctx) n32Live(state.n1ctx);
-else { const iv = setInterval(() => { if (state.n1ctx){ clearInterval(iv); n32Live(state.n1ctx); } }, 300); }
+if (state.n1ctx) n34Live(state.n1ctx);
+else { const iv = setInterval(() => { if (state.n1ctx){ clearInterval(iv); n34Live(state.n1ctx); } }, 300); }
 
 (() => { const st = document.createElement('style'); st.textContent = `
-.n32reg,.n32bad{display:inline-block;margin:4px 0 0 6px;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700;line-height:1.5}
-.n32reg{background:#E6F4EA;color:#17683C}
-.n32bad{background:#FDE2E0;color:#A8201A}
-.sq-card .n32reg,.sq-card .n32bad{margin:6px 0 0;display:inline-block}
-.n32drow{margin:0;padding:0 14px}
-.n32hist{margin-top:8px;border-top:1px solid var(--line);padding-top:8px}
-.n32hl{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}
-.n32hl li{line-height:1.45}
-.n32today{border:1.5px solid var(--primary)}
-.n32tl{list-style:none;margin:0;padding:0;display:grid;gap:4px}
-.n32tl a{display:block;padding:8px 10px;border-radius:10px;background:#FBF7F8;color:var(--ink);text-decoration:none;font-weight:600;font-size:14px;cursor:pointer}
-.n32tl a:hover{background:#F6EAEE}
-tr.n32sub td{color:var(--muted);font-size:13px}
-tr.n32more td{padding-top:0}
-.n32lock{margin:8px 0 0;font-weight:700;color:var(--primary)}
+.n34reg,.n34bad{display:inline-block;margin:4px 0 0 6px;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700;line-height:1.5}
+.n34reg{background:#E6F4EA;color:#17683C}
+.n34bad{background:#FDE2E0;color:#A8201A}
+.sq-card .n34reg,.sq-card .n34bad{margin:6px 0 0;display:inline-block}
+.n34drow{margin:0;padding:0 14px}
+.n34hist{margin-top:8px;border-top:1px solid var(--line);padding-top:8px}
+.n34hl{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}
+.n34hl li{line-height:1.45}
+.n34today{border:1.5px solid var(--primary)}
+.n34tl{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.n34tl a{display:block;padding:8px 10px;border-radius:10px;background:#FBF7F8;color:var(--ink);text-decoration:none;font-weight:600;font-size:14px;cursor:pointer}
+.n34tl a:hover{background:#F6EAEE}
+tr.n34sub td{color:var(--muted);font-size:13px}
+tr.n34more td{padding-top:0}
+.n34lock{margin:8px 0 0;font-weight:700;color:var(--primary)}
 `; document.head.appendChild(st); })();
 
 /* ---------- C5 (làm luôn): bấm tab Tổng quan luôn về trang tổng quan ---------- */
-function n32OverReset(){
+function n34OverReset(){
   if (state.n24) state.n24.view = null;
   if (state.n22) state.n22.rev = null;
 }
 window.addEventListener('hashchange', e => {
-  if (/#admin-over$/.test(location.hash) && !/#admin-over$/.test(e.oldURL || '')) { n32OverReset(); render(); }
+  if (/#admin-over$/.test(location.hash) && !/#admin-over$/.test(e.oldURL || '')) { n34OverReset(); render(); }
 });
 document.addEventListener('click', e => {
   const a = e.target && e.target.closest && e.target.closest('.adm-tabs a[href="#admin-over"]');
-  if (a && /#admin-over$/.test(location.hash)) { n32OverReset(); render(); }
+  if (a && /#admin-over$/.test(location.hash)) { n34OverReset(); render(); }
 }, true);
 
 render();
