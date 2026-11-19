@@ -13751,6 +13751,38 @@ tr.n35det td{background:#FBF7F8}
 details.n35rep summary{cursor:pointer;font-weight:700;color:var(--muted)}
 `; document.head.appendChild(st); })();
 
+/* ============================================================
+   n136 — admin đợt 3 (19/11): giao diện
+   C1 thanh tab admin xuống dòng, không bị che   C2 giờ theo tuỳ chọn (mặc định Texas), luôn kèm ngày
+   C3 ô tìm kiếm / ô ngày cùng kiểu với các ô khác   (C4, C5 đã làm ở đợt 1–2)
+   ============================================================ */
+/* C2: giờ chính theo tuỳ chọn Cài đặt, kèm ngày; dòng nhỏ là giờ bên kia */
+n13Pair = function(ms0){
+  if (!ms0) return null;
+  const d = new Date(ms0), main = admTZ(), other = main === TZ.vn ? TZ.tx : TZ.vn;
+  const loc = lang === 'vi' ? 'vi-VN' : 'en-US';
+  const day = d.toLocaleDateString(loc, {timeZone:main, day:'numeric', month:'short'});
+  const tm = z => d.toLocaleTimeString('en-US', {timeZone:z, hour:'numeric', minute:'2-digit'}).replace(' ', '').toLowerCase();
+  return {day, vn:tm(main), sa:tm(other) + ' ' + d.toLocaleDateString(loc, {timeZone:other, day:'numeric', month:'short'})};
+};
+function n36Swap(h){
+  const lb = admTZ() === TZ.vn ? 'SA' : 'VN';
+  return h.replace(/(<span(?: class="ct-p")?>)SA /g, `$1${lb} `);
+}
+const n36Row0 = ctRow;
+ctRow = function(c){ return n36Swap(n36Row0(c)); };
+const n36Ct0 = admCt;
+admCt = function(){ return n36Swap(n36Ct0()); };
+
+(() => { const st = document.createElement('style'); st.textContent = `
+.adm-tabs{flex-wrap:wrap;overflow-x:visible;row-gap:6px}
+.adm-tabs a{padding:7px 12px;font-size:13.5px}
+.adm-body input[type=search],.adm-body input[type=date],.ct-q,.n35q,#n15-d,#n1r-dfrom,#n1r-dto{
+  -webkit-appearance:none;appearance:none;box-sizing:border-box;min-height:44px;padding:10px 12px;
+  border:1.5px solid var(--field,#D9CDD2);border-radius:12px;background:#fff;font:inherit;font-size:15px;color:var(--ink)}
+.adm-body input[type=search]:focus,.adm-body input[type=date]:focus,.ct-q:focus,.n35q:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(150,30,80,.12)}
+`; document.head.appendChild(st); })();
+
 render();
 })();
 </script>
