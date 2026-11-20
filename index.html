@@ -14463,6 +14463,175 @@ ACT.n39box = function(el){ state.n39.box = ['salon', 'tech'].indexOf(el.dataset.
 .n39mrow .n39none{color:var(--muted)}
 `; document.head.appendChild(st); })();
 
+/* ============================================================
+   n140 — sửa lỗi từ đợt test vai Tiệm
+   1  lương ≤ 0 không lưu được (và % chia không quá 100)
+   2  tài khoản đã xoá không còn trong "Người ứng tuyển"; xếp người mới nhất lên trên
+   3  "Mới nhất / Cũ nhất" so theo giờ đăng (trước chỉ so theo ngày)
+   4  tin nhắn không bị gửi 2 lần
+   5  ô email trong form báo lỗi khi sai định dạng
+   6  "Thêm địa chỉ / Thêm ảnh tiệm" trong chat mở đúng ô
+   7  chỉ nhận ZIP Texas
+   8  câu "Thợ chưa thêm…" trong chat nói rõ là thông tin riêng
+   9  tiêu đề tab theo ngôn ngữ + menu tô đúng mục
+   10 hộp tin nhắn hiện giờ của tin cuối
+   ============================================================ */
+Object.assign(T.vi, {
+  n40Pay0:'Lương phải lớn hơn 0.', n40Pct:'Phần trăm chia từ 1 đến 100.',
+  n40Zip:'Chỉ nhận mã ZIP ở Texas (75xxx–79xxx).', n40Mail:'Email chưa đúng (vd. ten@gmail.com).',
+  n40Yest:'Hôm qua',
+  n32PvTechNone:'Thợ chưa thêm thông tin riêng (ảnh chân dung, số bằng, nơi làm trước, giờ rảnh cụ thể). Hãy hỏi trong tin nhắn.',
+  n32F:{portrait:'ảnh chân dung', licNo:'số bằng', pjobs:'nơi làm trước', avail:'giờ rảnh cụ thể'}
+});
+Object.assign(T.en, {
+  n40Pay0:'Pay must be more than 0.', n40Pct:'Commission must be 1–100%.',
+  n40Zip:'Only Texas ZIP codes (75xxx–79xxx).', n40Mail:'That email doesn’t look right (e.g. name@gmail.com).',
+  n40Yest:'Yesterday',
+  n32PvTechNone:'The tech hasn’t added private details yet (portrait, license number, previous jobs, exact hours). Ask in the chat.',
+  n32F:{portrait:'portrait', licNo:'license number', pjobs:'previous jobs', avail:'exact hours'}
+});
+state.n40 = {sending:{}};
+const N40_MAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+/* ZIP Texas: 75000–79999, 885xx (El Paso), 733xx (Austin) */
+const n40Tx = z => /^(7[5-9]\d{3}|885\d{2}|733\d{2})$/.test(String(z || ''));
+
+/* ---------- 1 + 5 + 7: kiểm tra form ---------- */
+const n40Val0 = validateStep;
+validateStep = function(type, fs){
+  const ok0 = n40Val0(type, fs), d = fs.data, errs = fs.errors || {};
+  const F = FORMS[type]; if (!F) return ok0;
+  F.steps[fs.step].fields.filter(f => !f.show || f.show(d)).forEach(f => {
+    if (errs[f.k]) return;
+    const v = d[f.k], has = v != null && String(v).trim() !== '';
+    if (!has) return;
+    if (/^amt(Day|Hour|Week)$/.test(f.k) || f.k === 'amount'){ const n = Number(String(v).replace(/[$,\s]/g, '')); if (!(n > 0)) errs[f.k] = t('n40Pay0'); }
+    else if (f.k === 'commissionPct'){ const n = Number(String(v).replace(/[%\s]/g, '')); if (!(n > 0 && n <= 100)) errs[f.k] = t('n40Pct'); }
+    else if (f.type === 'zip' && /^\d{5}$/.test(v) && !n40Tx(v)) errs[f.k] = t('n40Zip');
+    else if (f.k === 'email' && !N40_MAIL.test(String(v).trim())) errs[f.k] = t('n40Mail');
+  });
+  fs.errors = errs;
+  return Object.keys(errs).length === 0;
+};
+
+/* ---------- 2: người ứng tuyển ---------- */
+const n40Gone = th => (th.names || {})[th.techId] === N30_GONE || !!(th.gone && th.gone[th.techId]);
+const n40Apps0 = n30Apps;
+n30Apps = function(ad){
+  const L = state.live, all = L.threads;
+  /* bỏ tài khoản đã xoá (không xử lý được nữa, không tính vào số người); người mới nhất lên trên */
+  L.threads = all.filter(x => !(x.adId === ad.id && n40Gone(x)))
+    .map(x => x.adId === ad.id ? Object.assign({}, x, {lastAt:x.createdAt || x.lastAt}) : x);
+  try { return n40Apps0(ad); } finally { L.threads = all; }
+};
+
+/* ---------- 3: Mới nhất / Cũ nhất theo giờ đăng ---------- */
+n28Age = function(o){
+  const m = Number(o && o.postedMs) || 0;
+  return m ? (Date.now() - m) / 86400000 : (Number(o && o.daysAgo) || 0);
+};
+
+/* ---------- 4: không gửi trùng ---------- */
+(() => {
+  const s0 = ACT.thsend;
+  ACT.thsend = async function(el){
+    const tid = (el && el.dataset && el.dataset.v) || '';
+    if (state.n40.sending[tid]) return;
+    state.n40.sending[tid] = true;
+    try { return await s0.apply(this, arguments); }
+    finally { delete state.n40.sending[tid]; }
+  };
+})();
+
+/* ---------- 6: "Thêm địa chỉ / Thêm ảnh tiệm" mở đúng ô ---------- */
+const n40Th0 = viewThread;
+viewThread = function(id){
+  let h = n40Th0(id);
+  if (!h) return h;
+  return h.replace(/(<div class="card n30nudge">[\s\S]*?<button class="btn btn-ghost" type="button" data-act="liveedit" data-k="ads" data-v="[^"]*")>([^<]*)</,
+    (m, a, lbl) => `${a} data-n40f="${lbl === t('n32NudgeBtn') ? 'address' : 'spics'}">${lbl}<`);
+};
+(() => {
+  const e0 = ACT.liveedit;
+  ACT.liveedit = function(el){
+    const r = e0.apply(this, arguments), k = el && el.dataset && el.dataset.n40f;
+    if (k){
+      let n = 0;
+      const go = () => {
+        const box = document.querySelector(`.form-card [data-fk="${k}"]`) || document.getElementById('f-hiring-' + k);
+        const fq = box && (box.closest('.fq') || box);
+        if (!fq){ if (++n < 20) setTimeout(go, 100); return; }
+        const det = fq.closest('details'); if (det) det.open = true;
+        fq.scrollIntoView({block:'center'});
+        const i = fq.querySelector('input,textarea,button'); if (i && k === 'address') i.focus({preventScroll:true});
+      };
+      setTimeout(go, 150);
+    }
+    return r;
+  };
+})();
+
+/* ---------- 9: tiêu đề tab + menu ---------- */
+const N40_TITLE = {vi:document.title || 'Nail101 – Nơi tiệm nail và thợ nail kết nối', en:'Nail101 – Where nail salons and nail techs connect'};
+n3HomeOn = function(v){
+  const r = n3Role();
+  if (r === 'salon') return ['home', 'salon', 'ready', 'tech'].indexOf(v) >= 0;
+  if (r === 'tech') return ['home', 'jobs', 'ad'].indexOf(v) >= 0;
+  return ['home', 'salon', 'jobs', 'ready', 'ad', 'tech'].indexOf(v) >= 0;
+};
+const n40Head0 = header;
+header = function(r){
+  let h = n40Head0(r);
+  try {
+    const role = n3Role(), u = state.user;
+    let mine = false;
+    if (u && r && r.view === 'ad' && role === 'salon'){ const a = ADS.find(x => x.id === r.id); mine = !!(a && (a.ownerUid === u.uid || (typeof n23Mine === 'function' && n23Mine(a)))); }
+    if (u && r && r.view === 'tech' && role === 'tech') mine = r.id === u.uid || !!(state.myProfile && state.myProfile.id === r.id);
+    if (mine){
+      const href = role === 'salon' ? '#myads' : '#myprof';
+      h = h.replace(/(<nav class="n3dnav"[^>]*>)([\s\S]*?)(<\/nav>)/, (m, a, b, c) =>
+        a + b.replace(/ class="on" aria-current="page"/g, '').replace(`<a href="${href}"`, `<a href="${href}" class="on" aria-current="page"`) + c);
+    }
+  } catch (e) { console.warn('n40nav', e); }
+  return h;
+};
+const n40Render0 = render;
+render = function(){
+  const r = n40Render0.apply(this, arguments);
+  try { const want = N40_TITLE[lang] || N40_TITLE.vi; if (document.title !== want) document.title = want; } catch (e) {}
+  return r;
+};
+
+/* ---------- 10: giờ tin cuối trong hộp tin nhắn ---------- */
+function n40When(m){
+  if (!m) return '';
+  const d = new Date(m), now = new Date();
+  const day = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day(now) - day(d)) / 86400000);
+  if (diff <= 0){
+    let hh = d.getHours(), mm = String(d.getMinutes()).padStart(2, '0'); const ap = hh >= 12 ? 'pm' : 'am'; hh = hh % 12 || 12;
+    return `${hh}:${mm}${ap}`;
+  }
+  if (diff === 1) return t('n40Yest');
+  return lang === 'vi' ? `${d.getDate()}/${d.getMonth() + 1}` : d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+}
+const n40Inbox0 = viewInbox;
+viewInbox = function(){
+  let h = n40Inbox0();
+  if (!h || !state.user) return h;
+  (state.live.threads || []).forEach(th => {
+    const m = typeof n30Ms === 'function' ? n30Ms(th.lastAt) : 0; if (!m) return;
+    const id = th.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    h = h.replace(new RegExp(`(href="#inbox-${id}"[^>]*>[\\s\\S]*?<p class="last">)([\\s\\S]*?)(<\\/p>)`),
+      (all, a, b, c) => b.indexOf('n40t') >= 0 ? all : `${a}${b}<span class="n40t">${esc(n40When(m))}</span>${c}`);
+  });
+  return h;
+};
+
+(() => { const st = document.createElement('style'); st.textContent = `
+.thread-row .last{display:flex;gap:10px;align-items:baseline}
+.thread-row .last .n40t{margin-left:auto;flex:none;font-size:12.5px;color:var(--muted);font-weight:500}
+`; document.head.appendChild(st); })();
+
 render();
 })();
 </script>
