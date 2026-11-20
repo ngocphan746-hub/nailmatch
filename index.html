@@ -13269,6 +13269,23 @@ admOver = function(){
 };
 
 /* ---------- dữ liệu cho admin ---------- */
+/* vẽ lại nhẹ cho dữ liệu admin tải ngầm: không vẽ khi đang ở form / đăng nhập,
+   giữ chữ đang gõ dở + chỗ con trỏ (trước đây 60 giây vẽ lại 1 lần làm mất chữ đang gõ) */
+function n34Soft(){
+  try {
+    const v = route().view;
+    if (v === 'form' || v === 'login') return;
+    const main = document.getElementById('main'), a = document.activeElement, keep = [];
+    if (main) main.querySelectorAll('textarea[id],input[id]').forEach(e => {
+      if (/^(checkbox|radio|file|hidden|button|submit)$/i.test(e.type)) return;
+      if (e.value !== e.defaultValue) keep.push([e.id, e.value]);
+    });
+    const foc = a && a.id && main && main.contains(a) ? [a.id, a.selectionStart, a.selectionEnd] : null;
+    render();
+    keep.forEach(([id, val]) => { const e = document.getElementById(id); if (e && e.value !== val) e.value = val; });
+    if (foc){ const e = document.getElementById(foc[0]); if (e && document.activeElement !== e){ e.focus({preventScroll:true}); try { e.setSelectionRange(foc[1], foc[2]); } catch (_) {} } }
+  } catch (e) { console.warn('n34Soft', e); render(); }
+}
 function n34Live(c){
   const {db} = c;
   n34WrapDb(db);
@@ -13278,7 +13295,7 @@ function n34Live(c){
       const s = await db.collection('users').limit(500).get();
       state.n34.users = s.docs.map(d => Object.assign({id:d.id}, d.data() || {}));
     } catch (e) { console.warn('n34users', e); }
-    if (typeof softRender === 'function') softRender(); else render();
+    n34Soft();
   }
   setInterval(() => {
     if (!(state.adm && state.adm.on)){ on = false; return; }
@@ -13289,7 +13306,7 @@ function n34Live(c){
         /* dọn bản sao quá 30 ngày */
         state.n34.trash.filter(x => Date.now() - (x.atMs || n34Ms(x.at) || Date.now()) > N34_KEEP)
           .forEach(x => db.collection('trash').doc(x.id).delete().catch(() => {}));
-        if (typeof softRender === 'function') softRender(); else render();
+        n34Soft();
       }, e => { console.warn('n34trash', e); state.n34.trash = []; });
     }
     if (Date.now() - last > 60000){ last = Date.now(); users(); }
@@ -13729,7 +13746,7 @@ function n35Live(c){
     if (on) return; on = true;
     db.collection('audit').orderBy('at', 'desc').limit(60).onSnapshot(s => {
       state.n35.log = s.docs.map(d => { const x = d.data(); return {what:x.what, target:x.target, byName:x.byName || '', atMs:n34Ms(x.at) || Date.now()}; });
-      if (typeof softRender === 'function') softRender(); else render();
+      n34Soft();
     }, e => { console.warn('n35log', e); on = false; });
   }, 1500);
 }
@@ -13929,44 +13946,54 @@ ACT.n37flex = function(el){
 `; document.head.appendChild(st); })();
 
 /* ============================================================
-   n138 — (20/11) đăng nhập bằng số điện thoại + mật khẩu
-   - đăng ký: nhận mã SMS 1 lần → đặt mật khẩu (≥ 6 ký tự, số cũng được)
-   - đăng nhập: số + mật khẩu, không tốn SMS
-   - quên mật khẩu / tài khoản cũ: nhận mã SMS → web mời đặt (lại) mật khẩu
-   - Google giữ nguyên
-   Mật khẩu gắn vào chính tài khoản đang có (cùng uid, vẫn giữ số đã xác minh).
+   n138 — đăng nhập bằng số điện thoại + mã PIN 6 số
+   - đăng nhập: số + PIN (6 ô, nút 👁 hiện/ẩn), không tốn SMS
+   - "Quên mã PIN?": nhập số → mã SMS → đặt PIN mới
+   - "Chưa có tài khoản? Đăng ký": nhập số → mã SMS → tạo tài khoản + đặt PIN
+   - tài khoản cũ chưa có PIN: vào bằng "Quên mã PIN?" → web mời đặt PIN
+   - Google / email giữ nguyên
+   PIN gắn vào chính tài khoản đang có (cùng uid, vẫn giữ số đã xác minh).
    ============================================================ */
 Object.assign(T.vi, {
-  n38Pw:'Mật khẩu', n38PwPh:'Mật khẩu của bạn', n38Login:'Đăng nhập',
-  n38Sms:'Lần đầu dùng / quên mật khẩu? Nhận mã SMS',
-  n38PwHelp:'Đã đặt mật khẩu thì nhập số + mật khẩu. Lần đầu dùng thì bấm nhận mã SMS.',
-  n38Bad:'Sai số điện thoại hoặc mật khẩu. Chưa đặt mật khẩu? Bấm "Nhận mã SMS" bên dưới.',
-  n38Many:'Nhập sai nhiều lần. Đợi vài phút, hoặc bấm "Nhận mã SMS" bên dưới.',
-  n38NoPw:'Nhập mật khẩu.', n38Short:'Mật khẩu cần ít nhất 6 ký tự (số cũng được).',
-  n38Set:'Đặt mật khẩu', n38SetHint:'Ít nhất 6 ký tự, chỉ số cũng được. Lần sau đăng nhập bằng số + mật khẩu, không cần chờ mã.',
-  n38BanT:'🔐 Đặt mật khẩu để lần sau đăng nhập nhanh hơn', n38BanReset:'🔐 Đặt mật khẩu mới',
-  n38BanD:'Lần sau chỉ cần số điện thoại + mật khẩu, không phải chờ mã SMS.', n38BanResetD:'Bạn vừa đăng nhập bằng mã SMS. Muốn đổi mật khẩu thì nhập mật khẩu mới ở đây.',
-  n38Save:'Lưu mật khẩu', n38Later:'Để sau', n38Saved:'Đã lưu mật khẩu. Lần sau đăng nhập bằng số + mật khẩu.',
-  n38Used:'Số này đã có mật khẩu ở tài khoản khác. Liên hệ hỗ trợ.', n38Again:'Cần đăng nhập lại bằng mã SMS rồi mới đổi được mật khẩu.',
-  n38Change:'🔐 Đặt / đổi mật khẩu'
+  authLead:'',
+  n38Pw:'Mã PIN', n38Login:'Đăng nhập', n38Forgot:'Quên mã PIN?',
+  n38New:'Chưa có tài khoản?', n38SignupL:'Đăng ký',
+  n38Show:'Hiện mã PIN', n38Hide:'Ẩn mã PIN',
+  n38Bad:'Sai số điện thoại hoặc mã PIN. Chưa có mã PIN? Bấm "Quên mã PIN?".',
+  n38Many:'Nhập sai nhiều lần. Đợi vài phút, hoặc bấm "Quên mã PIN?".',
+  n38NoPw:'Nhập đủ mã PIN 6 số.', n38Short:'Mã PIN cần đúng 6 số.',
+  n38Set:'Tạo mã PIN 6 số', n38SetHint:'Tạo mã PIN 6 số cho tài khoản của bạn để đăng nhập những lần sau.',
+  n38ResetT:'Đặt lại mã PIN', n38ResetL:'Nhập số điện thoại của bạn. Chúng tôi gửi mã SMS, sau đó bạn đặt mã PIN mới.',
+  n38SignT:'Tạo tài khoản', n38SignL:'Nhập số điện thoại. Chúng tôi gửi mã SMS để xác minh, sau đó bạn tạo mã PIN 6 số.',
+  n38Send:'Gửi mã SMS', n38Back:'← Quay lại đăng nhập',
+  n38BanT:'🔐 Tạo mã PIN 6 số', n38BanReset:'🔐 Đặt mã PIN mới',
+  n38BanD:'Tạo mã PIN 6 số cho tài khoản của bạn để đăng nhập những lần sau.', n38BanResetD:'Nhập mã PIN 6 số mới. Lần sau đăng nhập bằng số điện thoại + mã PIN này.',
+  n38Save:'Lưu mã PIN', n38Later:'Để sau', n38Saved:'Đã lưu mã PIN. Lần sau đăng nhập bằng số điện thoại + mã PIN.',
+  n38Used:'Số này đã có mã PIN ở tài khoản khác. Liên hệ hỗ trợ.', n38Again:'Cần đăng nhập lại bằng mã SMS (bấm "Quên mã PIN?") rồi mới đổi được.',
+  n38Change:'🔐 Đặt / đổi mã PIN'
 });
 Object.assign(T.en, {
-  n38Pw:'Password', n38PwPh:'Your password', n38Login:'Sign in',
-  n38Sms:'First time / forgot password? Get a text code',
-  n38PwHelp:'If you set a password, enter your number + password. First time? Get a text code.',
-  n38Bad:'Wrong number or password. No password yet? Tap "Get a text code" below.',
-  n38Many:'Too many wrong tries. Wait a few minutes, or tap "Get a text code" below.',
-  n38NoPw:'Enter your password.', n38Short:'Password needs at least 6 characters (numbers only is fine).',
-  n38Set:'Set a password', n38SetHint:'At least 6 characters, numbers only is fine. Next time sign in with number + password, no code needed.',
-  n38BanT:'🔐 Set a password to sign in faster next time', n38BanReset:'🔐 Set a new password',
-  n38BanD:'Next time you only need your number + password, no waiting for a text.', n38BanResetD:'You just signed in with a text code. To change your password, enter a new one here.',
-  n38Save:'Save password', n38Later:'Later', n38Saved:'Password saved. Next time sign in with your number + password.',
-  n38Used:'This number already has a password on another account. Contact support.', n38Again:'Please sign in again with a text code, then change your password.',
-  n38Change:'🔐 Set / change password'
+  authLead:'',
+  n38Pw:'PIN', n38Login:'Sign in', n38Forgot:'Forgot PIN?',
+  n38New:'No account yet?', n38SignupL:'Sign up',
+  n38Show:'Show PIN', n38Hide:'Hide PIN',
+  n38Bad:'Wrong number or PIN. No PIN yet? Tap "Forgot PIN?".',
+  n38Many:'Too many wrong tries. Wait a few minutes, or tap "Forgot PIN?".',
+  n38NoPw:'Enter your 6-digit PIN.', n38Short:'Your PIN must be exactly 6 digits.',
+  n38Set:'Create a 6-digit PIN', n38SetHint:'Create a 6-digit PIN for your account to sign in next time.',
+  n38ResetT:'Reset your PIN', n38ResetL:'Enter your phone number. We text you a code, then you set a new PIN.',
+  n38SignT:'Create an account', n38SignL:'Enter your phone number. We text you a code to verify it, then you create a 6-digit PIN.',
+  n38Send:'Text me a code', n38Back:'← Back to sign in',
+  n38BanT:'🔐 Create a 6-digit PIN', n38BanReset:'🔐 Set a new PIN',
+  n38BanD:'Create a 6-digit PIN for your account to sign in next time.', n38BanResetD:'Enter a new 6-digit PIN. Next time sign in with your number + this PIN.',
+  n38Save:'Save PIN', n38Later:'Later', n38Saved:'PIN saved. Next time sign in with your number + PIN.',
+  n38Used:'This number already has a PIN on another account. Contact support.', n38Again:'Please sign in again with a text code ("Forgot PIN?"), then change it.',
+  n38Change:'🔐 Set / change PIN'
 });
-state.n38 = {viaSms:false, force:false, pw:'', msg:''};
+state.n38 = {viaSms:false, force:false, pw:'', msg:'', mode:'', show:false};
 const n38Em = ph => `p${n34D(ph)}@phone.nail101.com`;
 const n38Au = () => firebase.auth();
+const n38Ok = v => /^\d{6}$/.test(v || '');
 const n38HasPw = () => { const u = n38Au().currentUser; return !!(u && (u.providerData || []).some(p => p && p.providerId === 'password')); };
 function n38Err(e){
   const c = (e && e.code) || '';
@@ -13978,43 +14005,111 @@ function n38Err(e){
   return typeof errText === 'function' ? errText(e) : String(c || e);
 }
 
+/* ---------- ô mã PIN: 6 ô nhỏ + nút 👁 ---------- */
+function n38Pin(id, ac, val){
+  const v = String(val || '').replace(/\D/g, '').slice(0, 6), sh = state.n38.show;
+  const box = [0,1,2,3,4,5].map(i => `<span class="n38b${i < v.length ? ' f' : ''}">${i < v.length ? (sh ? v[i] : '•') : ''}</span>`).join('');
+  return `<div class="n38pin${sh ? ' sh' : ''}"><div class="n38bx"><input id="${id}" class="n38in" type="${sh ? 'text' : 'password'}" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="${ac}" value="${esc(v)}" aria-label="${esc(t('n38Pw'))}">${box}</div>
+    <button type="button" class="n38eye" data-act="n38eye" aria-pressed="${sh}" aria-label="${esc(t(sh ? 'n38Hide' : 'n38Show'))}" title="${esc(t(sh ? 'n38Hide' : 'n38Show'))}">${sh
+      ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>'
+      : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M3 3l18 18"/></svg>'}</button></div>`;
+}
+function n38Paint(inp){
+  const w = inp.closest('.n38pin'); if (!w) return;
+  const v = inp.value, sh = state.n38.show, foc = document.activeElement === inp;
+  w.querySelectorAll('.n38b').forEach((b, i) => {
+    b.textContent = i < v.length ? (sh ? v[i] : '•') : '';
+    b.classList.toggle('f', i < v.length);
+    b.classList.toggle('cur', foc && i === Math.min(v.length, 5));
+  });
+}
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (!el || !el.classList || !el.classList.contains('n38in')) return;
+  const v = el.value.replace(/\D/g, '').slice(0, 6);
+  if (v !== el.value) el.value = v;
+  if (el.id === 'n38-new' || el.id === 'n38-ban') state.n38.pw = v;
+  n38Paint(el);
+});
+document.addEventListener('focusin', e => { if (e.target && e.target.classList && e.target.classList.contains('n38in')) n38Paint(e.target); });
+document.addEventListener('focusout', e => { if (e.target && e.target.classList && e.target.classList.contains('n38in')) setTimeout(() => n38Paint(e.target), 0); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target && e.target.id === 'n38-pw'){ e.preventDefault(); const b = document.querySelector('[data-act=n38login]'); if (b && !b.disabled) b.click(); }
+});
+ACT.n38eye = function(){
+  state.n38.show = !state.n38.show;
+  document.querySelectorAll('.n38pin').forEach(w => {
+    const inp = w.querySelector('.n38in'), eb = w.querySelector('.n38eye');
+    inp.type = state.n38.show ? 'text' : 'password';
+    w.classList.toggle('sh', state.n38.show); n38Paint(inp);
+    if (eb){
+      const nw = document.createElement('div'); nw.innerHTML = n38Pin('x', 'off', '');
+      const ne = nw.querySelector('.n38eye'); eb.innerHTML = ne.innerHTML;
+      eb.setAttribute('aria-pressed', ne.getAttribute('aria-pressed')); eb.setAttribute('aria-label', ne.getAttribute('aria-label')); eb.title = ne.title;
+    }
+  });
+};
+
 /* ---------- màn đăng nhập ---------- */
 const n38Login0 = viewLogin;
 viewLogin = function(){
-  let h = n38Login0();
   const a = state.auth || {};
+  const startPhone = !state.user && (!a.step || a.step === 'start') && a.method !== 'email' && !state.n35.claimPh;
+  /* màn "Quên mã PIN?" / "Đăng ký": chỉ nhập số → gửi mã SMS */
+  if (startPhone && state.n38.mode){
+    const rs = state.n38.mode === 'reset', dis = a.busy ? ' disabled' : '';
+    const msg = a.msg ? `<p class="auth-msg" role="alert">${esc(a.msg)}</p>` : '';
+    return `<div class="wrap auth-wrap page"><div class="card auth-card n38mode">
+      <h1 class="pg-title">${t(rs ? 'n38ResetT' : 'n38SignT')}</h1><p class="lead-s">${t(rs ? 'n38ResetL' : 'n38SignL')}</p>
+      <div class="fq"><label class="flabel" for="au-phone">${t('phoneLbl')}</label><div class="tel-row"><span class="cc">🇺🇸 +1</span><input id="au-phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(210) 555-0123" value="${esc(a.phone || '')}"></div></div>
+      ${msg}<button class="btn btn-primary btn-block" type="button" data-act="ausend"${dis}>${a.busy ? t('sending') : t('n38Send')}</button>
+      <p class="n38c"><button class="btn-link" type="button" data-act="n38back">${t('n38Back')}</button></p>
+      ${rs ? '' : `<p class="agree-note">${t('agreeNote')}</p>`}</div></div>`;
+  }
+  let h = n38Login0();
   if (state.user) return h;
-  if ((!a.step || a.step === 'start') && a.method !== 'email' && !state.n35.claimPh && /id="au-phone"/.test(h)){
-    const pw = `<div class="fq"><label class="flabel" for="n38-pw">${t('n38Pw')}</label><input id="n38-pw" type="password" autocomplete="current-password" placeholder="${esc(t('n38PwPh'))}"></div>`;
+  h = h.replace(/<p class="lead-s">\s*<\/p>/, '');
+  if (startPhone && /id="au-phone"/.test(h)){
+    const pw = `<div class="fq n38f"><label class="flabel" for="n38-pw">${t('n38Pw')}</label>${n38Pin('n38-pw', 'current-password', '')}
+      <p class="n38fg"><button class="btn-link" type="button" data-act="n38forgot">${t('n38Forgot')}</button></p></div>`;
     h = h.replace(/(<div class="fq"><label class="flabel" for="au-phone">[\s\S]*?<\/div><\/div>)/, `$1${pw}`);
     h = h.replace(/<button class="btn btn-primary btn-block" type="button" data-act="ausend"([^>]*)>[^<]*<\/button>/,
-      (m, dis) => `<button class="btn btn-primary btn-block" type="button" data-act="n38login"${dis}>${a.busy ? t('sending') : t('n38Login')}</button>
-        <button class="btn btn-ghost btn-block n38sms" type="button" data-act="ausend"${dis}>${t('n38Sms')}</button>
-        <p class="hint n38help">${esc(t('n38PwHelp'))}</p>`);
+      (m, dis) => `<button class="btn btn-primary btn-block" type="button" data-act="n38login"${dis}>${a.busy ? t('sending') : t('n38Login')}</button>`);
+    h = h.replace(/<p class="hint" style="text-align:center;margin-top:12px">[^<]*<\/p>/,
+      `<p class="n38c n38su">${t('n38New')} <button class="btn-link" type="button" data-act="n38signup">${t('n38SignupL')}</button></p>`);
   }
-  /* bước tạo tài khoản (đăng ký bằng số): đặt mật khẩu luôn */
+  /* bước tạo tài khoản (đăng ký bằng số): tạo PIN luôn */
   const p = state.pendingUser;
   if (a.step === 'profile' && p && p.phone && /data-act="audone"/.test(h)){
     const box = `<div class="fq n38set"><label class="flabel" for="n38-new">${t('n38Set')} <span class="req">*</span></label>
-      <input id="n38-new" type="password" autocomplete="new-password" minlength="6" value="${esc(state.n38.pw)}">
+      ${n38Pin('n38-new', 'new-password', state.n38.pw)}
       <p class="hint">${esc(t('n38SetHint'))}</p>${state.n38.msg ? `<p class="err">${esc(state.n38.msg)}</p>` : ''}</div>`;
     h = h.replace(/(<button class="btn btn-primary btn-block" type="button" data-act="audone")/, box + '$1');
   }
   return h;
 };
-document.addEventListener('input', e => { if (e.target && (e.target.id === 'n38-new' || e.target.id === 'n38-ban')) state.n38.pw = e.target.value; });
+function n38Go(mode){
+  const a = state.auth, el = document.getElementById('au-phone');
+  if (el) a.phone = el.value;
+  state.n38.mode = mode; a.step = 'start'; a.method = 'phone'; a.msg = ''; a.busy = false;
+  render();
+  setTimeout(() => { const f = document.getElementById('au-phone'); if (f) f.focus(); }, 30);
+}
+ACT.n38forgot = () => n38Go('reset');
+ACT.n38signup = () => n38Go('signup');
+ACT.n38back = () => n38Go('');
 ACT.n38login = async function(){
   const a = state.auth, ph = n34D((document.getElementById('au-phone') || {}).value), pw = ((document.getElementById('n38-pw') || {}).value || '');
   a.msg = '';
   if (ph.length !== 10){ a.msg = t('errPhone'); render(); return; }
-  if (!pw){ a.msg = t('n38NoPw'); render(); return; }
+  if (!n38Ok(pw)){ a.phone = (document.getElementById('au-phone') || {}).value || ''; a.msg = t('n38NoPw'); render(); return; }
   a.phone = ph; a.busy = true; a.pending = true; render();
   try {
     await n38Au().signInWithEmailAndPassword(n38Em(ph), pw);
-    state.n38.viaSms = false;
+    state.n38.viaSms = false; state.n38.mode = '';
   } catch (e) { a.busy = false; a.pending = false; a.msg = n38Err(e); render(); }
 };
-/* đăng nhập bằng mã SMS → sau đó mời đặt (lại) mật khẩu */
+/* đăng nhập bằng mã SMS → sau đó mời đặt (lại) PIN */
 (() => {
   const v0 = ACT.auverify;
   ACT.auverify = function(el){ state.n38.viaSms = true; return v0.call(this, el); };
@@ -14024,7 +14119,7 @@ ACT.n38login = async function(){
     let pw = '';
     if (inp && p && p.phone){
       pw = inp.value; state.n38.pw = pw; state.n38.msg = '';
-      if (pw.length < 6){
+      if (!n38Ok(pw)){
         /* giữ lại tên, số đã gõ khi vẽ lại */
         const nm = document.getElementById('au-name'), p2 = document.getElementById('au-ph2');
         if (nm) state.auth.name = nm.value; if (p2) state.auth.phone2 = p2.value;
@@ -14034,78 +14129,92 @@ ACT.n38login = async function(){
     const ph = p && p.phone;
     const r = await d0.call(this, el);
     if (pw && ph && state.user){
-      try { await n38Au().currentUser.linkWithCredential(firebase.auth.EmailAuthProvider.credential(n38Em(ph), pw)); state.n38.viaSms = false; state.n38.pw = ''; }
+      try { await n38Au().currentUser.linkWithCredential(firebase.auth.EmailAuthProvider.credential(n38Em(ph), pw)); state.n38.viaSms = false; state.n38.pw = ''; state.n38.mode = ''; }
       catch (e) { console.warn('n38link', e); toast(n38Err(e)); }
     }
     return r;
   };
 })();
 
-/* ---------- lời mời đặt mật khẩu (tài khoản cũ / vừa đăng nhập bằng SMS) ---------- */
+/* ---------- lời mời đặt PIN (tài khoản cũ / vừa vào bằng mã SMS) ---------- */
 function n38BanHtml(){
   const u = state.user, cu = n38Au().currentUser;
   if (!u || !cu || !cu.phoneNumber) return '';
   const has = n38HasPw();
   let skip = false; try { skip = sessionStorage.getItem('n38skip_' + u.uid) === '1'; } catch (e) {}
   if (!state.n38.force && (skip || (has && !state.n38.viaSms))) return '';
-  const reset = has;
+  const reset = has || state.n38.mode === 'reset';
   return `<div class="card n38ban"><b>${esc(t(reset ? 'n38BanReset' : 'n38BanT'))}</b><p class="hint">${esc(t(reset ? 'n38BanResetD' : 'n38BanD'))}</p>
-    <div class="n38row"><input id="n38-ban" type="password" autocomplete="new-password" minlength="6" placeholder="${esc(t('n38SetHint').split('.')[0])}" value="${esc(state.n38.pw)}">
-    <button class="btn btn-primary" type="button" data-act="n38save">${t('n38Save')}</button></div>
+    ${n38Pin('n38-ban', 'new-password', state.n38.pw)}
     ${state.n38.msg ? `<p class="err">${esc(state.n38.msg)}</p>` : ''}
-    <button class="btn-link" type="button" data-act="n38skip">${t('n38Later')}</button></div>`;
+    <div class="n38row"><button class="btn btn-primary" type="button" data-act="n38save">${t('n38Save')}</button>
+    <button class="btn-link" type="button" data-act="n38skip">${t('n38Later')}</button></div></div>`;
 }
 ACT.n38save = async function(el){
   const pw = ((document.getElementById('n38-ban') || {}).value || '');
   state.n38.msg = '';
-  if (pw.length < 6){ state.n38.msg = t('n38Short'); render(); return; }
+  if (!n38Ok(pw)){ state.n38.pw = pw; state.n38.msg = t('n38Short'); n38Ban(true); return; }
   const cu = n38Au().currentUser; if (!cu) return;
   el.disabled = true;
   try {
     if (n38HasPw()) await cu.updatePassword(pw);
     else await cu.linkWithCredential(firebase.auth.EmailAuthProvider.credential(n38Em(cu.phoneNumber), pw));
-    state.n38 = {viaSms:false, force:false, pw:'', msg:''};
+    state.n38 = {viaSms:false, force:false, pw:'', msg:'', mode:'', show:state.n38.show};
     toast(t('n38Saved')); render();
-  } catch (e) { console.warn('n38save', e); el.disabled = false; state.n38.msg = n38Err(e); render(); }
+  } catch (e) { console.warn('n38save', e); el.disabled = false; state.n38.msg = n38Err(e); n38Ban(true); }
 };
 ACT.n38skip = function(){
   try { sessionStorage.setItem('n38skip_' + ((state.user || {}).uid || ''), '1'); } catch (e) {}
-  state.n38.force = false; state.n38.viaSms = false; state.n38.msg = ''; render();
+  state.n38.force = false; state.n38.viaSms = false; state.n38.msg = ''; state.n38.mode = ''; render();
 };
 ACT.n38change = function(){
   try { sessionStorage.removeItem('n38skip_' + ((state.user || {}).uid || '')); } catch (e) {}
   state.n38.force = true; render(); window.scrollTo(0, 0);
 };
+/* vẽ / cập nhật lời mời; redo = vẽ lại (để hiện lỗi) */
+function n38Ban(redo){
+  const main = document.getElementById('main'); if (!main) return;
+  const html = n38BanHtml(), old = main.querySelector('.n38ban');
+  if (!html){ if (old) old.remove(); return; }
+  if (old && !redo) return;
+  if (old) old.outerHTML = html;
+  else (main.querySelector('.wrap') || main).insertAdjacentHTML('afterbegin', html);
+}
 const n38Render0 = render;
 render = function(){
   const r = n38Render0.apply(this, arguments);
   try {
     const main = document.getElementById('main');
     const rv = route().view;
+    if (state.user && state.n38.mode && !state.n38.viaSms) state.n38.mode = '';
     if (!main || rv === 'login' || rv === 'claim') return r;
-    const html = n38BanHtml();
-    const old = main.querySelector('.n38ban');
-    if (!html){ if (old) old.remove(); }
-    else if (!old){
-      const host = main.querySelector('.wrap') || main;
-      host.insertAdjacentHTML('afterbegin', html);
-    }
+    n38Ban(false);
     if (rv === 'account' && state.user && n38Au().currentUser && n38Au().currentUser.phoneNumber && !main.querySelector('[data-act=n38change]')){
-      const host = main.querySelector('.wrap') || main;
+      const host = main.querySelector('.auth-card.acc') || main.querySelector('.wrap.page') || main;
       host.insertAdjacentHTML('beforeend', `<p class="n38acc"><button class="btn-link" type="button" data-act="n38change">${t('n38Change')}</button></p>`);
     }
   } catch (e) { console.warn('n38ban', e); }
   return r;
 };
-window.addEventListener('hashchange', () => { if (!/#login/.test(location.hash)) state.n38.msg = ''; });
+window.addEventListener('hashchange', () => { if (!/#login/.test(location.hash)){ state.n38.msg = ''; if (!state.user) state.n38.mode = ''; } });
 
 (() => { const st = document.createElement('style'); st.textContent = `
-.n38sms{margin-top:8px}
-.n38help{text-align:center;margin:10px 0 0}
-.n38set input,.n38ban input{width:100%;box-sizing:border-box;min-height:46px;padding:10px 12px;border:1.5px solid var(--field);border-radius:12px;font:inherit;font-size:16px;background:#fff}
-.n38ban{border:1.5px solid #F0C7D3;background:#FFF6F9;display:grid;gap:8px;margin-bottom:14px}
+.n38pin{display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:8px;align-items:stretch}
+.n38bx{position:relative;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.n38b{display:grid;place-items:center;min-height:48px;border:1px solid var(--field);border-radius:12px;background:#fff;font-size:20px;font-weight:800;color:var(--ink);transition:border-color .12s}
+.n38b.f{border-color:#C9A9B5}
+.n38b.cur{border:2px solid var(--primary);box-shadow:0 0 0 3px rgba(155,29,79,.12)}
+.n38in{position:absolute;inset:0;width:100%;height:100%;min-height:0;opacity:0;border:0;padding:0;margin:0;font-size:16px;color:transparent;caret-color:transparent;background:transparent;z-index:2;cursor:text}
+.n38eye{display:grid;place-items:center;border:1px solid var(--field);border-radius:12px;background:#fff;cursor:pointer;color:var(--muted);padding:0}
+.n38eye svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.n38pin.sh .n38eye{color:var(--primary);border-color:var(--primary)}
+.n38eye:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.n38fg{text-align:right;margin:8px 0 0}
+.n38fg .btn-link,.n38c .btn-link{font-size:14px}
+.n38c{text-align:center;margin:14px 0 0;font-size:14px;color:var(--muted)}
+.n38ban{border:1.5px solid #F0C7D3;background:#FFF6F9;display:grid;gap:10px;margin-bottom:14px}
 .n38ban p{margin:0}
-.n38row{display:grid;grid-template-columns:1fr auto;gap:8px}
+.n38row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .n38acc{text-align:center;margin:18px 0}
 `; document.head.appendChild(st); })();
 
