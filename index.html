@@ -3516,12 +3516,17 @@ function initLive(){
       if (type === 'profile'){ delete obj.licNo; obj.refs = (obj.refs || []).map(r => ({salon:r.salon || '', city:r.city || '', period:r.period || ''})); }
       const clean = JSON.parse(JSON.stringify(obj)), form = formToSave(fs);
       if (type === 'profile'){
-        await db.collection('users').doc(me.uid).set({licNo:d.licNo || '', refContacts:(d.refs || []).map(r => r.contact || '')}, {merge:true});
-        me.licNo = d.licNo || ''; me.refContacts = (d.refs || []).map(r => r.contact || '');
         const admNew = state.adm && state.adm.creating && state.adm.creating.type === 'profile' && !fs.editId;
-        const tid0 = admNew ? db.collection('techs').doc().id : ((state.myProfile && state.myProfile.live && state.myProfile.id) || me.uid);
-        const tref = db.collection('techs').doc(tid0), exists = !!TECHS.find(x => x.live && x.id === tid0);
-        if (exists) await tref.update({ownerName:me.name, updatedAt:TS(), ad:clean, form, kind:'profile'});
+        const edOther = fs.editId && (TECHS.find(x => x.live && x.id === fs.editId) || {}).ownerUid && ownerOf(TECHS.find(x => x.live && x.id === fs.editId)) !== me.uid;
+        /* số giấy phép / người giới thiệu là của chính mình: không ghi khi admin làm hồ sơ cho người khác */
+        if (!admNew && !edOther){
+          await db.collection('users').doc(me.uid).set({licNo:d.licNo || '', refContacts:(d.refs || []).map(r => r.contact || '')}, {merge:true});
+          me.licNo = d.licNo || ''; me.refContacts = (d.refs || []).map(r => r.contact || '');
+        }
+        const tid0 = admNew ? db.collection('techs').doc().id : (fs.editId || (state.myProfile && state.myProfile.live && state.myProfile.id) || me.uid);
+        const tref = db.collection('techs').doc(tid0), cur = TECHS.find(x => x.live && x.id === tid0), exists = !!cur;
+        /* admin sửa hồ sơ nháp của người khác: giữ nguyên tên chủ hồ sơ */
+        if (exists) await tref.update(Object.assign({updatedAt:TS(), ad:clean, form, kind:'profile'}, ownerOf(cur) === me.uid ? {ownerName:me.name} : {}));
         else await tref.set({ownerUid:me.uid, ownerName:me.name, createdAt:TS(), updatedAt:TS(), ad:clean, form, kind:'profile'});
         fs.liveId = tid0;
       } else if (fs.editId){
@@ -3566,7 +3571,9 @@ function initLive(){
   const TYPE_OF = {hiring:'hiring', salon_sale:'sale', service:'service'};
   function loadEdit(k, id, silent){
     const it = k === 'techs' ? TECHS.find(x => x.live && x.id === id) : ADS.find(a => a.live && a.id === id);
-    if (!it || !state.user || ownerOf(it) !== state.user.uid) return null;
+    /* admin sửa được mọi tin nháp (kể cả nháp do admin khác / tài khoản admin cũ tạo) */
+    const admDraft = !!(it && state.adm && state.adm.on && it.mod === 'draft');
+    if (!it || !state.user || (ownerOf(it) !== state.user.uid && !admDraft)) return null;
     if (!it._form){ if (!silent) toast(t('noEdit')); return null; }
     const type = k === 'techs' ? 'profile' : (TYPE_OF[it.type] || it._kind);
     const data = Object.assign({city:'San Antonio'}, JSON.parse(JSON.stringify(DEFAULTS[type] || {})), JSON.parse(JSON.stringify(it._form)));
@@ -11782,7 +11789,7 @@ function n30Live(c){
     } catch (e) { console.warn(e); el.disabled = false; toast(errText(e)); }
   };
 
-  /* ---- email khi nhắn tin (tối đa 1 email / 20 phút / cuộc trò chuyện) ---- */
+  /* ---- email khi nhắn tin (tối đa 1 email / 5 phút / người gửi / cuộc trò chuyện) ---- */
   const send0 = ACT.thsend;
   ACT.thsend = async function(el){
     const ta = document.getElementById('th-text'), had = ta && ta.value.trim();
@@ -11790,9 +11797,9 @@ function n30Live(c){
     const n = document.getElementById('th-text');
     if (!had || (n && n.value)) return;
     const th = L_.threads.find(x => x.id === el.dataset.v), u = me(); if (!th || !u) return;
-    const other = (th.members || []).find(x => x !== u.uid), key = 'n30m_' + th.id;
+    const other = (th.members || []).find(x => x !== u.uid), key = 'n30m_' + th.id + '_' + u.uid; /* theo từng người gửi: 2 tài khoản trên cùng máy không chặn mail của nhau */
     let last = 0; try { last = Number(localStorage.getItem(key)) || 0; } catch (e) {}
-    if (Date.now() - last < 20 * 60000) return;
+    if (Date.now() - last < 5 * 60000) return;
     try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
     mail(other, 'msg', (th.names || {})[u.uid] || u.name);
   };
