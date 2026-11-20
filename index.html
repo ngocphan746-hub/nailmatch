@@ -12571,10 +12571,10 @@ const N33_SHOW = {
 };
 /* thứ tự mục; mục trong "more" vào Thêm chi tiết */
 const N33_ORDER = {
-  hiring:{main:['businessName', 'city', 'zip', 'urgent', 'phone', 'services', 'jobType', 'experience', 'payType', 'commissionPct', 'amtDay', 'amtHour', 'amtWeek', '_n33pv', 'schedule', 'license'],
-    more:['perks', 'reqs', '_h1', 'address', 'spics', 'email', 'cover', 'techsNeeded', 'extras']},
-  profile:{main:['name', 'city', 'zip', 'phone', 'services', 'years', 'jobType', 'days', 'license', 'payType', 'commissionPct', 'amtDay', 'amtHour', 'amtWeek', '_n33pv', 'photos'],
-    more:['wants', 'travel', 'about', '_h1', 'portrait', 'licNo', 'pjobs', 'mpics', 'avail', 'email']}
+  hiring:{main:['businessName', 'city', 'zip', 'urgent', 'phone', 'services', 'jobType', 'experience', 'payType', 'commissionPct', 'amtDay', 'amtHour', 'amtWeek', '_n33pv', 'license'],
+    more:['schedule', 'perks', 'reqs', '_h1', 'address', 'spics', 'email', 'cover', 'techsNeeded', 'extras']},
+  profile:{main:['name', 'city', 'zip', 'phone', 'services', 'years', 'jobType', 'payType', 'commissionPct', 'amtDay', 'amtHour', 'amtWeek', '_n33pv', 'license', 'photos'],
+    more:['days', 'wants', 'travel', 'about', '_h1', 'portrait', 'licNo', 'pjobs', 'mpics', 'avail', 'email']}
 };
 
 (() => {
@@ -12588,7 +12588,7 @@ const N33_ORDER = {
     const by = {}; fl.forEach(f => { by[f.k] = f; });
     const out = [];
     O.main.forEach(k => { const f = by[k]; if (!f) return; delete f.more; out.push(f); delete by[k]; });
-    O.more.forEach(k => { const f = by[k]; if (!f) return; if (!f.req) f.more = 1; delete f.fold; out.push(f); delete by[k]; });
+    O.more.forEach(k => { const f = by[k]; if (!f) return; if (k === 'schedule' || k === 'days') delete f.req; if (!f.req) f.more = 1; delete f.fold; out.push(f); delete by[k]; });
     fl.forEach(f => { if (by[f.k]) out.push(f); });   /* mục lạ: giữ nguyên, để cuối */
     fl.length = 0; out.forEach(f => fl.push(f));
   });
@@ -12633,8 +12633,7 @@ renderField = function(type, f, fs){
   if (N33_PAYK.indexOf(f.k) >= 0) return h.replace(/^<div class="fq/, '<div class="fq n33sub');
   if (f.type !== 'multi' && f.type !== 'chips') return h;
   h = n33Hint(h, f.type === 'multi');
-  if (type === 'profile' && f.k === 'days') return n33Days(h, type).replace(/^<div class="fq/, '<div class="fq n33sub');
-  if (type === 'profile' && f.k === 'jobType') h = h.replace(/^(<div class="fq[^"]*"[^>]*>)/, `$1<p class="n33cardt">🗓 ${esc(t('n33Sched'))}</p>`);
+  if (type === 'profile' && f.k === 'days') return n33Days(h, type);
   const re = /(<div class="chipset" role="group"[^>]*>)([\s\S]*?)(<\/div>)/;
   if (!re.test(h)) return h;
   if (f.k === 'payType') return n33Pay(h, re, type, fs);
@@ -13781,6 +13780,150 @@ admCt = function(){ return n36Swap(n36Ct0()); };
   -webkit-appearance:none;appearance:none;box-sizing:border-box;min-height:44px;padding:10px 12px;
   border:1.5px solid var(--field,#D9CDD2);border-radius:12px;background:#fff;font:inherit;font-size:15px;color:var(--ink)}
 .adm-body input[type=search]:focus,.adm-body input[type=date]:focus,.ct-q:focus,.n35q:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(150,30,80,.12)}
+`; document.head.appendChild(st); })();
+
+/* ============================================================
+   n137 — (20/11) form gọn hơn + hộp Sẵn sàng thu gọn
+   - gom mục liên quan vào chung một khung có tiêu đề nhỏ (Thông tin / Công việc / Lương)
+   - hộp "Sẵn sàng đi làm ngay": mặc định 1 dòng, bấm mới mở ra chỉnh
+   - giờ: thêm ô "Không xác định giờ" → hiện "Giờ linh hoạt"
+   (tiền tố n37 — không trùng lớp nào)
+   ============================================================ */
+Object.assign(T.vi, {
+  n37G_info:'🏠 Thông tin tiệm', n37G_me:'👤 Thông tin', n37G_job:'💅 Công việc', n37G_skill:'💅 Tay nghề',
+  n37G_pay:'💵 Lương', n37G_want:'💵 Lương mong muốn',
+  n37Flex:'Giờ linh hoạt', n37FlexChk:'Không xác định giờ', n37Edit:'Chỉnh', n37Hide:'Thu gọn'
+});
+Object.assign(T.en, {
+  n37G_info:'🏠 Salon info', n37G_me:'👤 About you', n37G_job:'💅 The job', n37G_skill:'💅 Skills',
+  n37G_pay:'💵 Pay', n37G_want:'💵 Pay you want',
+  n37Flex:'Flexible hours', n37FlexChk:'No set hours', n37Edit:'Edit', n37Hide:'Hide'
+});
+state.n37 = {rOpen:false};
+
+/* ---------- khung gom nhóm ---------- */
+const N37_GRP = {
+  hiring:[['n37G_info', ['businessName', 'city', 'zip', 'urgent', 'phone']], ['n37G_job', ['services', 'jobType', 'experience']],
+    ['n37G_pay', ['payType', 'commissionPct', 'amtDay', 'amtHour', 'amtWeek', '_n33pv']]],
+  profile:[['n37G_me', ['name', 'city', 'zip', 'phone']], ['n37G_skill', ['services', 'years', 'jobType']],
+    ['n37G_want', ['payType', 'commissionPct', 'amtDay', 'amtHour', 'amtWeek', '_n33pv']]]
+};
+function n37Grp(type, k){
+  const G = N37_GRP[type] || [];
+  for (const [title, keys] of G) if (keys.indexOf(k) >= 0) return {title, keys};
+  return null;
+}
+/* trường đầu tiên đang hiện của nhóm → có tiêu đề; các trường sau → dính vào khung trên */
+function n37First(type, fs, keys){
+  const F = FORMS[type].steps[0].fields, d = fs.data || {};
+  for (const k of keys){
+    if (k === 'zip') continue;
+    const f = F.find(x => x.k === k);
+    if (f && !f.more && (!f.show || f.show(d))) return k;
+  }
+  return null;
+}
+const n37Field0 = renderField;
+renderField = function(type, f, fs){
+  let h = n37Field0(type, f, fs);
+  if ((type !== 'hiring' && type !== 'profile') || f.more || (fs && fs.step) || (fs && fs.done)) return h;
+  const g = n37Grp(type, f.k);
+  if (!g || f.k === 'city' || f.k === 'zip') return h;   /* hàng thành phố + ZIP xử lý ở viewForm */
+  const first = n37First(type, fs, g.keys);
+  if (f.k === first) return h.replace(/^(<div class="fq[^"]*"[^>]*>)/, `$1<p class="n37gh">${esc(t(g.title))}</p>`);
+  return /^<div class="fq[^"]*\bn33sub\b/.test(h) ? h : h.replace(/^<div class="fq/, '<div class="fq n33sub');
+};
+const n37Form0 = viewForm;
+viewForm = function(type){
+  let h = n37Form0(type);
+  if (type !== 'hiring' && type !== 'profile') return h;
+  const fs = getForm(type);
+  if (fs.done || fs.step) return h;
+  /* Giờ làm / ngày rảnh luôn có sẵn giá trị mặc định → không tự mở "Thêm chi tiết" vì chúng */
+  if (fs.n33more === undefined){
+    const F = FORMS[type].steps[0].fields, d = fs.data || {}, skip = ['schedule', 'days', 'techsNeeded', 'travel', 'contactBy', '_h1'];
+    const has = v => Array.isArray(v) ? v.length > 0 : (v && typeof v === 'object') ? Object.keys(v).length > 0 : (v !== undefined && v !== null && String(v).trim() !== '' && v !== false);
+    const any = F.some(f => f.more && skip.indexOf(f.k) < 0 && (has(d[f.k]) || (fs.errors || {})[f.k]));
+    if (!any) h = h.replace(/(<details class="more n33more-d" data-n33ft="[a-z]+") open>/, '$1>');
+  }
+  const g = n37Grp(type, 'city'); if (!g) return h;
+  const first = n37First(type, fs, g.keys);
+  if (first === 'city') return h.replace('<div class="n33row">', `<div class="n33row"><p class="n37gh n37ghrow">${esc(t(g.title))}</p>`);
+  return h.replace('<div class="n33row">', '<div class="n33row n33sub">');
+};
+
+/* ---------- hộp Sẵn sàng: thu gọn + giờ linh hoạt ---------- */
+const n37Line0 = n1ReadyLine;
+n1ReadyLine = function(r){
+  if (!r || !r.flex) return n37Line0(r);
+  return `⚡ ${esc(t('readyLine', n1ReadyDay(r), t('n37Flex')))} · ${esc(t('turnedOn', n1Ago(r.atC || r.atMs)))}`;
+};
+const n37Box0 = n1ReadyBox;
+n1ReadyBox = function(){
+  let h = n37Box0();
+  const mp = state.myProfile; if (!mp || !h) return h;
+  const r = n1Ready(mp), dr = state.n1r || {};
+  if (r) return h;   /* đang BẬT: hộp vốn đã ngắn */
+  /* ô Không xác định giờ */
+  const flex = !!dr.flex;
+  h = h.replace(/(<div class="two" style="max-width:320px"><input id="n1r-from"[\s\S]*?<\/div>)/, m =>
+    (flex ? m.replace('<div class="two" style="max-width:320px">', '<div class="two n37hid" style="max-width:320px">') : m)
+    + `<label class="n37flex"><input type="checkbox" data-act="n37flex"${flex ? ' checked' : ''}> ${esc(t('n37FlexChk'))}</label>`);
+  /* thu gọn: 1 dòng tóm tắt + nút Chỉnh */
+  const open = !!state.n37.rOpen;
+  const day = dr.dFrom ? (dr.dFrom + (dr.dTo && dr.dTo !== dr.dFrom ? '…' + dr.dTo : '')) : t((dr.day || 'today') === 'tomorrow' ? 'readyTomorrow' : 'readyToday');
+  const hrs = flex ? t('n37Flex') : `${fmtTime(dr.from || '10:00')}–${fmtTime(dr.to || '19:00')}`;
+  const sum = `<button type="button" class="n37sum" data-act="n37rtog" aria-expanded="${open}"><span>${esc(day)} · ${esc(hrs)}</span><b>${esc(t(open ? 'n37Hide' : 'n37Edit'))} ${open ? '▴' : '▾'}</b></button>`;
+  h = h.replace(/(<div class="n1rhead">[\s\S]*?<\/button><\/div>)/, `$1${sum}`);
+  return open ? h : h.replace('<div class="card n1rbox', '<div class="card n37rc n1rbox');
+};
+ACT.n37rtog = function(){ try { n1KeepTimes(); } catch (e) {} state.n37.rOpen = !state.n37.rOpen; render(); };
+ACT.n37flex = function(el){
+  try { n1KeepTimes(); } catch (e) {}
+  const r = state.n1r = state.n1r || {day:'today'};
+  r.flex = !!el.checked;
+  if (!r.flex && (r.from === '00:00' || !r.from)) { r.from = '10:00'; r.to = '19:00'; }
+  render();
+};
+(() => {
+  const r0 = ACT.n1ready;
+  if (!r0) return;
+  ACT.n1ready = async function(el){
+    const mp = state.myProfile, wasOn = !!(mp && n1Ready(mp)), dr = state.n1r || {};
+    const flex = !wasOn && !!dr.flex;
+    if (flex){
+      const a = document.getElementById('n1r-from'), b = document.getElementById('n1r-to');
+      if (a) a.value = '00:00'; if (b) b.value = '23:59';
+    }
+    const res = await r0.call(this, el);
+    try {
+      const c = state.n1ctx, u = state.user, now = state.myProfile && n1Ready(state.myProfile);
+      if (!wasOn && now && c && u){
+        await c.db.collection('techs').doc(u.uid).update({'ready.flex':flex});
+        state.myProfile.ready = Object.assign({}, state.myProfile.ready, {flex});
+        render();
+      }
+    } catch (e) { console.warn('n37flex', e); }
+    return res;
+  };
+})();
+
+(() => { const st = document.createElement('style'); st.textContent = `
+.form-card.n33f > .n33row.n33sub{margin-top:-13px;border-top:0;border-top-left-radius:0;border-top-right-radius:0;padding-top:2px}
+.form-card.n33f > .fq:has(+ .n33row.n33sub),.form-card.n33f > .n33row:has(+ .fq.n33sub){border-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0}
+.form-card.n33f > .n33row{grid-template-areas:none}
+.n37gh{margin:0 0 10px;font-size:13px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;color:var(--primary)}
+.n33row > .n37ghrow{grid-column:1 / -1;margin-bottom:0}
+.form-card.n33f .fq.n33sub{padding-top:8px}
+.form-card.n33f .fq .flabel{font-size:15px}
+.form-card.n33f .fq .hint{font-size:12.5px;margin-top:2px}
+.form-card.n33f .fq.n33sub:not(.n33pv){border-top:1px dashed #EFE6E9 !important}
+.n37rc .n1rset,.n37rc #n1r-more,.n37rc > .hint{display:none !important}
+.n37sum{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;margin:8px 0 0;padding:10px 12px;border:1px solid #EADFBF;border-radius:12px;background:#fff;font:inherit;font-size:14px;color:var(--ink);cursor:pointer;text-align:left}
+.n37sum b{color:var(--primary);white-space:nowrap}
+.n37flex{display:flex;align-items:center;gap:8px;margin:8px 0 2px;font-size:14px;font-weight:600;cursor:pointer}
+.n37flex input{width:20px;height:20px;accent-color:var(--primary)}
+.n37hid{display:none !important}
 `; document.head.appendChild(st); })();
 
 render();
