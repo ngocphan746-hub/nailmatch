@@ -3016,6 +3016,8 @@ Object.assign(T.vi, {footS:'Nail101', agreeNote:'Khi tiếp tục, bạn đồng
 Object.assign(T.en, {footS:'Nail101', agreeNote:'By continuing, you agree to our <a href="#terms">Terms of Use</a> and <a href="#privacy">Privacy Policy</a>. Message and data rates may apply.'});
 (() => { const st = document.createElement('style'); st.textContent = '.legal p{line-height:1.6}.legal .jd-list li{margin-bottom:6px;line-height:1.55}.agree-note{font-size:12.5px;color:var(--muted);text-align:center;margin:14px 0 0;line-height:1.5}.agree-note a{color:var(--primary);font-weight:700}.foot-legal a{color:var(--primary);font-weight:700}'; document.head.appendChild(st); })();
 
+/* n138: email giả dùng cho đăng nhập bằng mật khẩu (sốĐT@phone.nail101.com) không phải email thật */
+function n38Real(e){ return e && !/@phone\.nail101\.com$/i.test(e) ? e : ''; }
 /* ================= LIVE MODE (Firebase) =================
    Runs only when the Firebase SDK loaded. Otherwise the page stays a pure demo. */
 const FB_CFG = {
@@ -3177,7 +3179,7 @@ function initLive(){
     if (!u){ stopUserListeners(); state.user = null; state.pendingUser = null; state.myProfile = null; render(); return; }
     let d = null;
     try { const doc = await db.collection('users').doc(u.uid).get(); d = doc.exists ? doc.data() : null; } catch (e) { console.warn('user doc', e); }
-    const base = {uid:u.uid, email:u.email || (d && d.email) || '', phone:(d && d.phone) || (u.phoneNumber ? digits10(u.phoneNumber) : '')};
+    const base = {uid:u.uid, email:n38Real(u.email) || (d && d.email) || '', phone:(d && d.phone) || (u.phoneNumber ? digits10(u.phoneNumber) : '')};
     if (d && d.name){
       state.user = Object.assign(base, {name:d.name, role:d.role || 'other', licNo:d.licNo || '', refContacts:d.refContacts || [], addrs:d.addrs || {}, pics:d.pics || {}, priv:d.priv || {}, avatar:d.avatar || ''}); state.pendingUser = null;
       startUserListeners();
@@ -13924,6 +13926,187 @@ ACT.n37flex = function(el){
 .n37flex{display:flex;align-items:center;gap:8px;margin:8px 0 2px;font-size:14px;font-weight:600;cursor:pointer}
 .n37flex input{width:20px;height:20px;accent-color:var(--primary)}
 .n37hid{display:none !important}
+`; document.head.appendChild(st); })();
+
+/* ============================================================
+   n138 — (20/11) đăng nhập bằng số điện thoại + mật khẩu
+   - đăng ký: nhận mã SMS 1 lần → đặt mật khẩu (≥ 6 ký tự, số cũng được)
+   - đăng nhập: số + mật khẩu, không tốn SMS
+   - quên mật khẩu / tài khoản cũ: nhận mã SMS → web mời đặt (lại) mật khẩu
+   - Google giữ nguyên
+   Mật khẩu gắn vào chính tài khoản đang có (cùng uid, vẫn giữ số đã xác minh).
+   ============================================================ */
+Object.assign(T.vi, {
+  n38Pw:'Mật khẩu', n38PwPh:'Mật khẩu của bạn', n38Login:'Đăng nhập',
+  n38Sms:'Lần đầu dùng / quên mật khẩu? Nhận mã SMS',
+  n38PwHelp:'Đã đặt mật khẩu thì nhập số + mật khẩu. Lần đầu dùng thì bấm nhận mã SMS.',
+  n38Bad:'Sai số điện thoại hoặc mật khẩu. Chưa đặt mật khẩu? Bấm "Nhận mã SMS" bên dưới.',
+  n38Many:'Nhập sai nhiều lần. Đợi vài phút, hoặc bấm "Nhận mã SMS" bên dưới.',
+  n38NoPw:'Nhập mật khẩu.', n38Short:'Mật khẩu cần ít nhất 6 ký tự (số cũng được).',
+  n38Set:'Đặt mật khẩu', n38SetHint:'Ít nhất 6 ký tự, chỉ số cũng được. Lần sau đăng nhập bằng số + mật khẩu, không cần chờ mã.',
+  n38BanT:'🔐 Đặt mật khẩu để lần sau đăng nhập nhanh hơn', n38BanReset:'🔐 Đặt mật khẩu mới',
+  n38BanD:'Lần sau chỉ cần số điện thoại + mật khẩu, không phải chờ mã SMS.', n38BanResetD:'Bạn vừa đăng nhập bằng mã SMS. Muốn đổi mật khẩu thì nhập mật khẩu mới ở đây.',
+  n38Save:'Lưu mật khẩu', n38Later:'Để sau', n38Saved:'Đã lưu mật khẩu. Lần sau đăng nhập bằng số + mật khẩu.',
+  n38Used:'Số này đã có mật khẩu ở tài khoản khác. Liên hệ hỗ trợ.', n38Again:'Cần đăng nhập lại bằng mã SMS rồi mới đổi được mật khẩu.',
+  n38Change:'🔐 Đặt / đổi mật khẩu'
+});
+Object.assign(T.en, {
+  n38Pw:'Password', n38PwPh:'Your password', n38Login:'Sign in',
+  n38Sms:'First time / forgot password? Get a text code',
+  n38PwHelp:'If you set a password, enter your number + password. First time? Get a text code.',
+  n38Bad:'Wrong number or password. No password yet? Tap "Get a text code" below.',
+  n38Many:'Too many wrong tries. Wait a few minutes, or tap "Get a text code" below.',
+  n38NoPw:'Enter your password.', n38Short:'Password needs at least 6 characters (numbers only is fine).',
+  n38Set:'Set a password', n38SetHint:'At least 6 characters, numbers only is fine. Next time sign in with number + password, no code needed.',
+  n38BanT:'🔐 Set a password to sign in faster next time', n38BanReset:'🔐 Set a new password',
+  n38BanD:'Next time you only need your number + password, no waiting for a text.', n38BanResetD:'You just signed in with a text code. To change your password, enter a new one here.',
+  n38Save:'Save password', n38Later:'Later', n38Saved:'Password saved. Next time sign in with your number + password.',
+  n38Used:'This number already has a password on another account. Contact support.', n38Again:'Please sign in again with a text code, then change your password.',
+  n38Change:'🔐 Set / change password'
+});
+state.n38 = {viaSms:false, force:false, pw:'', msg:''};
+const n38Em = ph => `p${n34D(ph)}@phone.nail101.com`;
+const n38Au = () => firebase.auth();
+const n38HasPw = () => { const u = n38Au().currentUser; return !!(u && (u.providerData || []).some(p => p && p.providerId === 'password')); };
+function n38Err(e){
+  const c = (e && e.code) || '';
+  if (/too-many-requests/.test(c)) return t('n38Many');
+  if (/wrong-password|invalid-credential|user-not-found|invalid-login|invalid-email/.test(c)) return t('n38Bad');
+  if (/weak-password/.test(c)) return t('n38Short');
+  if (/credential-already-in-use|email-already-in-use/.test(c)) return t('n38Used');
+  if (/requires-recent-login/.test(c)) return t('n38Again');
+  return typeof errText === 'function' ? errText(e) : String(c || e);
+}
+
+/* ---------- màn đăng nhập ---------- */
+const n38Login0 = viewLogin;
+viewLogin = function(){
+  let h = n38Login0();
+  const a = state.auth || {};
+  if (state.user) return h;
+  if ((!a.step || a.step === 'start') && a.method !== 'email' && !state.n35.claimPh && /id="au-phone"/.test(h)){
+    const pw = `<div class="fq"><label class="flabel" for="n38-pw">${t('n38Pw')}</label><input id="n38-pw" type="password" autocomplete="current-password" placeholder="${esc(t('n38PwPh'))}"></div>`;
+    h = h.replace(/(<div class="fq"><label class="flabel" for="au-phone">[\s\S]*?<\/div><\/div>)/, `$1${pw}`);
+    h = h.replace(/<button class="btn btn-primary btn-block" type="button" data-act="ausend"([^>]*)>[^<]*<\/button>/,
+      (m, dis) => `<button class="btn btn-primary btn-block" type="button" data-act="n38login"${dis}>${a.busy ? t('sending') : t('n38Login')}</button>
+        <button class="btn btn-ghost btn-block n38sms" type="button" data-act="ausend"${dis}>${t('n38Sms')}</button>
+        <p class="hint n38help">${esc(t('n38PwHelp'))}</p>`);
+  }
+  /* bước tạo tài khoản (đăng ký bằng số): đặt mật khẩu luôn */
+  const p = state.pendingUser;
+  if (a.step === 'profile' && p && p.phone && /data-act="audone"/.test(h)){
+    const box = `<div class="fq n38set"><label class="flabel" for="n38-new">${t('n38Set')} <span class="req">*</span></label>
+      <input id="n38-new" type="password" autocomplete="new-password" minlength="6" value="${esc(state.n38.pw)}">
+      <p class="hint">${esc(t('n38SetHint'))}</p>${state.n38.msg ? `<p class="err">${esc(state.n38.msg)}</p>` : ''}</div>`;
+    h = h.replace(/(<button class="btn btn-primary btn-block" type="button" data-act="audone")/, box + '$1');
+  }
+  return h;
+};
+document.addEventListener('input', e => { if (e.target && (e.target.id === 'n38-new' || e.target.id === 'n38-ban')) state.n38.pw = e.target.value; });
+ACT.n38login = async function(){
+  const a = state.auth, ph = n34D((document.getElementById('au-phone') || {}).value), pw = ((document.getElementById('n38-pw') || {}).value || '');
+  a.msg = '';
+  if (ph.length !== 10){ a.msg = t('errPhone'); render(); return; }
+  if (!pw){ a.msg = t('n38NoPw'); render(); return; }
+  a.phone = ph; a.busy = true; a.pending = true; render();
+  try {
+    await n38Au().signInWithEmailAndPassword(n38Em(ph), pw);
+    state.n38.viaSms = false;
+  } catch (e) { a.busy = false; a.pending = false; a.msg = n38Err(e); render(); }
+};
+/* đăng nhập bằng mã SMS → sau đó mời đặt (lại) mật khẩu */
+(() => {
+  const v0 = ACT.auverify;
+  ACT.auverify = function(el){ state.n38.viaSms = true; return v0.call(this, el); };
+  const d0 = ACT.audone;
+  ACT.audone = async function(el){
+    const p = state.pendingUser, inp = document.getElementById('n38-new');
+    let pw = '';
+    if (inp && p && p.phone){
+      pw = inp.value; state.n38.pw = pw; state.n38.msg = '';
+      if (pw.length < 6){
+        /* giữ lại tên, số đã gõ khi vẽ lại */
+        const nm = document.getElementById('au-name'), p2 = document.getElementById('au-ph2');
+        if (nm) state.auth.name = nm.value; if (p2) state.auth.phone2 = p2.value;
+        state.n38.msg = t('n38Short'); render(); return;
+      }
+    }
+    const ph = p && p.phone;
+    const r = await d0.call(this, el);
+    if (pw && ph && state.user){
+      try { await n38Au().currentUser.linkWithCredential(firebase.auth.EmailAuthProvider.credential(n38Em(ph), pw)); state.n38.viaSms = false; state.n38.pw = ''; }
+      catch (e) { console.warn('n38link', e); toast(n38Err(e)); }
+    }
+    return r;
+  };
+})();
+
+/* ---------- lời mời đặt mật khẩu (tài khoản cũ / vừa đăng nhập bằng SMS) ---------- */
+function n38BanHtml(){
+  const u = state.user, cu = n38Au().currentUser;
+  if (!u || !cu || !cu.phoneNumber) return '';
+  const has = n38HasPw();
+  let skip = false; try { skip = sessionStorage.getItem('n38skip_' + u.uid) === '1'; } catch (e) {}
+  if (!state.n38.force && (skip || (has && !state.n38.viaSms))) return '';
+  const reset = has;
+  return `<div class="card n38ban"><b>${esc(t(reset ? 'n38BanReset' : 'n38BanT'))}</b><p class="hint">${esc(t(reset ? 'n38BanResetD' : 'n38BanD'))}</p>
+    <div class="n38row"><input id="n38-ban" type="password" autocomplete="new-password" minlength="6" placeholder="${esc(t('n38SetHint').split('.')[0])}" value="${esc(state.n38.pw)}">
+    <button class="btn btn-primary" type="button" data-act="n38save">${t('n38Save')}</button></div>
+    ${state.n38.msg ? `<p class="err">${esc(state.n38.msg)}</p>` : ''}
+    <button class="btn-link" type="button" data-act="n38skip">${t('n38Later')}</button></div>`;
+}
+ACT.n38save = async function(el){
+  const pw = ((document.getElementById('n38-ban') || {}).value || '');
+  state.n38.msg = '';
+  if (pw.length < 6){ state.n38.msg = t('n38Short'); render(); return; }
+  const cu = n38Au().currentUser; if (!cu) return;
+  el.disabled = true;
+  try {
+    if (n38HasPw()) await cu.updatePassword(pw);
+    else await cu.linkWithCredential(firebase.auth.EmailAuthProvider.credential(n38Em(cu.phoneNumber), pw));
+    state.n38 = {viaSms:false, force:false, pw:'', msg:''};
+    toast(t('n38Saved')); render();
+  } catch (e) { console.warn('n38save', e); el.disabled = false; state.n38.msg = n38Err(e); render(); }
+};
+ACT.n38skip = function(){
+  try { sessionStorage.setItem('n38skip_' + ((state.user || {}).uid || ''), '1'); } catch (e) {}
+  state.n38.force = false; state.n38.viaSms = false; state.n38.msg = ''; render();
+};
+ACT.n38change = function(){
+  try { sessionStorage.removeItem('n38skip_' + ((state.user || {}).uid || '')); } catch (e) {}
+  state.n38.force = true; render(); window.scrollTo(0, 0);
+};
+const n38Render0 = render;
+render = function(){
+  const r = n38Render0.apply(this, arguments);
+  try {
+    const main = document.getElementById('main');
+    const rv = route().view;
+    if (!main || rv === 'login' || rv === 'claim') return r;
+    const html = n38BanHtml();
+    const old = main.querySelector('.n38ban');
+    if (!html){ if (old) old.remove(); }
+    else if (!old){
+      const host = main.querySelector('.wrap') || main;
+      host.insertAdjacentHTML('afterbegin', html);
+    }
+    if (rv === 'account' && state.user && n38Au().currentUser && n38Au().currentUser.phoneNumber && !main.querySelector('[data-act=n38change]')){
+      const host = main.querySelector('.wrap') || main;
+      host.insertAdjacentHTML('beforeend', `<p class="n38acc"><button class="btn-link" type="button" data-act="n38change">${t('n38Change')}</button></p>`);
+    }
+  } catch (e) { console.warn('n38ban', e); }
+  return r;
+};
+window.addEventListener('hashchange', () => { if (!/#login/.test(location.hash)) state.n38.msg = ''; });
+
+(() => { const st = document.createElement('style'); st.textContent = `
+.n38sms{margin-top:8px}
+.n38help{text-align:center;margin:10px 0 0}
+.n38set input,.n38ban input{width:100%;box-sizing:border-box;min-height:46px;padding:10px 12px;border:1.5px solid var(--field);border-radius:12px;font:inherit;font-size:16px;background:#fff}
+.n38ban{border:1.5px solid #F0C7D3;background:#FFF6F9;display:grid;gap:8px;margin-bottom:14px}
+.n38ban p{margin:0}
+.n38row{display:grid;grid-template-columns:1fr auto;gap:8px}
+.n38acc{text-align:center;margin:18px 0}
 `; document.head.appendChild(st); })();
 
 render();
