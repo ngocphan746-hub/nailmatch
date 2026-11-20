@@ -3181,7 +3181,7 @@ function initLive(){
     try { const doc = await db.collection('users').doc(u.uid).get(); d = doc.exists ? doc.data() : null; } catch (e) { console.warn('user doc', e); }
     const base = {uid:u.uid, email:n38Real(u.email) || (d && d.email) || '', phone:(d && d.phone) || (u.phoneNumber ? digits10(u.phoneNumber) : '')};
     if (d && d.name){
-      state.user = Object.assign(base, {name:d.name, role:d.role || 'other', licNo:d.licNo || '', refContacts:d.refContacts || [], addrs:d.addrs || {}, pics:d.pics || {}, priv:d.priv || {}, avatar:d.avatar || ''}); state.pendingUser = null;
+      state.user = Object.assign(base, {name:d.name, role:d.role || 'other', mode:d.mode || '', licNo:d.licNo || '', refContacts:d.refContacts || [], addrs:d.addrs || {}, pics:d.pics || {}, priv:d.priv || {}, avatar:d.avatar || ''}); state.pendingUser = null;
       startUserListeners();
       if (state.auth.pending || route().view === 'login'){ state.auth = freshAuth(); toast(t('welcome', state.user.name)); afterAuth(); }
       render();
@@ -3240,7 +3240,7 @@ function initLive(){
       body = `<h1 class="pg-title">${t('profTitle')}</h1><p class="lead-s">${t('profLead')}</p>
       <div class="fq"><label class="flabel" for="au-name">${t('nameLbl')}</label><input id="au-name" type="text" maxlength="40" value="${esc(a.name || '')}"></div>
       ${!p.phone ? `<div class="fq"><label class="flabel" for="au-ph2">${t('phoneOpt')}</label><div class="tel-row"><span class="cc">🇺🇸 +1</span><input id="au-ph2" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(210) 555-0123" value="${esc(a.phone2 || '')}"></div></div>` : ''}
-      <div class="fq"><span class="flabel">${t('roleLbl')}</span><div class="seg three" role="radiogroup">${['salon','tech','other'].map(r => `<button type="button" role="radio" aria-checked="${a.role === r}" class="${a.role === r ? 'on' : ''}" data-act="aurole" data-v="${r}">${t('role_' + r)}</button>`).join('')}</div></div>
+      <div class="fq"><span class="flabel">${t('roleLbl')}</span><div class="seg three" role="radiogroup">${['tech','salon','both'].map(r => `<button type="button" role="radio" aria-checked="${a.role === r}" class="${a.role === r ? 'on' : ''}" data-act="aurole" data-v="${r}">${t('role_' + r)}</button>`).join('')}</div></div>
       ${msg}<button class="btn btn-primary btn-block" type="button" data-act="audone"${dis}>${a.busy ? t('sending') : t('done')}</button><p class="agree-note">${t('agreeNote')}</p>
       <p style="text-align:center;margin-top:12px"><button class="btn-link" type="button" data-act="signout">${t('signOut')}</button></p>`;
     } else {
@@ -3308,8 +3308,9 @@ function initLive(){
       const ph = p.phone || (p2el && digits10(p2el.value).length === 10 ? digits10(p2el.value) : '');
       a.busy = true; a.msg = ''; render();
       try {
-        await db.collection('users').doc(p.uid).set({name:n, role:a.role || 'other', phone:ph, email:p.email || '', createdAt:TS()}, {merge:true});
-        state.user = {uid:p.uid, name:n, role:a.role || 'other', phone:ph, email:p.email || ''}; state.pendingUser = null;
+        const role = a.role || 'other', mode = role === 'both' ? (a.n39mode === 'tech' ? 'tech' : 'salon') : '', em = p.email || a.n39mail || '';
+        await db.collection('users').doc(p.uid).set(Object.assign({name:n, role, phone:ph, email:em, createdAt:TS()}, mode ? {mode} : {}), {merge:true});
+        state.user = {uid:p.uid, name:n, role, mode, phone:ph, email:em}; state.pendingUser = null;
         state.auth = freshAuth(); startUserListeners(); toast(t('welcome', n)); afterAuth(); render();
       } catch (e) { a.busy = false; a.msg = errText(e); render(); }
     },
@@ -12869,12 +12870,12 @@ function n34AdmSet(){
 function n34Role(u){
   if (!u) return '';
   if (n34AdmSet().has(n34D(u.phone))) return 'admin';
-  return u.role === 'salon' || u.role === 'tech' ? u.role : 'other';
+  return u.role === 'salon' || u.role === 'tech' || u.role === 'both' ? u.role : 'other';
 }
-const n34RoleLb = r => r === 'admin' ? t('n34Adm') : r === 'salon' ? t('n34Salon') : r === 'tech' ? t('n34Tech') : t('n24Other');
+const n34RoleLb = r => r === 'admin' ? t('n34Adm') : r === 'salon' ? t('n34Salon') : r === 'tech' ? t('n34Tech') : r === 'both' ? t('n39Both') : t('n24Other');
 function n34Counts(rows){
-  const c = {all:rows.length, sal:0, tech:0, adm:0, other:0};
-  rows.forEach(u => { const r = n34Role(u); if (r === 'admin') c.adm++; else if (r === 'salon') c.sal++; else if (r === 'tech') c.tech++; else c.other++; });
+  const c = {all:rows.length, sal:0, tech:0, adm:0, other:0, both:0};
+  rows.forEach(u => { const r = n34Role(u); if (r === 'admin') c.adm++; else if (r === 'salon') c.sal++; else if (r === 'tech') c.tech++; else if (r === 'both') c.both++; else c.other++; });
   return c;
 }
 (() => {
@@ -13037,7 +13038,7 @@ viewLogin = function(){
   const lk = state.n34.lock;
   if (!lk) return h;
   a.role = lk;
-  h = h.replace(/<button[^>]*data-act="aurole" data-v="(salon|tech|other)"[^>]*>[\s\S]*?<\/button>/g, (m, v) => v === lk ? m : '');
+  h = h.replace(/<button[^>]*data-act="aurole" data-v="(salon|tech|other|both)"[^>]*>[\s\S]*?<\/button>/g, (m, v) => v === lk ? m : '');
   return h.replace(/(<div class="seg[^"]*" role="radiogroup">[\s\S]*?<\/div>)/, `$1<p class="hint n34lock">${esc(t('n34Lock', lk))}</p>`);
 };
 const n34Role0 = ACT.aurole;
@@ -13057,6 +13058,7 @@ function n34AccList(){
   if (f === 'adm') return all.filter(u => n34Role(u) === 'admin');
   if (f === 'sal') return all.filter(u => n34Role(u) === 'salon');
   if (f === 'tech') return all.filter(u => n34Role(u) === 'tech');
+  if (f === 'both') return all.filter(u => n34Role(u) === 'both');
   return all;
 }
 function n34AccWarn(u){
@@ -13085,15 +13087,15 @@ n24Card = function(){
       <td>${esc(n34RoleLb(n34Role(x)))}</td><td>${esc(n34When(n34Ms(x.createdAt)))}</td></tr>`).join('')}</tbody></table></div>`;
   return `<div class="card adm-card"><button class="btn-link" type="button" data-act="n24close">${t('n24Back')}</button>
     <h2 class="sec">${t('n24UH')}</h2><p class="hint">${esc(t('n24UD'))}</p>
-    <nav class="ct-fs chipset">${chip('all', t('n24All'))}${chip('sal', t('n24Sal'))}${chip('tech', t('n24Tech'))}${chip('adm', t('n34Adm'))}${chip('none', t('n34None'))}</nav>
+    <nav class="ct-fs chipset">${chip('all', t('n24All'))}${chip('sal', t('n24Sal'))}${chip('tech', t('n24Tech'))}${chip('both', t('n39Both'))}${chip('adm', t('n34Adm'))}${chip('none', t('n34None'))}</nav>
     ${body}</div>`;
 };
 const n34Go0 = ACT.n24go;
 ACT.n24go = function(el){
   const v = el.dataset.v;
-  if (v === 'u-adm' || v === 'u-none'){
+  if (v === 'u-adm' || v === 'u-none' || v === 'u-both'){
     const fake = {dataset:{v:'u-all'}}; n34Go0(fake);
-    state.n24.f = v === 'u-adm' ? 'adm' : 'none'; render(); return;
+    state.n24.f = v === 'u-adm' ? 'adm' : v === 'u-both' ? 'both' : 'none'; render(); return;
   }
   return n34Go0(el);
 };
@@ -13261,7 +13263,8 @@ admOver = function(){
   if ((state.n22 && state.n22.rev) || (state.n24 && state.n24.view)) return h;
   const u = state.n34.users ? n34Counts(state.n34.users) : null;
   if (u){
-    const extra = `<tr class="n24-row" data-act="n24go" data-v="u-adm"><td>${t('n34UAdm')}</td><td><b>${u.adm}</b></td></tr>`
+    const extra = `<tr class="n24-row" data-act="n24go" data-v="u-both"><td>${t('n39UBoth')}</td><td><b>${u.both}</b></td></tr>`
+      + `<tr class="n24-row" data-act="n24go" data-v="u-adm"><td>${t('n34UAdm')}</td><td><b>${u.adm}</b></td></tr>`
       + (u.other ? `<tr><td>${t('n34UOther')}</td><td><b>${u.other}</b></td></tr>` : '');
     h = h.replace(/(<tr class="n24-row" data-act="n24go" data-v="u-tech">[\s\S]*?<\/tr>)/, `$1${extra}`);
   }
@@ -14143,7 +14146,7 @@ function n38BanHtml(){
   const has = n38HasPw();
   let skip = false; try { skip = sessionStorage.getItem('n38skip_' + u.uid) === '1'; } catch (e) {}
   if (!state.n38.force && (skip || (has && !state.n38.viaSms))) return '';
-  const reset = has || state.n38.mode === 'reset';
+  const reset = has || state.n38.reset;
   return `<div class="card n38ban"><b>${esc(t(reset ? 'n38BanReset' : 'n38BanT'))}</b><p class="hint">${esc(t(reset ? 'n38BanResetD' : 'n38BanD'))}</p>
     ${n38Pin('n38-ban', 'new-password', state.n38.pw)}
     ${state.n38.msg ? `<p class="err">${esc(state.n38.msg)}</p>` : ''}
@@ -14186,7 +14189,8 @@ render = function(){
   try {
     const main = document.getElementById('main');
     const rv = route().view;
-    if (state.user && state.n38.mode && !state.n38.viaSms) state.n38.mode = '';
+    /* đã vào tài khoản: bỏ màn "Quên mã PIN / Đăng ký" để lần sau mở lại là màn đăng nhập */
+    if (state.user && state.n38.mode){ state.n38.reset = state.n38.mode === 'reset'; state.n38.mode = ''; }
     if (!main || rv === 'login' || rv === 'claim') return r;
     n38Ban(false);
     if (rv === 'account' && state.user && n38Au().currentUser && n38Au().currentUser.phoneNumber && !main.querySelector('[data-act=n38change]')){
@@ -14216,6 +14220,240 @@ window.addEventListener('hashchange', () => { if (!/#login/.test(location.hash))
 .n38ban p{margin:0}
 .n38row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .n38acc{text-align:center;margin:18px 0}
+`; document.head.appendChild(st); })();
+
+/* ============================================================
+   n139 — tài khoản "Cả hai (Thợ & Tiệm)" + email thông báo
+   - đăng ký: Thợ / Tiệm / Cả hai (thay "Khác"); chọn "Cả hai" thì chọn bắt đầu với Thợ hay Tiệm
+   - users.role = 'both' (không đổi được), users.mode = 'tech' | 'salon' (bên đang dùng)
+   - nút "Thợ ⇄ / Tiệm ⇄" trên đầu trang để chuyển bên
+   - mỗi bên 1 bài: 1 hồ sơ thợ (vốn đã vậy) + 1 tin tiệm
+   - không tự ứng tuyển / tự mời chính mình
+   - hộp tin nhắn: Tất cả / Tiệm / Thợ
+   - email: ô (không bắt buộc) lúc đăng ký bằng số + dòng email trong trang Tài khoản
+   ============================================================ */
+Object.assign(T.vi, {
+  role_both:'Cả hai', n39Both:'Cả hai', n39UBoth:'Tài khoản Cả hai (Thợ & Tiệm)',
+  n39BothHint:'Cả hai = vừa tìm việc (Thợ) vừa tuyển thợ (Tiệm). Mỗi bên đăng 1 bài.',
+  n39Start:'Bắt đầu với', n39StartHint:'Đổi qua lại bất cứ lúc nào bằng nút trên đầu trang.',
+  n39PickRole:'Chọn bạn là Thợ, Tiệm hay Cả hai.', n39PickMode:'Chọn bắt đầu với Thợ hay Tiệm.',
+  n39Mail:'Email nhận thông báo', n39MailOpt:'(không bắt buộc)', n39MailHint:'Nhận email khi có người ứng tuyển, mời đi làm hoặc nhắn tin cho bạn.',
+  n39MailBad:'Email chưa đúng. Kiểm tra lại hoặc để trống.',
+  n39SwTo:r => `Đang là ${r}. Bấm để chuyển sang ${r === 'Thợ' ? 'Tiệm' : 'Thợ'}`,
+  n39SwOk:r => `Đã chuyển sang ${r}.`, n39Now:'Đang dùng', n39SwBtn:r => `Chuyển sang ${r}`,
+  n39One:'Bạn đã có 1 tin tuyển thợ', n39OneD:'Tài khoản Cả hai đăng được 1 tin tuyển thợ. Muốn đăng tin mới thì sửa tin cũ, hoặc xoá tin cũ rồi đăng lại.',
+  n39OneEdit:'Sửa tin đang có', n39OneMine:'Xem tin của tôi',
+  n39Self:'Đây là bài của chính bạn.',
+  n39All:'Tất cả', n39BoxSalon:'Tiệm', n39BoxTech:'Thợ', n39BoxNone:'Chưa có tin nhắn ở mục này.',
+  n39MailRow:'Email nhận thông báo', n39MailNone:'Chưa có – bạn sẽ không nhận được email khi có người ứng tuyển hoặc nhắn tin.',
+  n39MailAdd:'Thêm email', n39MailEdit:'Đổi'
+});
+Object.assign(T.en, {
+  role_both:'Both', n39Both:'Both', n39UBoth:'Both accounts (tech & salon)',
+  n39BothHint:'Both = look for work (tech) and hire (salon). One post on each side.',
+  n39Start:'Start as', n39StartHint:'Switch any time with the button at the top.',
+  n39PickRole:'Choose tech, salon or both.', n39PickMode:'Choose to start as tech or salon.',
+  n39Mail:'Email for alerts', n39MailOpt:'(optional)', n39MailHint:'Get an email when someone applies, invites you or messages you.',
+  n39MailBad:'That email doesn’t look right. Fix it or leave it empty.',
+  n39SwTo:r => `You are on the ${r} side. Tap to switch to ${r === 'Tech' ? 'Salon' : 'Tech'}`,
+  n39SwOk:r => `Switched to ${r}.`, n39Now:'Using', n39SwBtn:r => `Switch to ${r}`,
+  n39One:'You already have a job post', n39OneD:'A Both account can have 1 job post. To post a new one, edit your post, or delete it and post again.',
+  n39OneEdit:'Edit my post', n39OneMine:'See my posts',
+  n39Self:'This is your own post.',
+  n39All:'All', n39BoxSalon:'Salon', n39BoxTech:'Tech', n39BoxNone:'No messages here yet.',
+  n39MailRow:'Email for alerts', n39MailNone:'None – you won’t get an email when someone applies or messages you.',
+  n39MailAdd:'Add email', n39MailEdit:'Change'
+});
+state.n39 = {box:'all'};
+const N39_MAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const n39Both = () => !!(state.user && state.user.role === 'both');
+const n39Mode = () => (state.user && state.user.mode === 'tech') ? 'tech' : 'salon';
+const n39Adm = () => !!(state.adm && state.adm.on);
+
+/* ---------- vai đang dùng ---------- */
+const n39Role0 = n3Role;
+n3Role = function(){
+  if (state.user && !n39Adm() && state.user.role === 'both') return n39Mode();
+  return n39Role0();
+};
+
+/* ---------- đăng ký ---------- */
+function n39Keep(){
+  const a = state.auth || {}, nm = document.getElementById('au-name'), p2 = document.getElementById('au-ph2'), ml = document.getElementById('n39-mail');
+  if (nm) a.name = nm.value; if (p2) a.phone2 = p2.value; if (ml) a.n39mail = ml.value.trim();
+}
+const n39Login0 = viewLogin;
+viewLogin = function(){
+  let h = n39Login0();
+  const a = state.auth || {}, p = state.pendingUser;
+  if (a.step !== 'profile' || !p || state.user || !/data-act="audone"/.test(h)) return h;
+  /* 3 lựa chọn ngang nhau */
+  h = h.replace(/<div class="seg(?: three)?" role="radiogroup">(?=[\s\S]*?data-act="aurole")/, '<div class="seg three n39seg" role="radiogroup">');
+  let add = '';
+  if (a.role === 'both' && !(state.n34 && state.n34.lock)){
+    const b = v => `<button type="button" role="radio" aria-checked="${a.n39mode === v}" class="${a.n39mode === v ? 'on' : ''}" data-act="n39start" data-v="${v}">${t(v === 'tech' ? 'n3RoleTech' : 'n3RoleSalon')}</button>`;
+    add += `<p class="hint n39bh">${esc(t('n39BothHint'))}</p><div class="fq n39start"><span class="flabel">${t('n39Start')}</span>
+      <div class="seg" role="radiogroup">${b('tech')}${b('salon')}</div><p class="hint">${esc(t('n39StartHint'))}</p></div>`;
+  }
+  if (p.phone && !p.email){
+    add += `<div class="fq n39mailf"><label class="flabel" for="n39-mail">${t('n39Mail')} <span class="opt">${t('n39MailOpt')}</span></label>
+      <input id="n39-mail" type="email" inputmode="email" autocomplete="email" placeholder="you@gmail.com" value="${esc(a.n39mail || '')}">
+      <p class="hint">${esc(t('n39MailHint'))}</p></div>`;
+  }
+  if (add) h = h.replace(/(<div class="fq n38set">|<p class="auth-msg"|<button class="btn btn-primary btn-block" type="button" data-act="audone")/, add + '$1');
+  return h;
+};
+(() => {
+  const r0 = ACT.aurole;
+  ACT.aurole = function(el){ n39Keep(); return r0.call(this, el); };
+  ACT.n39start = function(el){ n39Keep(); state.auth.n39mode = el.dataset.v === 'tech' ? 'tech' : 'salon'; state.auth.msg = ''; render(); };
+  const d0 = ACT.audone;
+  ACT.audone = async function(el){
+    const a = state.auth || {}, p = state.pendingUser;
+    if (a.step === 'profile' && p){
+      n39Keep();
+      const lock = state.n34 && state.n34.lock;
+      if (!lock && ['tech', 'salon', 'both'].indexOf(a.role) < 0){ a.msg = t('n39PickRole'); render(); return; }
+      if (!lock && a.role === 'both' && ['tech', 'salon'].indexOf(a.n39mode) < 0){ a.msg = t('n39PickMode'); render(); return; }
+      if (a.n39mail && !N39_MAIL.test(a.n39mail)){ a.msg = t('n39MailBad'); render(); return; }
+      if (lock && a.role !== 'both') a.n39mode = '';
+    }
+    return d0.call(this, el);
+  };
+})();
+
+/* ---------- chuyển bên ---------- */
+ACT.n39mode = async function(el){
+  if (!n39Both()) return;
+  const to = el && el.dataset && (el.dataset.v === 'tech' || el.dataset.v === 'salon') ? el.dataset.v : (n39Mode() === 'tech' ? 'salon' : 'tech');
+  state.user.mode = to; state.n39.box = 'all';
+  const nm = t(to === 'tech' ? 'n3RoleTech' : 'n3RoleSalon');
+  const v = route().view;
+  if (v === 'form' || v === 'myads' || v === 'myprof' || v === 'home') location.hash = '#home';
+  render(); toast(t('n39SwOk', nm));
+  await n39Save(to);
+};
+/* mở trang của bên kia (vd. link "Đăng tin tuyển thợ" khi đang ở bên Thợ) → tự chuyển bên cho khớp */
+async function n39Save(to){ try { const c = state.n1ctx; if (c && c.db && state.user) await c.db.collection('users').doc(state.user.uid).set({mode:to}, {merge:true}); } catch (e) { console.warn('n39mode', e); } }
+const n39R0 = render;
+render = function(){
+  try {
+    if (n39Both() && !n39Adm()){
+      const h = (location.hash || '').replace(/^#/, ''), r = route(); let want = '';
+      if (h === 'myads' || h === 'post-hiring' || (r.view === 'form' && r.type === 'hiring')) want = 'salon';
+      else if (h === 'myprof' || h === 'post-profile' || (r.view === 'form' && r.type === 'profile')) want = 'tech';
+      if (want && n39Mode() !== want){ state.user.mode = want; state.n39.box = 'all'; n39Save(want); setTimeout(() => toast(t('n39SwOk', t(want === 'tech' ? 'n3RoleTech' : 'n3RoleSalon'))), 0); }
+    }
+  } catch (e) { console.warn('n39auto', e); }
+  return n39R0.apply(this, arguments);
+};
+const n39Head0 = header;
+header = function(r){
+  let h = n39Head0(r);
+  if (!n39Both() || n39Adm()) return h;
+  const nm = t(n39Mode() === 'tech' ? 'n3RoleTech' : 'n3RoleSalon');
+  return h.replace(/<span class="n3chiprole">[^<]*<\/span>/,
+    `<button type="button" class="n39sw" data-act="n39mode" aria-label="${esc(t('n39SwTo', nm))}" title="${esc(t('n39SwTo', nm))}"><span>${esc(nm)}</span><span class="n39ar" aria-hidden="true">⇄</span></button>`);
+};
+
+/* ---------- trang Tài khoản ---------- */
+const n39Acc0 = viewAccount;
+viewAccount = function(){
+  let h = n39Acc0();
+  const u = state.user;
+  if (!u || !h) return h;
+  if (n39Both() && !n39Adm()){
+    const cur = n39Mode(), other = cur === 'tech' ? 'salon' : 'tech', nm = k => t(k === 'tech' ? 'n3RoleTech' : 'n3RoleSalon');
+    h = h.replace(/<p class="n2note n3role">[\s\S]*?<\/p>/, `<p class="n2note n3role n39row">${esc(t('n3RoleLbl'))}: <b>${esc(t('n39Both'))}</b> · ${esc(t('n39Now'))}: <b>${esc(nm(cur))}</b>
+      <button class="btn-link" type="button" data-act="n39mode" data-v="${other}">${esc(t('n39SwBtn', nm(other)))}</button></p>`);
+  }
+  /* bỏ dòng email cũ (đã thay bằng dòng mới rõ hơn) */
+  h = h.replace(/<p class="n2note">[^<]*: <b>[^<]*<\/b> <button class="btn-link" type="button" data-act="n2mailopen">[^<]*<\/button><\/p>/, '');
+  if (!n39Adm()){
+    const row = `<p class="n2note n39mrow">📧 ${esc(t('n39MailRow'))}: ${u.email ? `<b>${esc(u.email)}</b>` : `<span class="n39none">${esc(t('n39MailNone'))}</span>`}
+      <button class="btn-link" type="button" data-act="n2mailopen">${esc(t(u.email ? 'n39MailEdit' : 'n39MailAdd'))}</button></p>`;
+    const i = h.indexOf('<div class="acc-btns">');
+    h = i < 0 ? h.replace(/(<\/div>\s*<\/div>\s*)$/, row + '$1') : h.slice(0, i) + row + h.slice(i);
+  }
+  return h;
+};
+
+/* ---------- mỗi bên 1 bài (tin tiệm) ---------- */
+function n39MyAd(){ try { return (n1MyAds() || [])[0] || null; } catch (e) { return null; } }
+const n39Form0 = viewForm;
+viewForm = function(type){
+  if (type === 'hiring' && n39Both() && !n39Adm()){
+    const fs = getForm('hiring'), ad = n39MyAd();
+    if (ad && fs && !fs.editId && !fs.done && !fs.liveId){
+      return `<div class="wrap narrow page"><div class="card n39one"><h1 class="pg-title">${esc(t('n39One'))}</h1>
+        <p class="lead-s">${esc(t('n39OneD'))}</p>
+        <div class="row"><button class="btn btn-primary" type="button" data-act="liveedit" data-k="ads" data-v="${esc(ad.id)}">${esc(t('n39OneEdit'))}</button>
+        <a class="btn btn-ghost" href="#myads">${esc(t('n39OneMine'))}</a></div></div></div>`;
+    }
+  }
+  return n39Form0(type);
+};
+(() => {
+  const pub0 = ACT.fpublish;
+  ACT.fpublish = function(el){
+    const type = el && el.dataset && el.dataset.ft;
+    if (type === 'hiring' && n39Both() && !n39Adm()){
+      const fs = getForm('hiring'), ad = n39MyAd();
+      if (ad && fs && !fs.editId && !fs.liveId){ toast(t('n39One')); render(); return; }
+    }
+    return pub0.apply(this, arguments);
+  };
+})();
+
+/* ---------- không tự ứng tuyển / tự mời ---------- */
+function n39IsMine(it){
+  const u = state.user; if (!u || !it) return false;
+  if (it.ownerUid && it.ownerUid === u.uid) return true;
+  if (TECHS.includes(it) && it.id === u.uid) return true;
+  try { if (typeof n23Mine === 'function' && n23Mine(it)) return true; } catch (e) {}
+  return false;
+}
+(() => {
+  const ap0 = ACT.n1apply, of0 = ACT.n1offer;
+  ACT.n1apply = function(el){ const it = ADS.find(a => a.id === el.dataset.v); if (n39IsMine(it)){ toast(t('n39Self')); return; } return ap0.apply(this, arguments); };
+  ACT.n1offer = function(el){ const it = TECHS.find(x => x.id === el.dataset.v); if (n39IsMine(it)){ toast(t('n39Self')); return; } return of0.apply(this, arguments); };
+})();
+
+/* ---------- hộp tin nhắn: Tất cả / Tiệm / Thợ ---------- */
+function n39Side(th){
+  const u = state.user; if (!u || !th) return 'salon';
+  const pid = state.myProfile && state.myProfile.id;
+  return th.techId && (th.techId === u.uid || (pid && th.techId === pid)) ? 'tech' : 'salon';
+}
+const n39Inbox0 = viewInbox;
+viewInbox = function(){
+  if (!n39Both() || n39Adm()) return n39Inbox0();
+  const L = state.live, all = L.threads, f = state.n39.box;
+  let h;
+  if (f === 'salon' || f === 'tech'){ L.threads = all.filter(th => n39Side(th) === f); try { h = n39Inbox0(); } finally { L.threads = all; } }
+  else h = n39Inbox0();
+  if (!h) return h;
+  const cnt = k => all.filter(th => th.status && th.status !== 'declined' && (k === 'all' || n39Side(th) === k)).length;
+  const chip = (k, lb) => `<button type="button" class="choice${f === k ? ' on' : ''}" data-act="n39box" data-v="${k}" aria-pressed="${f === k}">${esc(lb)} (${cnt(k)})</button>`;
+  const bar = `<nav class="chipset n39box" aria-label="${esc(t('inbox'))}">${chip('all', t('n39All'))}${chip('salon', t('n39BoxSalon'))}${chip('tech', t('n39BoxTech'))}</nav>`;
+  if (f !== 'all' && !cnt(f)) h = h.replace(/<div class="card n1empty">[\s\S]*?<\/div>\s*<\/div>(?=\s*$)/, `<p class="empty-s">${esc(t('n39BoxNone'))}</p></div>`);
+  return h.replace(/(<h1 class="pg-title">[\s\S]*?<\/h1>)/, `$1${bar}`);
+};
+ACT.n39box = function(el){ state.n39.box = ['salon', 'tech'].indexOf(el.dataset.v) >= 0 ? el.dataset.v : 'all'; render(); };
+
+(() => { const st = document.createElement('style'); st.textContent = `
+.n39sw{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--primary);color:var(--primary);background:#fff;border-radius:999px;padding:5px 12px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;min-height:34px}
+.n39sw:hover{background:var(--primary);color:#fff}
+.n39sw:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.n39ar{font-size:15px;line-height:1}
+@media (max-width:430px){.hdr-right:has(.n39sw) .inbox-btn{display:none}.n39sw{padding:4px 10px;font-size:13px;min-height:32px;gap:4px}}
+.n39seg button{padding-left:6px;padding-right:6px}
+.n39start .seg{display:grid;grid-template-columns:1fr 1fr}
+.n39bh{margin:-4px 0 10px}
+.n39mailf .opt{font-weight:500;color:var(--muted);font-size:13px}
+.n39box{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 14px}
+.n39one .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.n39mrow .n39none{color:var(--muted)}
 `; document.head.appendChild(st); })();
 
 render();
