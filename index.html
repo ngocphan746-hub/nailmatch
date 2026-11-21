@@ -3181,7 +3181,7 @@ function initLive(){
     try { const doc = await db.collection('users').doc(u.uid).get(); d = doc.exists ? doc.data() : null; } catch (e) { console.warn('user doc', e); }
     const base = {uid:u.uid, email:n38Real(u.email) || (d && d.email) || '', phone:(d && d.phone) || (u.phoneNumber ? digits10(u.phoneNumber) : '')};
     if (d && d.name){
-      state.user = Object.assign(base, {name:d.name, role:d.role || 'other', mode:d.mode || '', licNo:d.licNo || '', refContacts:d.refContacts || [], addrs:d.addrs || {}, pics:d.pics || {}, priv:d.priv || {}, avatar:d.avatar || ''}); state.pendingUser = null;
+      state.user = Object.assign(base, {name:d.name, role:d.role || 'other', mode:d.mode || '', licNo:d.licNo || '', refContacts:d.refContacts || [], addrs:d.addrs || {}, pics:d.pics || {}, priv:d.priv || {}, avatar:d.avatar || '', saved:d.saved || []}); state.pendingUser = null;
       startUserListeners();
       if (state.auth.pending || route().view === 'login'){ state.auth = freshAuth(); toast(t('welcome', state.user.name)); afterAuth(); }
       render();
@@ -12815,6 +12815,7 @@ ACT.n33fix = function(el){
    ============================================================ */
 Object.assign(T.vi, {
   n34Adm:'Admin', n34UAdm:'— Admin', n34UOther:'— Chưa chọn vai', n34None:'Chưa có tin/hồ sơ',
+  n41Mail:'Email', n41NoMail:'— chưa có', n41NoMailF:'Chưa có email', n41UNoMail:'Chưa có email (không nhận được thông báo)',
   n34Reg:(n, r) => `Đã đăng ký: ${n} (${r})`, n34Bad:(n, r, w) => `⚠ ${n} đăng ký là ${r}, nhưng ở đây là ${w}`,
   n34Salon:'Tiệm', n34Tech:'Thợ',
   n34Lock:r => `Số này đã có tin ${r === 'salon' ? 'của tiệm' : 'hồ sơ thợ'} nên tài khoản sẽ là ${r === 'salon' ? 'Tiệm' : 'Thợ'}.`,
@@ -12835,6 +12836,7 @@ Object.assign(T.vi, {
 });
 Object.assign(T.en, {
   n34Adm:'Admin', n34UAdm:'— Admins', n34UOther:'— No role yet', n34None:'No post/profile yet',
+  n41Mail:'Email', n41NoMail:'— none', n41NoMailF:'No email', n41UNoMail:'No email (gets no alerts)',
   n34Reg:(n, r) => `Signed up: ${n} (${r})`, n34Bad:(n, r, w) => `⚠ ${n} signed up as ${r}, but this is a ${w}`,
   n34Salon:'Salon', n34Tech:'Tech',
   n34Lock:r => `This number already has a ${r === 'salon' ? 'salon post' : 'tech profile'}, so the account will be a ${r === 'salon' ? 'Salon' : 'Tech'}.`,
@@ -12880,8 +12882,10 @@ function n34Role(u){
   return u.role === 'salon' || u.role === 'tech' || u.role === 'both' ? u.role : 'other';
 }
 const n34RoleLb = r => r === 'admin' ? t('n34Adm') : r === 'salon' ? t('n34Salon') : r === 'tech' ? t('n34Tech') : r === 'both' ? t('n39Both') : t('n24Other');
+const n41HasMail = u => !!(u && u.email && /@/.test(String(u.email)) && !/@phone\.nail101\.com$/i.test(String(u.email)));
 function n34Counts(rows){
-  const c = {all:rows.length, sal:0, tech:0, adm:0, other:0, both:0};
+  const c = {all:rows.length, sal:0, tech:0, adm:0, other:0, both:0, nomail:0};
+  rows.forEach(u => { if (n34Role(u) !== 'admin' && !n41HasMail(u)) c.nomail++; });
   rows.forEach(u => { const r = n34Role(u); if (r === 'admin') c.adm++; else if (r === 'salon') c.sal++; else if (r === 'tech') c.tech++; else if (r === 'both') c.both++; else c.other++; });
   return c;
 }
@@ -13066,6 +13070,7 @@ function n34AccList(){
   if (f === 'sal') return all.filter(u => n34Role(u) === 'salon');
   if (f === 'tech') return all.filter(u => n34Role(u) === 'tech');
   if (f === 'both') return all.filter(u => n34Role(u) === 'both');
+  if (f === 'nomail') return all.filter(u => n34Role(u) !== 'admin' && !n41HasMail(u));
   return all;
 }
 function n34AccWarn(u){
@@ -13088,21 +13093,21 @@ n24Card = function(){
   else if (state.n24.rows === null) body = `<p class="empty-s">${t('n24Load')}</p>`;
   else if (!l.length) body = `<p class="empty-s">${t('n24Empty')}</p>`;
   else body = `<div class="im-wrap"><table class="im-tbl ct-tbl">
-    <thead><tr><th>${t('n24Name')}</th><th>${t('n24Ph')}</th><th>${t('n24Kind')}</th><th>${t('n24When')}</th></tr></thead>
+    <thead><tr><th>${t('n24Name')}</th><th>${t('n24Ph')}</th><th>${t('n41Mail')}</th><th>${t('n24Kind')}</th><th>${t('n24When')}</th></tr></thead>
     <tbody>${l.map(x => `<tr><td><b>${esc(x.name || t('n24NoName'))}</b>${n34AccWarn(x)}</td>
-      <td>${esc(admPretty(n34D(x.phone)) || '—')}</td>
+      <td>${esc(admPretty(n34D(x.phone)) || '—')}</td><td>${n41HasMail(x) ? esc(String(x.email).trim()) : `<span class="n41nomail">${esc(t('n41NoMail'))}</span>`}</td>
       <td>${esc(n34RoleLb(n34Role(x)))}</td><td>${esc(n34When(n34Ms(x.createdAt)))}</td></tr>`).join('')}</tbody></table></div>`;
   return `<div class="card adm-card"><button class="btn-link" type="button" data-act="n24close">${t('n24Back')}</button>
     <h2 class="sec">${t('n24UH')}</h2><p class="hint">${esc(t('n24UD'))}</p>
-    <nav class="ct-fs chipset">${chip('all', t('n24All'))}${chip('sal', t('n24Sal'))}${chip('tech', t('n24Tech'))}${chip('both', t('n39Both'))}${chip('adm', t('n34Adm'))}${chip('none', t('n34None'))}</nav>
+    <nav class="ct-fs chipset">${chip('all', t('n24All'))}${chip('sal', t('n24Sal'))}${chip('tech', t('n24Tech'))}${chip('both', t('n39Both'))}${chip('adm', t('n34Adm'))}${chip('none', t('n34None'))}${chip('nomail', t('n41NoMailF'))}</nav>
     ${body}</div>`;
 };
 const n34Go0 = ACT.n24go;
 ACT.n24go = function(el){
   const v = el.dataset.v;
-  if (v === 'u-adm' || v === 'u-none' || v === 'u-both'){
+  if (v === 'u-adm' || v === 'u-none' || v === 'u-both' || v === 'u-nomail'){
     const fake = {dataset:{v:'u-all'}}; n34Go0(fake);
-    state.n24.f = v === 'u-adm' ? 'adm' : v === 'u-both' ? 'both' : 'none'; render(); return;
+    state.n24.f = v === 'u-adm' ? 'adm' : v === 'u-both' ? 'both' : v === 'u-nomail' ? 'nomail' : 'none'; render(); return;
   }
   return n34Go0(el);
 };
@@ -13272,6 +13277,7 @@ admOver = function(){
   if (u){
     const extra = `<tr class="n24-row" data-act="n24go" data-v="u-both"><td>${t('n39UBoth')}</td><td><b>${u.both}</b></td></tr>`
       + `<tr class="n24-row" data-act="n24go" data-v="u-adm"><td>${t('n34UAdm')}</td><td><b>${u.adm}</b></td></tr>`
+      + `<tr class="n24-row" data-act="n24go" data-v="u-nomail"><td>${t('n41UNoMail')}</td><td><b class="${u.nomail ? 'n41nomail' : ''}">${u.nomail}</b></td></tr>`
       + (u.other ? `<tr><td>${t('n34UOther')}</td><td><b>${u.other}</b></td></tr>` : '');
     h = h.replace(/(<tr class="n24-row" data-act="n24go" data-v="u-tech">[\s\S]*?<\/tr>)/, `$1${extra}`);
   }
@@ -13980,7 +13986,7 @@ Object.assign(T.vi, {
   n38BanD:'Tạo mã PIN 6 số cho tài khoản của bạn để đăng nhập những lần sau.', n38BanResetD:'Nhập mã PIN 6 số mới. Lần sau đăng nhập bằng số điện thoại + mã PIN này.',
   n38Save:'Lưu mã PIN', n38Later:'Để sau', n38Saved:'Đã lưu mã PIN. Lần sau đăng nhập bằng số điện thoại + mã PIN.',
   n38Used:'Số này đã có mã PIN ở tài khoản khác. Liên hệ hỗ trợ.', n38Again:'Cần đăng nhập lại bằng mã SMS (bấm "Quên mã PIN?") rồi mới đổi được.',
-  n38Change:'🔐 Đặt / đổi mã PIN'
+  n38Change:'🔐 Đặt / đổi mã PIN', n38Again2:'Nhập lại mã PIN', n38Diff:'Hai mã PIN không giống nhau. Nhập lại.'
 });
 Object.assign(T.en, {
   authLead:'',
@@ -13998,9 +14004,9 @@ Object.assign(T.en, {
   n38BanD:'Create a 6-digit PIN for your account to sign in next time.', n38BanResetD:'Enter a new 6-digit PIN. Next time sign in with your number + this PIN.',
   n38Save:'Save PIN', n38Later:'Later', n38Saved:'PIN saved. Next time sign in with your number + PIN.',
   n38Used:'This number already has a PIN on another account. Contact support.', n38Again:'Please sign in again with a text code ("Forgot PIN?"), then change it.',
-  n38Change:'🔐 Set / change PIN'
+  n38Change:'🔐 Set / change PIN', n38Again2:'Enter the PIN again', n38Diff:'The two PINs don’t match. Try again.'
 });
-state.n38 = {viaSms:false, force:false, pw:'', msg:'', mode:'', show:false};
+state.n38 = {viaSms:false, force:false, pw:'', pw2:'', msg:'', mode:'', show:false};
 const n38Em = ph => `p${n34D(ph)}@phone.nail101.com`;
 const n38Au = () => firebase.auth();
 const n38Ok = v => /^\d{6}$/.test(v || '');
@@ -14039,6 +14045,7 @@ document.addEventListener('input', e => {
   const v = el.value.replace(/\D/g, '').slice(0, 6);
   if (v !== el.value) el.value = v;
   if (el.id === 'n38-new' || el.id === 'n38-ban') state.n38.pw = v;
+  if (el.id === 'n38-ban2') state.n38.pw2 = v;
   n38Paint(el);
 });
 document.addEventListener('focusin', e => { if (e.target && e.target.classList && e.target.classList.contains('n38in')) n38Paint(e.target); });
@@ -14156,20 +14163,22 @@ function n38BanHtml(){
   const reset = has || state.n38.reset;
   return `<div class="card n38ban"><b>${esc(t(reset ? 'n38BanReset' : 'n38BanT'))}</b><p class="hint">${esc(t(reset ? 'n38BanResetD' : 'n38BanD'))}</p>
     ${n38Pin('n38-ban', 'new-password', state.n38.pw)}
+    <label class="flabel n38l2" for="n38-ban2">${esc(t('n38Again2'))}</label>${n38Pin('n38-ban2', 'new-password', state.n38.pw2)}
     ${state.n38.msg ? `<p class="err">${esc(state.n38.msg)}</p>` : ''}
     <div class="n38row"><button class="btn btn-primary" type="button" data-act="n38save">${t('n38Save')}</button>
     <button class="btn-link" type="button" data-act="n38skip">${t('n38Later')}</button></div></div>`;
 }
 ACT.n38save = async function(el){
-  const pw = ((document.getElementById('n38-ban') || {}).value || '');
+  const pw = ((document.getElementById('n38-ban') || {}).value || ''), pw2 = ((document.getElementById('n38-ban2') || {}).value || '');
   state.n38.msg = '';
-  if (!n38Ok(pw)){ state.n38.pw = pw; state.n38.msg = t('n38Short'); n38Ban(true); return; }
+  if (!n38Ok(pw)){ state.n38.pw = pw; state.n38.pw2 = pw2; state.n38.msg = t('n38Short'); n38Ban(true); return; }
+  if (pw2 !== pw){ state.n38.pw = pw; state.n38.pw2 = ''; state.n38.msg = t('n38Diff'); n38Ban(true); return; }
   const cu = n38Au().currentUser; if (!cu) return;
   el.disabled = true;
   try {
     if (n38HasPw()) await cu.updatePassword(pw);
     else await cu.linkWithCredential(firebase.auth.EmailAuthProvider.credential(n38Em(cu.phoneNumber), pw));
-    state.n38 = {viaSms:false, force:false, pw:'', msg:'', mode:'', show:state.n38.show};
+    state.n38 = {viaSms:false, force:false, pw:'', pw2:'', msg:'', mode:'', show:state.n38.show};
     toast(t('n38Saved')); render();
   } catch (e) { console.warn('n38save', e); el.disabled = false; state.n38.msg = n38Err(e); n38Ban(true); }
 };
@@ -14227,6 +14236,7 @@ window.addEventListener('hashchange', () => { if (!/#login/.test(location.hash))
 .n38ban p{margin:0}
 .n38row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .n38acc{text-align:center;margin:18px 0}
+.n38l2{margin:2px 0 -4px}
 `; document.head.appendChild(st); })();
 
 /* ============================================================
@@ -14630,6 +14640,156 @@ viewInbox = function(){
 (() => { const st = document.createElement('style'); st.textContent = `
 .thread-row .last{display:flex;gap:10px;align-items:baseline}
 .thread-row .last .n40t{margin-left:auto;flex:none;font-size:12.5px;color:var(--muted);font-weight:500}
+`; document.head.appendChild(st); })();
+
+/* ============================================================
+   n141 — sửa lỗi đợt test vai Thợ
+   T3 bấm Lưu mà lỗi nằm ở ô tick (ảnh tay nghề…) → cuộn tới đó
+   T7 "Thêm ngay" (ảnh chân dung, số bằng) → mở đúng chỗ
+   T8 Sẵn sàng đi làm: dòng tóm tắt đổi theo khi sửa giờ/ngày, báo lỗi ngay trong hộp
+   T9 câu email theo vai (thợ: tiệm mời / nhắn tin; tiệm: thợ ứng tuyển / nhắn tin)
+   nhỏ: "Việc đã lưu (n)", Tài khoản thợ ghi "Hồ sơ của tôi", hộp tin không lặp tên tiệm,
+        ★ ở trang chi tiết tin, nút "Xem hồ sơ như tiệm thấy"
+   ============================================================ */
+const n41Role = () => (typeof n3Role === 'function' ? n3Role() : '');
+const n41Side = () => { const r = (state.auth && state.auth.step === 'profile' && !state.user) ? state.auth.role : n41Role(); return r === 'tech' ? 'tech' : r === 'both' ? 'both' : 'salon'; };
+(() => {
+  const vi = {
+    tech:'khi tiệm mời đi làm hoặc nhắn tin cho bạn', salon:'khi có thợ ứng tuyển hoặc nhắn tin cho bạn', both:'khi có thợ ứng tuyển, tiệm mời đi làm hoặc nhắn tin cho bạn'};
+  const en = {
+    tech:'when a salon invites you or messages you', salon:'when a tech applies or messages you', both:'when a tech applies, a salon invites you, or someone messages you'};
+  Object.assign(T.vi, {
+    n39MailHint:() => `Nhận email ${vi[n41Side()]}.`,
+    n39MailNone:() => `Chưa có – bạn sẽ không nhận được email ${vi[n41Side()]}.`,
+    emailAskD:() => `Nhập email để Nail101 báo ${vi[n41Side()]}. Không hiện công khai.`,
+    n41Saved:n => `Việc đã lưu (${n})`, n41MyProf:'Hồ sơ của tôi', n41AsSalon:'👁 Xem hồ sơ như tiệm thấy',
+    n41BadHours:'Giờ kết thúc phải sau giờ bắt đầu.', n41BadDates:'Ngày không hợp lệ: chọn trong 14 ngày tới, ngày kết thúc không trước ngày bắt đầu.'
+  });
+  Object.assign(T.en, {
+    n39MailHint:() => `Get an email ${en[n41Side()]}.`,
+    n39MailNone:() => `None – you won’t get an email ${en[n41Side()]}.`,
+    emailAskD:() => `Add your email and Nail101 will let you know ${en[n41Side()]}. Never shown publicly.`,
+    n41Saved:n => `Saved jobs (${n})`, n41MyProf:'My profile', n41AsSalon:'👁 See my profile as salons do',
+    n41BadHours:'End time must be after start time.', n41BadDates:'Pick dates within the next 14 days; the end can’t be before the start.'
+  });
+  /* tiêu đề danh sách việc khi đang lọc "Đã lưu" */
+  ['jobsNear', 'n32JAll', 'n32JUrg', 'n32JNear'].forEach(k => ['vi', 'en'].forEach(lg => {
+    const f0 = T[lg][k]; if (typeof f0 !== 'function') return;
+    T[lg][k] = n => (state.n2 && state.n2.savedOnly) ? T[lg].n41Saved(n) : f0(n);
+  }));
+})();
+
+/* ---------- T3: lỗi ở ô tick → cuộn tới ---------- */
+function n41GoErr(type){
+  setTimeout(() => {
+    const fs = state.forms && state.forms[type]; if (!fs || !fs.errors) return;
+    const keys = Object.keys(fs.errors); if (!keys.length) return;
+    let el = document.querySelector('.form-card .fq.has-err');
+    if (!el){ for (const k of ['ownWork', 'captionsOk', 'rvConsent']) if (fs.errors[k]){ const c = document.querySelector(`.form-card [data-fk="${k}"]`); if (c){ el = c.closest('label') || c; break; } } }
+    if (!el) return;
+    const det = el.closest('details'); if (det) det.open = true;
+    el.scrollIntoView({block:'center'});
+    el.classList.add('n41flash'); setTimeout(() => el.classList.remove('n41flash'), 1600);
+  }, 60);
+}
+(() => {
+  const p0 = ACT.n1pub;
+  if (p0) ACT.n1pub = function(el){ const r = p0.apply(this, arguments); const ty = el && el.dataset && el.dataset.ft; if (ty){ if (r && typeof r.then === 'function') r.then(() => n41GoErr(ty)); else n41GoErr(ty); } return r; };
+})();
+
+/* ---------- T7: "Thêm ngay" → ô ảnh chân dung ---------- */
+(() => {
+  const f0 = ACT.n33fix;
+  if (!f0) return;
+  ACT.n33fix = function(el){
+    const r = f0.apply(this, arguments);
+    let n = 0;
+    const go = () => {
+      const c = document.querySelector('.form-card [data-fk="portrait"]') || document.querySelector('.form-card [data-fk="licNo"]') || document.getElementById('f-profile-licNo');
+      const fq = c && (c.closest('.fq') || c);
+      if (!fq){ if (++n < 20) setTimeout(go, 100); return; }
+      const det = fq.closest('details'); if (det) det.open = true;
+      fq.scrollIntoView({block:'center'});
+    };
+    setTimeout(go, 200);
+    return r;
+  };
+})();
+
+/* ---------- T8: hộp Sẵn sàng ---------- */
+function n41RCheck(){
+  try { n1KeepTimes(); } catch (e) {}
+  const r = state.n1r || {}, flex = !!r.flex;
+  if (!flex && (r.from || '10:00') >= (r.to || '19:00')) return t('n41BadHours');
+  if (r.dFrom){ const a = r.dFrom, b = r.dTo || r.dFrom; if (a < n1Today(0) || b < a || b > n1Today(13)) return t('n41BadDates'); }
+  return '';
+}
+function n41RPaint(){
+  const box = document.querySelector('.n1rbox'); if (!box) return;
+  const msg = n41RCheck();
+  let p = box.querySelector('.n41rerr');
+  if (msg){ if (!p){ p = document.createElement('p'); p.className = 'err n41rerr'; p.setAttribute('role', 'alert'); const b = box.querySelector('[data-act=n1ready]'); if (b) b.parentNode.insertBefore(p, b); else box.appendChild(p); } p.textContent = msg; }
+  else if (p) p.remove();
+  const s = box.querySelector('.n37sum span'), r = state.n1r || {};
+  if (s){
+    const day = r.dFrom ? (r.dFrom + (r.dTo && r.dTo !== r.dFrom ? '…' + r.dTo : '')) : t((r.day || 'today') === 'tomorrow' ? 'readyTomorrow' : 'readyToday');
+    const hrs = r.flex ? t('n37Flex') : `${fmtTime(r.from || '10:00')}–${fmtTime(r.to || '19:00')}`;
+    s.textContent = `${day} · ${hrs}`;
+  }
+  return msg;
+}
+['input', 'change'].forEach(ev => document.addEventListener(ev, e => {
+  const id = e.target && e.target.id;
+  if (/^n1r-(from|to|dfrom|dto)$/.test(id || '')) n41RPaint();
+}));
+(() => {
+  const r0 = ACT.n1ready;
+  if (!r0) return;
+  ACT.n1ready = function(el){
+    const mp = state.myProfile, on = !!(mp && n1Ready(mp));
+    if (!on){
+      const msg = n41RPaint();
+      if (msg){ const p = document.querySelector('.n41rerr'); if (p) p.scrollIntoView({block:'center'}); return; }
+    }
+    return r0.apply(this, arguments);
+  };
+})();
+
+/* ---------- nhỏ: Tài khoản thợ, hộp tin, ★, xem hồ sơ ---------- */
+const n41Acc0 = viewAccount;
+viewAccount = function(){
+  let h = n41Acc0();
+  if (h && n41Role() === 'tech') h = h.replace(new RegExp('(<h2 class="sec"[^>]*>)' + t('myPosts').replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(</h2>)'), `$1${t('n41MyProf')}$2`);
+  return h;
+};
+const n41Inbox0 = viewInbox;
+viewInbox = function(){
+  const h = n41Inbox0();
+  return h ? h.replace(/(<h3>💬 ([^<]*)<\/h3><p class="biz">)\2 – /g, '$1') : h;
+};
+const n41Ad0 = viewAd;
+viewAd = function(id){
+  let h = n41Ad0(id);
+  const ad = ADS.find(a => a.id === id);
+  if (!h || !ad || !ad.live || !state.user || n41Role() !== 'tech' || n2Mine(ad)) return h;
+  const on = n2Saved(ad.id);
+  const btn = `<button type="button" class="n2star n41star${on ? ' on' : ''}" data-act="n2save" data-v="${esc(ad.id)}" aria-pressed="${on}">★ ${esc(t(on ? 'savedBtn' : 'saveBtn'))}</button>`;
+  return h.replace(/(<h1[^>]*>[\s\S]*?<\/h1>)/, `$1${btn}`);
+};
+const n41My0 = n3MyProf;
+n3MyProf = function(){
+  let h = n41My0();
+  const mp = state.myProfile;
+  if (!mp || !h) return h;
+  return h.replace(/(<button class="btn btn-primary btn-block n1big" type="button" data-act="liveedit" data-k="techs")/, `<a class="btn btn-ghost btn-block n41as" href="#tech-${esc(mp.id)}">${esc(t('n41AsSalon'))}</a>$1`);
+};
+
+(() => { const st = document.createElement('style'); st.textContent = `
+.n41flash{outline:3px solid #E8A33D;outline-offset:4px;border-radius:10px;transition:outline-color .4s}
+.n41rerr{margin:6px 0 10px}
+.n41star{display:inline-flex;align-items:center;gap:6px;width:auto;height:auto;padding:6px 14px;border-radius:999px;font-size:15px;font-weight:700;margin:4px 0 10px}
+.n41as{margin-bottom:10px}
+.n41nomail{color:#B85A00;font-weight:600}
 `; document.head.appendChild(st); })();
 
 render();
