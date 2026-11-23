@@ -11263,7 +11263,7 @@ function n30SortAll(){
 svcCardsStatic = function(list){
   const vi = lang === 'vi';
   return `<div class="svc-cards">${n30SortSvc(list.slice()).map(s => { const d = N30_SVC_DESC[s.id];
-    return `<div class="svc-card${s.need ? ' ' + s.need : ''}">${svcArt(s.id)}<span class="nm">${esc(svcShort(s.id))}${d ? `<small class="n30desc">${esc(d[vi ? 0 : 1])}</small>` : ''}</span></div>`; }).join('')}</div>`;
+    return `<div class="svc-card${s.need ? ' ' + s.need : ''}">${svcArt(s.id)}<span class="nm">${esc(svcShort(s.id))}${d ? `<small class="n30desc">(${esc(d[vi ? 0 : 1])})</small>` : ''}</span></div>`; }).join('')}</div>`;
 };
 const n30Fix0 = fixFormData;
 fixFormData = function(type, fs){
@@ -11875,7 +11875,7 @@ function n30Live(c){
   };
 
   /* ---- T6 + C1 + T5: trước khi đăng ---- */
-  const N30_PAY = {amtHour:[10, 30, 'n30Hour', '$'], amtDay:[80, 350, 'n30Day', '$'], amtWeek:[500, 2500, 'n30Week', '$'], commissionPct:[40, 70, 'n30Pct', '%']};
+  const N30_PAY = {amtHour:[10, 60, 'n30Hour', '$'], amtDay:[80, 350, 'n30Day', '$'], amtWeek:[500, 2500, 'n30Week', '$'], commissionPct:[40, 70, 'n30Pct', '%']};
   const pub0 = ACT.n1pub;
   ACT.n1pub = function(el){
     const type = el.dataset.ft, fs = getForm(type), d = fs.data, u = me();
@@ -11889,6 +11889,7 @@ function n30Live(c){
         const [lo, hi, lbl, unit] = N30_PAY[k];
         if (k === 'commissionPct' ? pt.indexOf('commission') < 0 : pt.indexOf({amtHour:'per_hour', amtDay:'per_day', amtWeek:'per_week'}[k]) < 0) continue;
         const v = n27Num(d[k]); if (v == null || (v >= lo && v <= hi)) continue;
+        if (fs.editId && fs.n43pay && fs.n43pay[k] === v) continue;   /* n143: sửa tin mà không đổi lương thì không hỏi lại */
         const f = x => unit === '$' ? '$' + x : x + '%';
         if (!confirm(t('n30PayQ', t(lbl), f(v), f(lo), f(hi)))) return;
       }
@@ -12134,6 +12135,21 @@ function n31Live(c){
       }
       const op = it ? imDig(it.ownerPhone || '') : '';
       if (op.length === 10){ doc.ownerPhone = '+1' + op; doc.ownerUid = it.ownerUid || ''; }
+      /* n143 (vòng 3, mục 2): mỗi cặp tiệm–thợ chỉ 1 cuộc trò chuyện → dùng lại cuộc đã có */
+      const pair = typeof n43PairOf === 'function' ? n43PairOf(doc.members, tid) : null;
+      if (pair){
+        const FV = firebase.firestore.FieldValue, entry = {adId:doc.adId || '', kind:doc.kind, from:u.uid, at:Date.now(), title:(doc.about || {}).title || '', note};
+        const upd = {apps:FV.arrayUnion(entry), about:doc.about, lastText:note || doc.lastText, lastAt:TS(), lastFrom:u.uid, ['readAt.' + u.uid]:TS(), ['names.' + u.uid]:doc.names[u.uid]};
+        if (pair.status === 'pending' && pair.from !== u.uid){ upd.status = 'accepted'; upd.answeredAt = TS(); }
+        else if (pair.status === 'pending'){ upd.note = note; }
+        else if (pair.status !== 'accepted'){ Object.assign(upd, {status:'pending', from:u.uid, kind:doc.kind, note, urgent:!!doc.urgent}); }
+        await db.collection('threads').doc(pair.id).update(upd);
+        await pushPriv({id:pair.id, techId:pair.techId || doc.techId, adId:pair.adId || doc.adId});
+        mailOf(doc.members[1], m.kind === 'apply' ? 'apply' : 'offer', doc.names[u.uid]);
+        state.modal = null; renderModal(); toast(t(m.kind === 'apply' ? 'sentApply' : 'sentOffer'));
+        if (pair.status === 'accepted' || upd.status === 'accepted') location.hash = '#inbox-' + pair.id;
+        render(); return;
+      }
       await db.collection('threads').doc(tid).set(doc);
       await pushPriv({id:tid, techId:doc.techId, adId:doc.adId});
       mailOf(doc.members[1], m.kind === 'apply' ? 'apply' : 'offer', doc.names[u.uid]);
@@ -15166,7 +15182,7 @@ Object.assign(T.vi, {
   n43AccOk:'Đồng ý kết nối',
   n43PendT:'Đã gửi tin, đang chờ duyệt', n43PendD:'Nail101 duyệt tin thường trong vòng 12 giờ. Duyệt xong, thợ sẽ thấy tin của bạn.',
   n43PendPT:'Đã gửi hồ sơ, đang chờ duyệt', n43PendPD:'Nail101 duyệt hồ sơ thường trong vòng 12 giờ. Duyệt xong, tiệm sẽ thấy hồ sơ của bạn.',
-  n43PendToast:'Đã gửi, đang chờ duyệt (thường trong 12 giờ).', n43Wait:'⏳ Chờ duyệt',
+  n43PendToast:'Đã gửi, đang chờ duyệt (thường trong 12 giờ).', n43Wait:'⏳ Chờ duyệt', n43Wait2:'⏳ Chờ duyệt · thường trong 12 giờ',
   n43HoursAsk:'Giờ làm: hỏi trong tin nhắn',
   n43DelPost:'🗑 Xoá tin này', n43DelProf:'🗑 Xoá hồ sơ này',
   n43AsBan:'👁 Bạn đang xem hồ sơ giống như tiệm thấy.', n43AsBack:'Quay lại hồ sơ của tôi',
@@ -15182,7 +15198,7 @@ Object.assign(T.vi, {
   n43ReadyOn:'Đang bật', n43ReadyOff:'Đang tắt',
   n43EnterHint:'Enter để gửi · Shift + Enter để xuống dòng',
   n43PinOld:'Mã PIN hiện tại', n43PinOldD:'Để bảo vệ tài khoản, nhập mã PIN đang dùng trước khi đặt mã mới.',
-  n43PinOldBad:'Mã PIN hiện tại không đúng.', n43PinForgot:'Quên mã PIN hiện tại? Đăng xuất rồi bấm “Quên mã PIN?” để đặt lại bằng mã SMS.',
+  n43PinOldBad:'Mã PIN hiện tại không đúng.', n43PinOldEmpty:'Vui lòng nhập mã PIN hiện tại.', n43PinForgot:'Quên mã PIN hiện tại? Đăng xuất rồi bấm “Quên mã PIN?” để đặt lại bằng mã SMS.',
   n43PinNew:'Mã PIN mới',
   n43Mail:'Email nhận thông báo', n43MailH:'Dùng chung với email ở trang Tài khoản. Không hiện công khai.',
   n43Other:'Thành phố khác…', n43OtherPh:'Gõ tên thành phố (Texas)', n43OtherErr:'Nhập tên thành phố.',
@@ -15202,7 +15218,7 @@ Object.assign(T.en, {
   n43AccOk:'Connect',
   n43PendT:'Sent – waiting for review', n43PendD:'Nail101 usually reviews posts within 12 hours. After that, techs will see your post.',
   n43PendPT:'Sent – waiting for review', n43PendPD:'Nail101 usually reviews profiles within 12 hours. After that, salons will see your profile.',
-  n43PendToast:'Sent – waiting for review (usually within 12 hours).', n43Wait:'⏳ In review',
+  n43PendToast:'Sent – waiting for review (usually within 12 hours).', n43Wait:'⏳ In review', n43Wait2:'⏳ In review · usually within 12 hours',
   n43HoursAsk:'Hours: ask in messages',
   n43DelPost:'🗑 Delete this post', n43DelProf:'🗑 Delete this profile',
   n43AsBan:'👁 You’re seeing your profile the way salons see it.', n43AsBack:'Back to my profile',
@@ -15218,7 +15234,7 @@ Object.assign(T.en, {
   n43ReadyOn:'On', n43ReadyOff:'Off',
   n43EnterHint:'Enter to send · Shift + Enter for a new line',
   n43PinOld:'Current PIN', n43PinOldD:'To protect your account, enter your current PIN before setting a new one.',
-  n43PinOldBad:'That current PIN is wrong.', n43PinForgot:'Forgot your current PIN? Sign out, then tap “Forgot PIN?” to reset it with an SMS code.',
+  n43PinOldBad:'That current PIN is wrong.', n43PinOldEmpty:'Please enter your current PIN.', n43PinForgot:'Forgot your current PIN? Sign out, then tap “Forgot PIN?” to reset it with an SMS code.',
   n43PinNew:'New PIN',
   n43Mail:'Email for notifications', n43MailH:'Same email as on your Account page. Never shown publicly.',
   n43Other:'Other city…', n43OtherPh:'Type the city (Texas)', n43OtherErr:'Type the city name.',
@@ -15369,6 +15385,10 @@ function n43Role(){ return typeof n30Role === 'function' ? n30Role() : (typeof n
     let h = f0(type);
     const fs = state.forms && state.forms[type];
     if (!h || !fs) return h;
+    if (fs.editId && !fs.n43pay && fs.data){
+      fs.n43pay = {};
+      ['amtHour', 'amtDay', 'amtWeek', 'commissionPct'].forEach(k => { const v = n27Num(fs.data[k]); if (v != null) fs.n43pay[k] = v; });
+    }
     if (!fs0 && type === 'hiring' && !fs.editId && !fs.n43sc){ fs.n43sc = 0; return viewForm(type); }
     if (!fs0 && !fs.editId && !fs.n43mail && !(state.adm && state.adm.creating)) return viewForm(type);
     if (fs.done && fs.n43pend){
@@ -15389,9 +15409,27 @@ function n43Role(){ return typeof n30Role === 'function' ? n30Role() : (typeof n
 function n43RealMail(m){ m = String(m || ''); return /@/.test(m) && !/@phone\.nail101\.com$/i.test(m) ? m : ''; }
 
 /* ================= 20 + 18: đăng tin ================= */
+state.n43.lastHash = location.hash;
 window.addEventListener('hashchange', () => {
-  ['hiring', 'profile', 'sale', 'service'].forEach(k => { const fs = state.forms && state.forms[k]; if (fs && fs.done) delete state.forms[k]; });
+  const was = state.n43.lastHash || '', now = location.hash;
+  state.n43.lastHash = now;
+  ['hiring', 'profile', 'sale', 'service'].forEach(k => {
+    const fs = state.forms && state.forms[k]; if (!fs) return;
+    /* đã đăng xong, hoặc rời trang Sửa mà chưa lưu → lần sau mở form mới */
+    if (fs.done || (fs.editId && /^#post-/.test(was) && was !== now)) delete state.forms[k];
+  });
 });
+/* nút "+ Đăng tin": luôn mở form trống, kể cả khi đang có form Sửa dở */
+document.addEventListener('click', e => {
+  const a = e.target && e.target.closest && e.target.closest('a[href="#post-hiring"], a[href="#post-profile"]');
+  if (!a || a.closest('#main form, .form-wrap')) return;
+  const k = a.getAttribute('href') === '#post-hiring' ? 'hiring' : 'profile';
+  const fs = state.forms && state.forms[k];
+  if (fs && (fs.done || fs.editId) && !(k === 'profile' && state.myProfile && !fs.done)){
+    delete state.forms[k];
+    if (location.hash === a.getAttribute('href')){ e.preventDefault(); render(); window.scrollTo(0, 0); }
+  }
+}, true);
 (() => {
   const p0 = ACT.fpublish;
   ACT.fpublish = async function(el){
@@ -15420,13 +15458,19 @@ window.addEventListener('hashchange', () => {
     if (o.filled && !TECHS.includes(o)) h = h.split(esc(t('filledTag'))).join(esc(t(o.outcome === 'yes' || o.outcome === 'other' ? 'n43Filled' : 'n43Closed')));
     /* 18: đang chờ duyệt thì không hiện "Đang tuyển" */
     if (o.mod === 'pending') h = h.replace(/<span class="n2tag[^"]*">\s*●[^<]*<\/span>/g, '');
+    /* 9 (vòng 3): tin đã đóng thì chỉ ghi đã đóng, không kèm "Chờ duyệt" */
+    if ((o.filled || o.hired) && o.mod === 'pending') h = h.split(`<span class="n2tag warn">${t('admWait')}</span>`).join('');
     return h;
   };
   const s0 = n2Status;
   n2Status = function(o){
     let h = s0(o);
     if (!h || !o) return h;
-    if (o.mod === 'pending') h = h.replace(/<span class="n32badge on">[^<]*<\/span>/, `<span class="n32badge">${esc(t('n43Wait'))}</span>`);
+    if (state.n43.as && o.id === state.n43.as) return '';
+    if (o.mod === 'pending'){
+      h = h.replace(`<p class="n2note warn">${t('modPending')}</p>`, '');
+      h = h.replace(/<span class="n32badge on">[^<]*<\/span>/, `<span class="n32badge">${esc(t('n43Wait2'))}</span>`);
+    }
     if (!TECHS.includes(o)){
       h = h.split(esc(t('n32SOnB'))).join(esc(t('n43SOnB')));
       if (o.filled) h = h.split(esc(t('n32SOff'))).join(esc(t(o.outcome === 'yes' || o.outcome === 'other' ? 'n43Filled' : 'n43Closed')));
@@ -15659,9 +15703,10 @@ T.vi.readyOn = T.vi.n43ReadyOn; T.vi.readyOff = T.vi.n43ReadyOff; T.en.readyOn =
 (() => {
   const pf = (FORMS.profile.steps[0] || {}).fields || [];
   const mp = pf.find(f => f.k === 'mpics'); if (mp) mp.label = {vi:T.vi.n43Mpics, en:T.en.n43Mpics};
-  [FORMS.hiring, FORMS.profile].forEach(F => (F.steps || []).forEach(s => (s.fields || []).forEach(f => {
-    if (f.k === 'email'){ f.label = {vi:T.vi.n43Mail, en:T.en.n43Mail}; delete f.hintKey; f.hint = {vi:T.vi.n43MailH, en:T.en.n43MailH}; }
-  })));
+  /* 4 (vòng 3): email chỉ ở trang Tài khoản; đăng xong mà chưa có email thì web tự hỏi */
+  [FORMS.hiring, FORMS.profile].forEach(F => (F.steps || []).forEach(s => {
+    if (Array.isArray(s.fields)){ const i = s.fields.findIndex(f => f.k === 'email'); if (i >= 0) s.fields.splice(i, 1); }
+  }));
 })();
 
 /* ================= 27: đổi PIN phải nhập PIN cũ ================= */
@@ -15681,7 +15726,8 @@ T.vi.readyOn = T.vi.n43ReadyOn; T.vi.readyOff = T.vi.n43ReadyOff; T.en.readyOn =
     if (!needOld()) return s0.apply(this, arguments);
     const old = ((document.getElementById('n43-pin0') || {}).value || '').trim(), cu = firebase.auth().currentUser;
     const pw = ((document.getElementById('n38-ban') || {}).value || ''), pw2 = ((document.getElementById('n38-ban2') || {}).value || '');
-    if (!/^\d{6}$/.test(old) || !cu){ state.n38.pw = pw; state.n38.pw2 = pw2; state.n38.msg = t('n43PinOldBad'); n38Ban(true); return; }
+    if (!old || !cu){ state.n38.pw = pw; state.n38.pw2 = pw2; state.n38.msg = t('n43PinOldEmpty'); n38Ban(true); return; }
+    if (!/^\d{6}$/.test(old)){ state.n38.pw = pw; state.n38.pw2 = pw2; state.n38.msg = t('n43PinOldBad'); n38Ban(true); return; }
     const email = ((cu.providerData || []).find(p => p && p.providerId === 'password') || {}).email || cu.email;
     try { await cu.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(email, old)); }
     catch (e) {
@@ -15795,7 +15841,8 @@ function n43ZipWarn(){
   document.querySelectorAll('input[data-fk="zip"]').forEach(i => {
     const fs = state.forms && state.forms[i.dataset.ft]; if (!fs) return;
     const fq = i.closest('.fq'); if (!fq) return;
-    const old = fq.querySelector('.n43zipw'), far = /^\d{5}$/.test(fs.data.zip || '') ? n43ZipFar(fs.data.zip, fs.data.city) : null;
+    const hasErr = !!(fs.errors && fs.errors.zip);
+    const old = fq.querySelector('.n43zipw'), far = !hasErr && /^\d{5}$/.test(fs.data.zip || '') ? n43ZipFar(fs.data.zip, fs.data.city) : null;
     const msg = far ? t('n43ZipFar', fs.data.zip, fs.data.city, far.zc, far.mi) : '';
     if (!msg){ if (old) old.remove(); return; }
     if (old){ if (old.textContent !== msg) old.textContent = msg; return; }
@@ -15858,7 +15905,7 @@ if (typeof n26FixThreads === 'function'){
       const ad = ADS.find(a => a.id === th.adId);
       if (ad){
         let tt = ''; try { tt = titleOf(ad); } catch (e) {}
-        return tt && biz.indexOf(esc(tt)) < 0 ? `<a class="card thread-row${cls}" href="#inbox-${id}">${pre}<p class="biz">${biz ? biz + ' – ' : ''}${esc(tt)}</p>` : m;
+        return tt && !biz ? `<a class="card thread-row${cls}" href="#inbox-${id}">${pre}<p class="biz">${esc(tt)}</p>` : m;
       }
       const ab = th.about || {}, at = ab.n43t || String(ab.title || '').split(' – ').slice(1).join(' – ');
       return `<a class="card thread-row${cls}" href="#inbox-${id}">${pre}<p class="biz">${biz}${at && biz.indexOf(esc(at)) < 0 ? (biz ? ' – ' : '') + esc(at) : ''} <span class="n43deltag">${esc(t('n43DelTag'))}</span></p>`;
@@ -15889,6 +15936,145 @@ if (typeof n26FixThreads === 'function'){
 .n1sw::after{content:"";position:absolute;left:12px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:#fff;transition:left .15s}
 .n1sw.on::before{background:rgba(255,255,255,.55)}.n1sw.on::after{left:22px}
 `; document.head.appendChild(st); })();
+
+/* ================= vòng 3 ================= */
+/* 8: trang xem thử giữ thanh menu dưới cùng */
+(() => {
+  const mb0 = mobileBar;
+  mobileBar = function(r){ if (r && r.view === 'tech' && state.n43.as && r.id === state.n43.as) return ''; return mb0(r); };
+})();
+/* 9: "Tin của tôi" ở trang Tài khoản ghi tin đang chờ duyệt */
+(() => {
+  const a0 = viewAccount;
+  viewAccount = function(){
+    let h = a0();
+    if (!h) return h;
+    ADS.concat(TECHS).filter(o => o && o.live && o.mod === 'pending' && n2Mine(o)).forEach(o => {
+      const re = new RegExp(`(<div class="del">)(\\s*<button class="btn-link" type="button" data-act="liveedit" data-k="(?:ads|techs)" data-v="${o.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}")`);
+      h = h.replace(re, `$1<span class="n43pend">${esc(t('n43Wait'))}</span> · $2`);
+    });
+    return h;
+  };
+})();
+/* 10: vừa bật */
+T.vi.turnedOn = x => (x === t('minsS', 1) ? 'vừa bật' : `bật ${x} trước`);
+T.en.turnedOn = x => (x === t('minsS', 1) ? 'just turned on' : `on ${x} ago`);
+/* 11: thợ ứng tuyển từ thẻ ngoài danh sách cũng tính 1 lượt xem */
+(() => {
+  const ap0 = ACT.n1apply;
+  ACT.n1apply = function(el){
+    const ad = ADS.find(a => a.id === (el && el.dataset && el.dataset.v));
+    try { if (ad && typeof n2CountView === 'function') n2CountView(ad); } catch (e) {}
+    return ap0.apply(this, arguments);
+  };
+})();
+(() => { const st = document.createElement('style'); st.textContent = `.n43pend{color:#8A5A00;font-weight:700;font-size:13px}`; document.head.appendChild(st); })();
+
+/* ================= vòng 3 · mục 2: mỗi cặp tiệm–thợ 1 cuộc trò chuyện ================= */
+Object.assign(T.vi, {
+  n43SysApply:(n, tt) => `${n} ứng tuyển tin “${tt}”`, n43SysOffer:(n, tt) => `${n} mời làm${tt ? ` · tin “${tt}”` : ''}`,
+  n43SysAcc:'Hai bên đã kết nối', n43More:n => `${n} tin liên quan`
+});
+Object.assign(T.en, {
+  n43SysApply:(n, tt) => `${n} applied for “${tt}”`, n43SysOffer:(n, tt) => `${n} offered a job${tt ? ` · “${tt}”` : ''}`,
+  n43SysAcc:'You are now connected', n43More:n => `${n} related posts`
+});
+state.n43.sm = {};
+const n43Key = mm => (mm || []).slice().sort().join('|');
+const n43Ms = v => (v && typeof v.toMillis === 'function' ? v.toMillis() : v && v.seconds ? v.seconds * 1000 : Number(v && v.__tsv || v) || 0);
+function n43Group(th){
+  const L = (state.live && state.live.threads) || [], k = n43Key(th.members);
+  return L.filter(x => n43Key(x.members) === k);
+}
+function n43Canon(list){
+  const r = s => (s === 'accepted' ? 3 : s === 'pending' ? 2 : 1);
+  return list.slice().sort((a, b) => r(b.status) - r(a.status) || n43Ms(b.lastAt) - n43Ms(a.lastAt))[0] || null;
+}
+/* dùng khi ứng tuyển / mời làm (n130): cuộc có sẵn của cặp này, không tính cuộc đã chặn */
+function n43PairOf(members, tid){
+  const L = (state.live && state.live.threads) || [], k = n43Key(members);
+  const l = L.filter(x => x.id !== tid && n43Key(x.members) === k && x.status !== 'blocked');
+  return l.length ? n43Canon(l) : null;
+}
+/* tin liên quan đã ghi trong cuộc (apps) → coi như có ứng tuyển / mời ở tin đó */
+function n43WithApps(fn){
+  const L = state.live; if (!L || !Array.isArray(L.threads)) return fn();
+  const all = L.threads, extra = [];
+  all.forEach(x => (Array.isArray(x.apps) ? x.apps : []).forEach(a => {
+    if (!a || !a.adId || a.adId === x.adId || extra.some(e => e.id === x.id && e.adId === a.adId)) return;
+    extra.push(Object.assign({}, x, {adId:a.adId, kind:a.kind || x.kind, createdAt:{toMillis:() => a.at}, lastAt:{toMillis:() => a.at}, n43v:1}));
+  }));
+  if (!extra.length) return fn();
+  L.threads = all.concat(extra);
+  try { return fn(); } finally { L.threads = all; }
+}
+(() => {
+  const a0 = n30Apps; n30Apps = function(ad){ return n43WithApps(() => a0(ad)); };
+  const s0 = n2Stats; n2Stats = function(o){ return n43WithApps(() => s0(o)); };
+  const p0 = n30PairThread; n30PairThread = function(it){ return n30PairThreadX(p0, it); };
+  function n30PairThreadX(p0, it){ return n43WithApps(() => p0(it)); }
+})();
+/* hộp thư: 1 dòng cho mỗi cặp */
+(() => {
+  const i0 = viewInbox;
+  viewInbox = function(){
+    const L = state.live; if (!L || !Array.isArray(L.threads)) return i0();
+    const all = L.threads, groups = {}, cnt = {};
+    all.forEach(x => { const k = n43Key(x.members); (groups[k] = groups[k] || []).push(x); });
+    const keep = new Set(Object.keys(groups).map(k => { const c = n43Canon(groups[k]); cnt[c.id] = groups[k].reduce((n, x) => n + 1 + ((x.apps || []).length), 0); return c.id; }));
+    L.threads = all.filter(x => keep.has(x.id));
+    let h; try { h = i0(); } finally { L.threads = all; }
+    return h ? h.replace(/(<a class="card thread-row[^"]*" href="#inbox-([^"]+)">[\s\S]*?<p class="biz">)/g, (m, a, id) => cnt[id] > 1 ? `${a}<span class="n43cnt">${esc(t('n43More', cnt[id]))}</span> · ` : m) : h;
+  };
+})();
+/* khung chat: gộp tin nhắn của các cuộc cũ trùng cặp + dòng "X ứng tuyển tin …" */
+const N43_SYS = '⁣';
+function n43LoadSib(tid){
+  const db = n43Db(), c = state.n43.sm[tid];
+  const th = ((state.live && state.live.threads) || []).find(x => x.id === tid);
+  const stamp = th ? n43Ms(th.lastAt) : 0;
+  if (!db || (c && (c.busy || c.stamp === stamp))) return;
+  state.n43.sm[tid] = {busy:true, stamp, msgs:(c && c.msgs) || []};
+  db.collection('threads').doc(tid).collection('messages').orderBy('at').get().then(s => {
+    state.n43.sm[tid] = {stamp, msgs:s.docs.map(d => d.data({serverTimestamps:'estimate'}))};
+    if (/^#inbox-/.test(location.hash)) render();
+  }).catch(e => { console.warn('n43 sib', e); state.n43.sm[tid] = {stamp, msgs:[]}; });
+}
+function n43Events(list){
+  const ev = [], nm = x => (id => ((x.names || {})[id]) || '')(x);
+  list.forEach(x => {
+    const title = (x.about && (x.about.n43t || String(x.about.title || '').split(' – ').slice(1).join(' – '))) || '';
+    const who = (x.names || {})[x.from] || '';
+    const first = (Array.isArray(x.apps) ? x.apps : []);
+    if (x.createdAt) ev.push({at:n43Ms(x.createdAt), text:t(x.kind === 'offer' ? 'n43SysOffer' : 'n43SysApply', who, title || '—')});
+    first.forEach(a => ev.push({at:Number(a.at) || 0, text:t(a.kind === 'offer' ? 'n43SysOffer' : 'n43SysApply', (x.names || {})[a.from] || '', String(a.title || '').split(' – ').slice(1).join(' – ') || a.title || '—')}));
+    void nm;
+  });
+  return ev;
+}
+(() => {
+  const v0 = viewThread;
+  viewThread = function(id){
+    const L = state.live, all = (L && L.threads) || [], x = all.find(z => z.id === id);
+    if (!x || !L.msgs) return v0(id);
+    const grp = n43Group(x), canon = n43Canon(grp);
+    if (canon && canon.id !== id){ location.replace('#inbox-' + canon.id); return `<div class="wrap narrow page"><p class="empty-s">${t('loadingTxt')}</p></div>`; }
+    const sibs = grp.filter(z => z.id !== id);
+    sibs.forEach(z => n43LoadSib(z.id));
+    const own = L.msgs[id];
+    if (!own) return v0(id);
+    const merged = own.slice();
+    sibs.forEach(z => { const c = state.n43.sm[z.id]; if (c && c.msgs) merged.push(...c.msgs); });
+    n43Events(grp).forEach(e => merged.push({from:'__sys', text:N43_SYS + e.text, at:{toMillis:() => e.at}}));
+    merged.sort((a, b) => n43Ms(a.at) - n43Ms(b.at));
+    L.msgs[id] = merged;
+    let h; try { h = v0(id); } finally { L.msgs[id] = own; }
+    return h ? h.replace(new RegExp(`<div class="bub (?:me|them)">${N43_SYS}([\\s\\S]*?)<small class="tm">([^<]*)</small></div>`, 'g'), '<div class="n43sys">$1 · <small>$2</small></div>') : h;
+  };
+})();
+(() => { const st = document.createElement('style'); st.textContent = `
+.n43sys{align-self:center;text-align:center;font-size:12.5px;color:var(--muted);background:#F4F1F2;border-radius:999px;padding:4px 12px;margin:6px auto;max-width:90%}
+.n43cnt{color:var(--primary);font-weight:700}`; document.head.appendChild(st); })();
 
 render();
 })();
