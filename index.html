@@ -11736,7 +11736,7 @@ function n30Live(c){
     const [sv, bv, se, be] = MAIL[kind](fromName || 'Nail101'), link = site() + '#inbox';
     const text = `${bv}\nMở Nail101 để xem: ${link}\n\n${be}\nOpen Nail101: ${link}`;
     const html = `<p>${esc(bv)}</p><p><a href="${esc(link)}">Mở Nail101 để xem</a></p><hr><p>${esc(be)}</p><p><a href="${esc(link)}">Open Nail101</a></p>`;
-    try { await db.collection('mail').add({toUids:[toUid], message:{subject:sv + ' / ' + se, text, html}, kind, from:me().uid, createdAt:TS()}); }
+    try { await db.collection('mail').add({toUids:[toUid], message:{subject:sv + ' / ' + se, text, html}, kind, by:me().uid, createdAt:TS()}); }
     catch (e) { console.warn('n30 mail', e); }
   }
 
@@ -12105,7 +12105,7 @@ function n31Live(c){
     if (!toUid || !MAIL[kind]) return;
     const [sv, bv, se, be] = MAIL[kind](fromName || 'Nail101'), link = location.origin + location.pathname + '#inbox';
     db.collection('mail').add({toUids:[toUid], message:{subject:sv + ' / ' + se, text:`${bv}\nMở Nail101 để xem: ${link}\n\n${be}\nOpen Nail101: ${link}`,
-      html:`<p>${esc(bv)}</p><p><a href="${esc(link)}">Mở Nail101 để xem</a></p><hr><p>${esc(be)}</p><p><a href="${esc(link)}">Open Nail101</a></p>`}, kind, from:me().uid, createdAt:TS()})
+      html:`<p>${esc(bv)}</p><p><a href="${esc(link)}">Mở Nail101 để xem</a></p><hr><p>${esc(be)}</p><p><a href="${esc(link)}">Open Nail101</a></p>`}, kind, by:me().uid, createdAt:TS()})
       .catch(e => console.warn('n31 mail', e));
   };
   ACT.n1send = async function(el){
