@@ -4626,13 +4626,20 @@ function n2Live(c){
 
   /* saved + blocked come from the user doc / blocks collection */
   const prevStop = typeof stopUserListeners === 'function' ? stopUserListeners : null;
+  let blkStop = null, blkTry = 0;
   function loadMine(){
+    if (blkStop) { try { blkStop(); } catch (e) {} blkStop = null; }
     const u = me(); if (!u) { state.n2.saved = []; state.n2.blocked = []; return; }
     state.n2.saved = u.saved || []; state.n2.blocked = [];
-    db.collection('blocks').where('members', 'array-contains', u.uid).onSnapshot(s => {
+    blkStop = db.collection('blocks').where('members', 'array-contains', u.uid).onSnapshot(s => {
+      blkTry = 0;
       state.n2.blocked = s.docs.map(d => (d.data().members || []).find(m => m !== u.uid)).filter(Boolean);
       softRender();
-    }, e => console.warn('blocks', e));
+    }, e => {
+      /* lúc vừa đăng nhập đôi khi bị từ chối: thử lại, tối đa 6 lần */
+      console.warn('blocks', e); blkStop = null;
+      if (blkTry < 6) { blkTry++; setTimeout(() => { const v = me(); if (v && v.uid === u.uid && !blkStop) loadMine(); }, 1500 * blkTry); }
+    });
   }
   let lastU = null;
   const tick = setInterval(() => { const u = me() && me().uid; if (u !== lastU){ lastU = u; loadMine(); } }, 400);
@@ -13231,6 +13238,7 @@ function n34TodayItems(){
     const age = now - (n34Ms(x.createdAt) || n34Ms(x.lastAt));
     if (age < 2 * N34_DAY) return;
     const nm = x.names || {}, to = (x.members || []).find(m => m !== x.from);
+    if (typeof n42GoneTh === 'function' && n42GoneTh(x)) return;
     out.push({ic:'⏳', txt:t('n42TLate', n34Nm(nm[x.from]), n34Nm(nm[to]), Math.floor(age / 3600000)), act:'href="#admin-track"'});
   });
   /* 3. link nháp còn ≤ 2 ngày */
@@ -14805,13 +14813,13 @@ n3MyProf = function(){
 Object.assign(T.vi, {
   n42Act:'Hoạt động', n42On:'🟢 Đang online', n42OnF:'Đang online', n42UOn:'— Đang online',
   n42Never:'chưa ghi nhận', n42Ago:(n, u) => `${n} ${u} trước`, n42Min:'phút', n42Hr:'giờ', n42Yest:'Hôm qua',
-  n42Login:'Đăng nhập', n42TLate:(a, b, h) => `${a} → ${b}: chưa trả lời ${h} giờ`,
+  n42Login:'Đăng nhập', n42TLate:(a, b, h) => `${a} → ${b}: chưa trả lời ${h >= 72 ? Math.floor(h / 24) + ' ngày' : h + ' giờ'}`,
   n42Msgs:'Tin nhắn', n42Log:'Nhật ký tin nhắn', n42LogD:'Ai nhắn cho ai, lúc nào. Không có nội dung tin nhắn.',
   n42LogQ:'Tìm theo tên…', n42LogNone:'Chưa có tin nhắn nào được ghi lại.', n42LogPair:'Đang xem 1 cặp', n42LogOne:'Chỉ xem cặp này', n42LogAll:'Xem tất cả',
   n42Res:'📈 Kết quả & phễu người dùng', n42Fun:['Đăng ký', 'Có bài', 'Được kết nối', 'Có nhắn tin', 'Tuyển được / có việc'],
   n42Hire:(a, b) => `Tuyển được qua Nail101: <b>${a}</b> tiệm · <b>${b}</b> thợ có việc`,
   n42Resp:(h, n) => `Tiệm trả lời ứng tuyển trung bình sau: <b>${h}</b> (${n} lần)`, n42RespNone:'Chưa đủ dữ liệu thời gian trả lời.',
-  n42FunNote:'% = so với bước trước. "Tuyển được" chỉ tính người tự báo.',
+  n42FunNote:'% = so với bước trước. "Có bài" tính cả bài nháp và bài đã đóng. "Tuyển được" chỉ tính người tự báo.',
   n42Err:'🐞 Lỗi web người dùng gặp', n42ErrNone:'Chưa ghi nhận lỗi nào.', n42ErrDel:'Xoá', n42Times:n => `${n} lần`,
   n42QAd:'Đã tuyển được thợ chưa?', n42QAdYes:'Có – tuyển qua Nail101', n42QAdOther:'Có – nhưng không qua Nail101', n42QAdNo:'Chưa tuyển được',
   n42QTech:'Chúc mừng bạn có việc! Có phải nhờ Nail101 không?', n42QYes:'Có, nhờ Nail101', n42QNo:'Không', n42Skip:'Bỏ qua', n42Thx:'Cảm ơn bạn đã cho biết!'
@@ -14819,13 +14827,13 @@ Object.assign(T.vi, {
 Object.assign(T.en, {
   n42Act:'Activity', n42On:'🟢 Online now', n42OnF:'Online now', n42UOn:'— Online now',
   n42Never:'not seen yet', n42Ago:(n, u) => `${n} ${u} ago`, n42Min:'min', n42Hr:'h', n42Yest:'Yesterday',
-  n42Login:'Signed in', n42TLate:(a, b, h) => `${a} → ${b}: no reply for ${h}h`,
+  n42Login:'Signed in', n42TLate:(a, b, h) => `${a} → ${b}: no reply for ${h >= 72 ? Math.floor(h / 24) + ' days' : h + 'h'}`,
   n42Msgs:'Messages', n42Log:'Message log', n42LogD:'Who messaged whom, and when. No message content.',
   n42LogQ:'Search by name…', n42LogNone:'No messages logged yet.', n42LogPair:'Showing one pair', n42LogOne:'Only this pair', n42LogAll:'Show all',
   n42Res:'📈 Results & user funnel', n42Fun:['Signed up', 'Has a post', 'Connected', 'Messaged', 'Hired / found work'],
   n42Hire:(a, b) => `Hired through Nail101: <b>${a}</b> salons · <b>${b}</b> techs found work`,
   n42Resp:(h, n) => `Salons answer applications on average after: <b>${h}</b> (${n} times)`, n42RespNone:'Not enough reply-time data yet.',
-  n42FunNote:'% = compared with the step before. "Hired" counts only what users report.',
+  n42FunNote:'% = compared with the step before. "Has a post" includes drafts and closed posts. "Hired" counts only what users report.',
   n42Err:'🐞 Errors users hit', n42ErrNone:'No errors logged.', n42ErrDel:'Delete', n42Times:n => `${n}×`,
   n42QAd:'Did you hire a tech?', n42QAdYes:'Yes – through Nail101', n42QAdOther:'Yes – but not through Nail101', n42QAdNo:'Not yet',
   n42QTech:'Congrats on the job! Was it through Nail101?', n42QYes:'Yes, through Nail101', n42QNo:'No', n42Skip:'Skip', n42Thx:'Thanks for letting us know!'
@@ -15096,6 +15104,39 @@ admOver = function(){
 .n42qc{background:#fff;border-radius:18px;padding:22px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25);display:grid;gap:12px;text-align:center}
 .n42qc h2{margin:0;font-size:20px}.n42qb{display:grid;gap:8px}
 `; document.head.appendChild(st); })();
+
+/* ---------- sửa: danh sách lời mời/ứng tuyển của admin có lúc chỉ có của chính admin ----------
+   lấy lại từ máy chủ khi vào trang Quản trị, rồi tối đa mỗi 60 giây khi đang mở trang Quản trị */
+function n42GoneTh(x){
+  const nm = x.names || {}, G = /Tài khoản đã xoá|Deleted account/i;
+  const ids = (state.n34 && state.n34.users) ? new Set(state.n34.users.map(u => u.uid || u.id)) : null;
+  return (x.members || []).some(m => G.test(String(nm[m] || '')) || (ids && ids.size && ids.size < 500 && !ids.has(m)));
+}
+(() => {
+  let last = 0, busy = false;
+  async function sync(force){
+    const db = n42Db();
+    if (busy || !db || !(state.adm && state.adm.on) || document.visibilityState === 'hidden') return;
+    const h = location.hash;
+    if (!(h === '' || h === '#home' || /^#admin/.test(h))) return;
+    if (!force && Date.now() - last < 60000) return;
+    busy = true; last = Date.now();
+    try {
+      const s = await db.collection('threads').limit(300).get();
+      if (!state.tr) state.tr = {threads:[]};
+      state.tr.threads = s.docs.map(d => Object.assign({id:d.id}, d.data()));
+      if (typeof n34Soft === 'function') n34Soft();
+    } catch (e) { console.warn('n42 sync', e); last = 0; }
+    busy = false;
+  }
+  let wasAdm = false;
+  setInterval(() => {
+    const on = !!(state.adm && state.adm.on);
+    if (on && !wasAdm) sync(true); else sync(false);
+    wasAdm = on;
+  }, 5000);
+  window.addEventListener('hashchange', () => { if (/^#admin/.test(location.hash)) sync(false); });
+})();
 
 render();
 })();
