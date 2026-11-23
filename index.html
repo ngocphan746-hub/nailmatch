@@ -2949,7 +2949,8 @@ const LEGAL = {
       {h:{vi:'3. Ai thấy thông tin của bạn', en:'3. Who can see your information'}, li:[
         {vi:'<b>Công khai:</b> tin đăng, hồ sơ thợ (tên, khu vực, dịch vụ, kinh nghiệm, ảnh/video tác phẩm) và tên tiệm bạn ghi.', en:'<b>Public:</b> your ads, tech profile (name, area, services, experience, work photos/videos), and any salon name you enter.'},
         {vi:'<b>Luôn được giữ kín:</b> số điện thoại, email, số bằng TDLR và thông tin liên lạc của người giới thiệu. Người khác không thấy các thông tin này.', en:'<b>Always private:</b> your phone number, email, TDLR license number, and reference contact details. Other users never see them.'},
-        {vi:'<b>Tin nhắn:</b> chỉ bạn và người nhận đọc được.', en:'<b>Messages:</b> only you and the other person can read them.'}]},
+        {vi:'<b>Tin nhắn:</b> chỉ bạn và người nhận đọc được.', en:'<b>Messages:</b> only you and the other person can read them.'},
+        {vi:'<b>Quản trị viên (admin):</b> để hỗ trợ người dùng, admin thấy ai gửi lời mời/ứng tuyển cho ai, thời gian gửi tin và số tin nhắn, lần đăng nhập gần nhất, trạng thái online, kết quả tuyển dụng bạn tự báo và lỗi kỹ thuật của trang. Admin <b>không bao giờ</b> thấy nội dung tin nhắn.', en:'<b>Admins:</b> to support users, admins can see who invited or applied to whom, when messages were sent and how many, your last sign-in, whether you are online, the hiring results you report, and technical errors on the site. Admins <b>never</b> see the content of your messages.'}]},
       {h:{vi:'4. Bên cung cấp dịch vụ', en:'4. Service providers'}, li:[
         {vi:'Chúng tôi dùng Google Firebase (máy chủ ở Mỹ) để đăng nhập, lưu dữ liệu, lưu ảnh/video và gửi mã SMS. Đăng nhập bằng Google do Google xử lý.', en:'We use Google Firebase (servers in the U.S.) for sign-in, data storage, photo/video storage, and sending SMS codes. Google sign-in is handled by Google.'},
         {vi:'Trang web được lưu trữ trên GitHub Pages.', en:'The website is hosted on GitHub Pages.'},
@@ -3143,7 +3144,7 @@ function initLive(){
   function fromDoc(doc){
     try {
       const d = doc.data(EST), o = d.ad || {};
-      return Object.assign({}, o, {id:doc.id, live:true, ownerUid:d.ownerUid, ownerPhone:d.ownerPhone || '', ownerName:d.ownerName || '', daysAgo:daysSince(d.createdAt), postedMs:ms(d.createdAt) || ms(d.updatedAt) || 0, _form:d.form || null, _kind:d.kind || '', avatar:d.avatar || '', filled:!!d.filled, hired:!!d.hired, expMs:d.expMs || 0, views:d.views || 0, mod:d.mod || '', claim:d.claim || null, licOk2:!!d.licOk2, ready:d.ready ? Object.assign({}, d.ready, {atMs:ms(d.ready.at) || Date.now()}) : null});
+      return Object.assign({}, o, {id:doc.id, live:true, ownerUid:d.ownerUid, ownerPhone:d.ownerPhone || '', ownerName:d.ownerName || '', daysAgo:daysSince(d.createdAt), postedMs:ms(d.createdAt) || ms(d.updatedAt) || 0, _form:d.form || null, _kind:d.kind || '', avatar:d.avatar || '', filled:!!d.filled, hired:!!d.hired, outcome:d.outcome || '', hiredVia:d.hiredVia || '', expMs:d.expMs || 0, views:d.views || 0, mod:d.mod || '', claim:d.claim || null, licOk2:!!d.licOk2, ready:d.ready ? Object.assign({}, d.ready, {atMs:ms(d.ready.at) || Date.now()}) : null});
     } catch (e) { return null; }
   }
   function replaceLive(arr, list){ for (let i = arr.length - 1; i >= 0; i--) if (arr[i].live) arr.splice(i, 1); arr.unshift(...list); }
@@ -12884,8 +12885,8 @@ function n34Role(u){
 const n34RoleLb = r => r === 'admin' ? t('n34Adm') : r === 'salon' ? t('n34Salon') : r === 'tech' ? t('n34Tech') : r === 'both' ? t('n39Both') : t('n24Other');
 const n41HasMail = u => !!(u && u.email && /@/.test(String(u.email)) && !/@phone\.nail101\.com$/i.test(String(u.email)));
 function n34Counts(rows){
-  const c = {all:rows.length, sal:0, tech:0, adm:0, other:0, both:0, nomail:0};
-  rows.forEach(u => { if (n34Role(u) !== 'admin' && !n41HasMail(u)) c.nomail++; });
+  const c = {all:rows.length, sal:0, tech:0, adm:0, other:0, both:0, nomail:0, online:0};
+  rows.forEach(u => { if (n34Role(u) !== 'admin' && !n41HasMail(u)) c.nomail++; if (n42Online(u)) c.online++; });
   rows.forEach(u => { const r = n34Role(u); if (r === 'admin') c.adm++; else if (r === 'salon') c.sal++; else if (r === 'tech') c.tech++; else if (r === 'both') c.both++; else c.other++; });
   return c;
 }
@@ -13071,6 +13072,7 @@ function n34AccList(){
   if (f === 'tech') return all.filter(u => n34Role(u) === 'tech');
   if (f === 'both') return all.filter(u => n34Role(u) === 'both');
   if (f === 'nomail') return all.filter(u => n34Role(u) !== 'admin' && !n41HasMail(u));
+  if (f === 'online') return all.filter(u => n42Online(u));
   return all;
 }
 function n34AccWarn(u){
@@ -13093,21 +13095,21 @@ n24Card = function(){
   else if (state.n24.rows === null) body = `<p class="empty-s">${t('n24Load')}</p>`;
   else if (!l.length) body = `<p class="empty-s">${t('n24Empty')}</p>`;
   else body = `<div class="im-wrap"><table class="im-tbl ct-tbl">
-    <thead><tr><th>${t('n24Name')}</th><th>${t('n24Ph')}</th><th>${t('n41Mail')}</th><th>${t('n24Kind')}</th><th>${t('n24When')}</th></tr></thead>
+    <thead><tr><th>${t('n24Name')}</th><th>${t('n24Ph')}</th><th>${t('n41Mail')}</th><th>${t('n42Act')}</th><th>${t('n24Kind')}</th><th>${t('n24When')}</th></tr></thead>
     <tbody>${l.map(x => `<tr><td><b>${esc(x.name || t('n24NoName'))}</b>${n34AccWarn(x)}</td>
-      <td>${esc(admPretty(n34D(x.phone)) || '—')}</td><td>${n41HasMail(x) ? esc(String(x.email).trim()) : `<span class="n41nomail">${esc(t('n41NoMail'))}</span>`}</td>
+      <td>${esc(admPretty(n34D(x.phone)) || '—')}</td><td>${n41HasMail(x) ? esc(String(x.email).trim()) : `<span class="n41nomail">${esc(t('n41NoMail'))}</span>`}</td><td>${n42ActCell(x)}</td>
       <td>${esc(n34RoleLb(n34Role(x)))}</td><td>${esc(n34When(n34Ms(x.createdAt)))}</td></tr>`).join('')}</tbody></table></div>`;
   return `<div class="card adm-card"><button class="btn-link" type="button" data-act="n24close">${t('n24Back')}</button>
     <h2 class="sec">${t('n24UH')}</h2><p class="hint">${esc(t('n24UD'))}</p>
-    <nav class="ct-fs chipset">${chip('all', t('n24All'))}${chip('sal', t('n24Sal'))}${chip('tech', t('n24Tech'))}${chip('both', t('n39Both'))}${chip('adm', t('n34Adm'))}${chip('none', t('n34None'))}${chip('nomail', t('n41NoMailF'))}</nav>
+    <nav class="ct-fs chipset">${chip('all', t('n24All'))}${chip('sal', t('n24Sal'))}${chip('tech', t('n24Tech'))}${chip('both', t('n39Both'))}${chip('adm', t('n34Adm'))}${chip('none', t('n34None'))}${chip('nomail', t('n41NoMailF'))}${chip('online', t('n42OnF'))}</nav>
     ${body}</div>`;
 };
 const n34Go0 = ACT.n24go;
 ACT.n24go = function(el){
   const v = el.dataset.v;
-  if (v === 'u-adm' || v === 'u-none' || v === 'u-both' || v === 'u-nomail'){
+  if (v === 'u-adm' || v === 'u-none' || v === 'u-both' || v === 'u-nomail' || v === 'u-online'){
     const fake = {dataset:{v:'u-all'}}; n34Go0(fake);
-    state.n24.f = v === 'u-adm' ? 'adm' : v === 'u-both' ? 'both' : v === 'u-nomail' ? 'nomail' : 'none'; render(); return;
+    state.n24.f = v === 'u-adm' ? 'adm' : v === 'u-both' ? 'both' : v === 'u-nomail' ? 'nomail' : v === 'u-online' ? 'online' : 'none'; render(); return;
   }
   return n34Go0(el);
 };
@@ -13126,17 +13128,17 @@ function n34ReqCard(){
     const d = Math.max(0, Math.floor((Date.now() - lastMs(x)) / N34_DAY));
     const late = (!x.status || x.status === 'pending') && Date.now() - lastMs(x) >= N34_DAY;
     return `<tr class="${late ? 'tr-late' : ''}${sub ? ' n34sub' : ''}"><td>${esc(from)}</td><td>${esc(to)}</td>
-      <td>${esc(t(offer ? 'n34Offer' : 'n34Apply'))}</td><td>${esc(st)}${late ? ` <b class="im-x">${t('trLate')}</b>` : ''}</td>
+      <td>${esc(t(offer ? 'n34Offer' : 'n34Apply'))}</td><td>${esc(st)}${late ? ` <b class="im-x">${t('trLate')}</b>` : ''}</td><td>${x.msgN ? `<button class="btn-link" type="button" data-act="n42pair" data-v="${esc(x.id)}">💬 ${x.msgN}</button>` : '—'}</td>
       <td>${esc(t('trDays', d))}</td><td>${late && !sub ? `<button class="btn-link" type="button" data-act="trnudge" data-v="${offer ? 'tech' : 'salon'}" data-t="${esc((x.about || {}).title || '')}">${t('trNudge')}</button>` : ''}</td></tr>`;
   };
   const rows = keys.map(k => {
     const g = groups[k].slice().sort((a, b) => lastMs(b) - lastMs(a)), open = !!state.n34.trOpen[k];
-    const more = g.length > 1 ? `<tr class="n34more"><td colspan="6"><button class="btn-link" type="button" data-act="n34tr" data-v="${esc(k)}">${esc(open ? t('n34OlderHide') : t('n34Older', g.length - 1))}</button></td></tr>` : '';
+    const more = g.length > 1 ? `<tr class="n34more"><td colspan="7"><button class="btn-link" type="button" data-act="n34tr" data-v="${esc(k)}">${esc(open ? t('n34OlderHide') : t('n34Older', g.length - 1))}</button></td></tr>` : '';
     return row(g[0]) + more + (open ? g.slice(1).map(x => row(x, true)).join('') : '');
   }).join('');
   return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('trReq')} (${keys.length})</h2>
       <p class="hint">${esc(t('trOnly'))}</p>
-      ${keys.length ? `<div class="im-wrap"><table class="im-tbl"><thead><tr><th>${t('trWho')}</th><th>${t('trTo')}</th><th>${t('trKind')}</th><th>${t('trSt')}</th><th>${t('trAge')}</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : `<p class="empty-s">${esc(t('trNoReq') || '')}</p>`}</div>`;
+      ${keys.length ? `<div class="im-wrap"><table class="im-tbl"><thead><tr><th>${t('trWho')}</th><th>${t('trTo')}</th><th>${t('trKind')}</th><th>${t('trSt')}</th><th>${t('n42Msgs')}</th><th>${t('trAge')}</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : `<p class="empty-s">${esc(t('trNoReq') || '')}</p>`}</div>`;
 }
 ACT.n34tr = function(el){ const k = el.dataset.v; state.n34.trOpen[k] = !state.n34.trOpen[k]; render(); };
 const n34Track0 = admTrack;
@@ -13227,9 +13229,9 @@ function n34TodayItems(){
   (state.tr && state.tr.threads || []).forEach(x => {
     if ((x.kind !== 'apply' && x.kind !== 'offer') || (x.status && x.status !== 'pending')) return;
     const age = now - (n34Ms(x.createdAt) || n34Ms(x.lastAt));
-    if (age < 7 * N34_DAY) return;
+    if (age < 2 * N34_DAY) return;
     const nm = x.names || {}, to = (x.members || []).find(m => m !== x.from);
-    out.push({ic:'⏳', txt:t('n34TLate', n34Nm(nm[x.from]), n34Nm(nm[to]), Math.floor(age / N34_DAY)), act:'href="#admin-track"'});
+    out.push({ic:'⏳', txt:t('n42TLate', n34Nm(nm[x.from]), n34Nm(nm[to]), Math.floor(age / 3600000)), act:'href="#admin-track"'});
   });
   /* 3. link nháp còn ≤ 2 ngày */
   const m = state.cl && state.cl.map || {};
@@ -13277,6 +13279,7 @@ admOver = function(){
   if (u){
     const extra = `<tr class="n24-row" data-act="n24go" data-v="u-both"><td>${t('n39UBoth')}</td><td><b>${u.both}</b></td></tr>`
       + `<tr class="n24-row" data-act="n24go" data-v="u-adm"><td>${t('n34UAdm')}</td><td><b>${u.adm}</b></td></tr>`
+      + `<tr class="n24-row" data-act="n24go" data-v="u-online"><td>${t('n42UOn')}</td><td><b class="${u.online ? 'n42on' : ''}">${u.online}</b></td></tr>`
       + `<tr class="n24-row" data-act="n24go" data-v="u-nomail"><td>${t('n41UNoMail')}</td><td><b class="${u.nomail ? 'n41nomail' : ''}">${u.nomail}</b></td></tr>`
       + (u.other ? `<tr><td>${t('n34UOther')}</td><td><b>${u.other}</b></td></tr>` : '');
     h = h.replace(/(<tr class="n24-row" data-act="n24go" data-v="u-tech">[\s\S]*?<\/tr>)/, `$1${extra}`);
@@ -14790,6 +14793,308 @@ n3MyProf = function(){
 .n41star{display:inline-flex;align-items:center;gap:6px;width:auto;height:auto;padding:6px 14px;border-radius:999px;font-size:15px;font-weight:700;margin:4px 0 10px}
 .n41as{margin-bottom:10px}
 .n41nomail{color:#B85A00;font-weight:600}
+`; document.head.appendChild(st); })();
+
+/* ============================================================
+   n142 — theo dõi cho admin (không bao giờ đọc nội dung tin nhắn)
+   1 nhật ký tin nhắn: ai → ai, lúc nào (msgLog) + số tin mỗi cặp (threads.msgN)
+   2 online + lần đăng nhập gần nhất (users.seenAt / users.loginAt)
+   3 kết quả tuyển dụng: đóng tin → "Đã tuyển được qua Nail101?"; "Đã có việc" → "Nhờ Nail101?"
+   4 phễu người dùng   5 thời gian tiệm trả lời (threads.answeredAt)   6 lỗi web (errLog)
+   ============================================================ */
+Object.assign(T.vi, {
+  n42Act:'Hoạt động', n42On:'🟢 Đang online', n42OnF:'Đang online', n42UOn:'— Đang online',
+  n42Never:'chưa ghi nhận', n42Ago:(n, u) => `${n} ${u} trước`, n42Min:'phút', n42Hr:'giờ', n42Yest:'Hôm qua',
+  n42Login:'Đăng nhập', n42TLate:(a, b, h) => `${a} → ${b}: chưa trả lời ${h} giờ`,
+  n42Msgs:'Tin nhắn', n42Log:'Nhật ký tin nhắn', n42LogD:'Ai nhắn cho ai, lúc nào. Không có nội dung tin nhắn.',
+  n42LogQ:'Tìm theo tên…', n42LogNone:'Chưa có tin nhắn nào được ghi lại.', n42LogPair:'Đang xem 1 cặp', n42LogOne:'Chỉ xem cặp này', n42LogAll:'Xem tất cả',
+  n42Res:'📈 Kết quả & phễu người dùng', n42Fun:['Đăng ký', 'Có bài', 'Được kết nối', 'Có nhắn tin', 'Tuyển được / có việc'],
+  n42Hire:(a, b) => `Tuyển được qua Nail101: <b>${a}</b> tiệm · <b>${b}</b> thợ có việc`,
+  n42Resp:(h, n) => `Tiệm trả lời ứng tuyển trung bình sau: <b>${h}</b> (${n} lần)`, n42RespNone:'Chưa đủ dữ liệu thời gian trả lời.',
+  n42FunNote:'% = so với bước trước. "Tuyển được" chỉ tính người tự báo.',
+  n42Err:'🐞 Lỗi web người dùng gặp', n42ErrNone:'Chưa ghi nhận lỗi nào.', n42ErrDel:'Xoá', n42Times:n => `${n} lần`,
+  n42QAd:'Đã tuyển được thợ chưa?', n42QAdYes:'Có – tuyển qua Nail101', n42QAdOther:'Có – nhưng không qua Nail101', n42QAdNo:'Chưa tuyển được',
+  n42QTech:'Chúc mừng bạn có việc! Có phải nhờ Nail101 không?', n42QYes:'Có, nhờ Nail101', n42QNo:'Không', n42Skip:'Bỏ qua', n42Thx:'Cảm ơn bạn đã cho biết!'
+});
+Object.assign(T.en, {
+  n42Act:'Activity', n42On:'🟢 Online now', n42OnF:'Online now', n42UOn:'— Online now',
+  n42Never:'not seen yet', n42Ago:(n, u) => `${n} ${u} ago`, n42Min:'min', n42Hr:'h', n42Yest:'Yesterday',
+  n42Login:'Signed in', n42TLate:(a, b, h) => `${a} → ${b}: no reply for ${h}h`,
+  n42Msgs:'Messages', n42Log:'Message log', n42LogD:'Who messaged whom, and when. No message content.',
+  n42LogQ:'Search by name…', n42LogNone:'No messages logged yet.', n42LogPair:'Showing one pair', n42LogOne:'Only this pair', n42LogAll:'Show all',
+  n42Res:'📈 Results & user funnel', n42Fun:['Signed up', 'Has a post', 'Connected', 'Messaged', 'Hired / found work'],
+  n42Hire:(a, b) => `Hired through Nail101: <b>${a}</b> salons · <b>${b}</b> techs found work`,
+  n42Resp:(h, n) => `Salons answer applications on average after: <b>${h}</b> (${n} times)`, n42RespNone:'Not enough reply-time data yet.',
+  n42FunNote:'% = compared with the step before. "Hired" counts only what users report.',
+  n42Err:'🐞 Errors users hit', n42ErrNone:'No errors logged.', n42ErrDel:'Delete', n42Times:n => `${n}×`,
+  n42QAd:'Did you hire a tech?', n42QAdYes:'Yes – through Nail101', n42QAdOther:'Yes – but not through Nail101', n42QAdNo:'Not yet',
+  n42QTech:'Congrats on the job! Was it through Nail101?', n42QYes:'Yes, through Nail101', n42QNo:'No', n42Skip:'Skip', n42Thx:'Thanks for letting us know!'
+});
+state.n42 = {log:[], err:[], q:'', pair:'', errN:0, errSeen:{}};
+const N42_ON = 4 * 60000;
+const n42Db = () => state.n1ctx && state.n1ctx.db;
+const n42TS = () => firebase.firestore.FieldValue.serverTimestamp();
+const n42Err = e => (state.n1ctx && state.n1ctx.errText ? state.n1ctx.errText(e) : String(e && e.message || e));
+const n42Ms = v => (typeof n34Ms === 'function' ? n34Ms(v) : (v && v.toMillis ? v.toMillis() : 0)) || 0;
+
+/* ---------- 2: online + đăng nhập ---------- */
+function n42Online(u){ return !!u && Date.now() - n42Ms(u.seenAt) < N42_ON; }
+function n42Ago(ms){
+  if (!ms) return t('n42Never');
+  const d = Date.now() - ms;
+  if (d < 3600000) return t('n42Ago', Math.max(1, Math.round(d / 60000)), t('n42Min'));
+  const a = new Date(ms), n = new Date(), day = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const dd = Math.round((day(n) - day(a)) / 86400000);
+  if (dd === 0) return t('n42Ago', Math.round(d / 3600000), t('n42Hr'));
+  if (dd === 1) return t('n42Yest');
+  return lang === 'vi' ? `${a.getDate()}/${a.getMonth() + 1}` : a.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+}
+function n42ActCell(u){
+  if (n42Online(u)) return `<span class="n42on">${esc(t('n42On'))}</span>`;
+  const s = n42Ms(u.seenAt) || n42Ms(u.loginAt);
+  return `<span class="n42ago">${esc(n42Ago(s))}</span>`;
+}
+async function n42Ping(login){
+  const db = n42Db(), u = state.user; if (!db || !u || !u.uid) return;
+  if (!login && document.visibilityState === 'hidden') return;
+  try { await db.collection('users').doc(u.uid).set(login ? {loginAt:n42TS(), seenAt:n42TS()} : {seenAt:n42TS()}, {merge:true}); }
+  catch (e) { console.warn('n42ping', e); }
+}
+(() => {
+  let last = '';
+  setInterval(() => {
+    const uid = state.user && state.user.uid;
+    if (uid && uid !== last){
+      last = uid;
+      let first = true; try { first = sessionStorage.getItem('n42in_' + uid) !== '1'; sessionStorage.setItem('n42in_' + uid, '1'); } catch (e) {}
+      n42Ping(first);
+    } else if (!uid) last = '';
+  }, 1500);
+  setInterval(() => n42Ping(false), 120000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') n42Ping(false); });
+})();
+
+/* ---------- 1: nhật ký tin nhắn ---------- */
+(() => {
+  const s0 = ACT.thsend;
+  ACT.thsend = async function(el){
+    const ta = document.getElementById('th-text'), had = ta && ta.value.trim();
+    const tid = el && el.dataset && el.dataset.v;
+    const r = await s0.apply(this, arguments);
+    const now = document.getElementById('th-text');
+    try {
+      const db = n42Db(), u = state.user;
+      if (had && tid && db && u && (!now || !now.value.trim())){
+        const th = (state.live.threads || []).find(x => x.id === tid) || {};
+        const to = (th.members || []).find(m => m !== u.uid) || '';
+        const nm = th.names || {};
+        await db.collection('msgLog').add({tid, from:u.uid, to, fromName:String(nm[u.uid] || u.name || '').slice(0, 80), toName:String(nm[to] || '').slice(0, 80), at:n42TS()});
+        await db.collection('threads').doc(tid).update({msgN:firebase.firestore.FieldValue.increment(1)});
+      }
+    } catch (e) { console.warn('n42log', e); }
+    return r;
+  };
+})();
+
+/* ---------- 5: giờ trả lời ---------- */
+(() => {
+  ['n1acc', 'n1dec'].forEach(k => {
+    const f0 = ACT[k]; if (!f0) return;
+    ACT[k] = async function(el){
+      const tid = el && el.dataset && el.dataset.v;
+      const before = ((state.live.threads || []).find(x => x.id === tid) || {}).status;
+      const r = await f0.apply(this, arguments);
+      try {
+        const th = (state.live.threads || []).find(x => x.id === tid), db = n42Db();
+        if (db && tid && (!before || before === 'pending') && !(th && th.answeredAt)) await db.collection('threads').doc(tid).update({answeredAt:n42TS()});
+      } catch (e) { console.warn('n42ans', e); }
+      return r;
+    };
+  });
+})();
+
+/* ---------- 3: kết quả tuyển dụng ---------- */
+function n42Ask(k, id){
+  const old = document.getElementById('n42q'); if (old) old.remove();
+  const ad = k === 'ads';
+  const opts = ad ? [['yes', 'n42QAdYes'], ['other', 'n42QAdOther'], ['no', 'n42QAdNo']] : [['yes', 'n42QYes'], ['no', 'n42QNo']];
+  const box = document.createElement('div');
+  box.id = 'n42q'; box.className = 'n42q';
+  box.innerHTML = `<div class="n42qc" role="dialog" aria-modal="true" aria-labelledby="n42qt"><h2 id="n42qt">${esc(t(ad ? 'n42QAd' : 'n42QTech'))}</h2>
+    <div class="n42qb">${opts.map(([v, lb], i) => `<button class="btn ${i === 0 ? 'btn-primary' : 'btn-ghost'} btn-block" type="button" data-act="n42out" data-k="${k}" data-v="${esc(id)}" data-o="${v}">${esc(t(lb))}</button>`).join('')}</div>
+    <button class="btn-link" type="button" data-act="n42skip">${esc(t('n42Skip'))}</button></div>`;
+  document.body.appendChild(box);
+  const f = box.querySelector('button'); if (f) f.focus();
+}
+ACT.n42skip = () => { const b = document.getElementById('n42q'); if (b) b.remove(); };
+ACT.n42out = async function(el){
+  const k = el.dataset.k, id = el.dataset.v, o = el.dataset.o, db = n42Db();
+  ACT.n42skip();
+  try {
+    if (db) await db.collection(k).doc(id).update(k === 'ads' ? {outcome:o, outcomeAt:n42TS()} : {hiredVia:o, hiredAt:n42TS()});
+    const it = (k === 'ads' ? ADS : TECHS).find(x => x.id === id); if (it){ if (k === 'ads') it.outcome = o; else it.hiredVia = o; }
+    toast(t('n42Thx'));
+  } catch (e) { console.warn('n42out', e); toast(n42Err(e)); }
+};
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('n42q')) ACT.n42skip(); });
+(() => {
+  const c0 = ACT.n2close;
+  ACT.n2close = async function(el){
+    const k = el.dataset.k, id = el.dataset.v, on = el.dataset.on === '1';
+    const r = await c0.apply(this, arguments);
+    const it = (k === 'ads' ? ADS : TECHS).find(x => x.id === id);
+    if (on && it && it[k === 'ads' ? 'filled' : 'hired']) n42Ask(k, id);
+    return r;
+  };
+})();
+
+/* ---------- 6: lỗi web ---------- */
+function n42Hash(s){ let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return 'e' + (h >>> 0).toString(36); }
+function n42UA(){
+  const u = navigator.userAgent || '';
+  const dev = /iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) ? 'iPad' : /Android/.test(u) ? 'Android' : /Mac/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : /Linux/.test(u) ? 'Linux' : 'Other';
+  const br = /CriOS|Chrome/.test(u) && !/Edg/.test(u) ? 'Chrome' : /Edg/.test(u) ? 'Edge' : /FxiOS|Firefox/.test(u) ? 'Firefox' : /Safari/.test(u) ? 'Safari' : '';
+  return (dev + ' ' + br).trim();
+}
+function n42Report(msg, line){
+  try {
+    msg = String(msg || '').replace(/\s+/g, ' ').trim().slice(0, 280);
+    if (!msg || /ResizeObserver loop|^Script error\.?$|Non-Error promise rejection|AbortError|NetworkError|Failed to fetch|Load failed|network-request-failed/i.test(msg)) return;
+    if (state.n42.errN >= 5) return;
+    const page = (location.hash || '#home').replace(/^#/, '').replace(/-[A-Za-z0-9_]{6,}$/, '-…').slice(0, 40) || 'home';
+    const id = n42Hash(msg + '|' + (line || 0));
+    if (state.n42.errSeen[id]) return;
+    state.n42.errSeen[id] = 1; state.n42.errN++;
+    const db = n42Db(); if (!db) return;
+    db.collection('errLog').doc(id).set({msg, line:Number(line) || 0, page, ua:n42UA(), lang:lang || '', uid:(state.user && state.user.uid) || '', n:firebase.firestore.FieldValue.increment(1), lastAt:n42TS()}, {merge:true}).catch(() => {});
+  } catch (e) {}
+}
+window.addEventListener('error', e => n42Report(e && (e.message || (e.error && e.error.message)), e && e.lineno));
+window.addEventListener('unhandledrejection', e => { const r = e && e.reason; n42Report('Promise: ' + (r && (r.message || r.code) || r), 0); });
+
+/* ---------- admin: tải nhật ký + lỗi ---------- */
+(() => {
+  let on = false;
+  setInterval(() => {
+    const db = n42Db();
+    if (on || !db || !(state.adm && state.adm.on)) return;
+    on = true;
+    db.collection('msgLog').orderBy('at', 'desc').limit(200).onSnapshot(s => {
+      state.n42.log = s.docs.map(d => Object.assign({id:d.id}, d.data()));
+      if (/^#admin-track/.test(location.hash) && typeof n34Soft === 'function') n34Soft();
+    }, e => { console.warn('n42 msgLog', e); });
+    db.collection('errLog').orderBy('lastAt', 'desc').limit(50).onSnapshot(s => {
+      state.n42.err = s.docs.map(d => Object.assign({id:d.id}, d.data()));
+      if (/^#admin(-over)?$/.test(location.hash) && typeof n34Soft === 'function') n34Soft();
+    }, e => { console.warn('n42 errLog', e); });
+  }, 1200);
+})();
+function n42When(ms){
+  if (!ms) return '—';
+  const tx = new Date(ms).toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US', {timeZone:'America/Chicago', hour:'numeric', minute:'2-digit', day:'numeric', month:'numeric', hour12:true});
+  const vn = new Date(ms).toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US', {timeZone:'Asia/Ho_Chi_Minh', hour:'numeric', minute:'2-digit', hour12:true});
+  return `${esc(tx)} <span class="n42vn">(Texas) · VN ${esc(vn)}</span>`;
+}
+function n42LogCard(){
+  const q = state.n42.q.trim().toLowerCase(), pair = state.n42.pair;
+  let L = state.n42.log || [];
+  if (pair) L = L.filter(x => x.tid === pair);
+  if (q) L = L.filter(x => (String(x.fromName) + ' ' + String(x.toName)).toLowerCase().indexOf(q) >= 0);
+  const rows = L.map(x => `<tr><td><b>${esc(x.fromName || '—')}</b> → ${esc(x.toName || '—')}<div class="n42t">${n42When(n42Ms(x.at))}</div></td>
+    <td>${pair ? '' : `<button class="btn-link" type="button" data-act="n42pair" data-v="${esc(x.tid)}">${esc(t('n42LogOne'))}</button>`}</td></tr>`).join('');
+  return `<div class="card adm-card n42logc" id="n42log"><h2 class="sec" style="margin-top:0">💬 ${t('n42Log')} (${L.length})</h2>
+    <p class="hint">${esc(t('n42LogD'))}</p>
+    <div class="n42lbar"><input id="n42q" class="n35q" type="search" placeholder="${esc(t('n42LogQ'))}" value="${esc(state.n42.q)}" aria-label="${esc(t('n42LogQ'))}">
+      ${pair ? `<span class="n42pill">${esc(t('n42LogPair'))}</span><button class="btn-link" type="button" data-act="n42pair" data-v="">${esc(t('n42LogAll'))}</button>` : ''}</div>
+    ${L.length ? `<div class="im-wrap"><table class="im-tbl"><tbody>${rows}</tbody></table></div>` : `<p class="empty-s">${esc(t('n42LogNone'))}</p>`}</div>`;
+}
+ACT.n42pair = function(el){
+  state.n42.pair = el.dataset.v || '';
+  if (!/^#admin-track/.test(location.hash)) location.hash = '#admin-track';
+  render();
+  if (state.n42.pair) setTimeout(() => { const c = document.getElementById('n42log'); if (c) c.scrollIntoView({block:'start'}); }, 60);
+};
+document.addEventListener('input', e => {
+  if (e.target && e.target.id === 'n42q'){
+    state.n42.q = e.target.value;
+    const pos = e.target.selectionStart; render();
+    const n = document.getElementById('n42q'); if (n){ n.focus(); try { n.setSelectionRange(pos, pos); } catch (x) {} }
+  }
+});
+const n42Track0 = admTrack;
+admTrack = function(){ return n42Track0() + n42LogCard(); };
+
+/* ---------- 3 + 4 + 5 + 6 trên Tổng quan ---------- */
+function n42Stats(){
+  const users = (state.n34.users || []).filter(u => (typeof n34Role === 'function' ? n34Role(u) : u.role) !== 'admin');
+  const ths = (state.tr && state.tr.threads) || [];
+  const all = ADS.concat(TECHS);
+  const ownerOf = o => o.ownerUid || '';
+  const hasPost = new Set(users.filter(u => typeof n34Owns === 'function' && n34Owns(u)).map(u => u.uid || u.id));
+  const conn = new Set(), msg = new Set();
+  ths.forEach(x => {
+    if (x.status !== 'accepted') return;
+    (x.members || []).forEach(m => conn.add(m));
+    const talked = (x.msgN || 0) > 0 || (x.lastFrom && n42Ms(x.lastAt) - n42Ms(x.createdAt) > 120000);
+    if (talked) (x.members || []).forEach(m => msg.add(m));
+  });
+  const adsYes = all.filter(o => o.outcome === 'yes'), techYes = all.filter(o => o.hiredVia === 'yes');
+  const hired = new Set(adsYes.concat(techYes).map(ownerOf).filter(Boolean));
+  const ids = users.map(u => u.uid || u.id);
+  const f = [ids.length, ids.filter(i => hasPost.has(i)).length, ids.filter(i => conn.has(i)).length, ids.filter(i => msg.has(i)).length, ids.filter(i => hired.has(i)).length];
+  const rt = ths.filter(x => x.kind === 'apply' && x.answeredAt).map(x => n42Ms(x.answeredAt) - n42Ms(x.createdAt)).filter(d => d > 0);
+  return {f, adsYes:adsYes.length, techYes:techYes.length, rt};
+}
+function n42Dur(ms){ const h = ms / 3600000; return h < 1 ? `${Math.max(1, Math.round(ms / 60000))} ${t('n42Min')}` : h < 48 ? `${Math.round(h * 10) / 10} ${t('n42Hr')}` : `${Math.round(h / 24)} ${lang === 'vi' ? 'ngày' : 'days'}`; }
+function n42ResCard(){
+  const s = n42Stats(), L = t('n42Fun');
+  const steps = s.f.map((n, i) => {
+    const pct = i === 0 ? '' : s.f[i - 1] ? ` <span class="n42pct">${Math.round(n / s.f[i - 1] * 100)}%</span>` : ' <span class="n42pct">—</span>';
+    return `<li><span class="n42fl">${esc(L[i])}</span><b>${n}</b>${pct}</li>`;
+  }).join('');
+  const avg = s.rt.length ? s.rt.reduce((a, b) => a + b, 0) / s.rt.length : 0;
+  return `<div class="card adm-card n42res"><h2 class="sec" style="margin-top:0">${t('n42Res')}</h2>
+    <p class="n42big">${t('n42Hire', s.adsYes, s.techYes)}</p>
+    <ol class="n42fun">${steps}</ol><p class="hint">${esc(t('n42FunNote'))}</p>
+    <p>${s.rt.length ? t('n42Resp', esc(n42Dur(avg)), s.rt.length) : esc(t('n42RespNone'))}</p></div>`;
+}
+function n42ErrCard(){
+  const L = state.n42.err || [];
+  return `<div class="card adm-card n42errc"><h2 class="sec" style="margin-top:0">${t('n42Err')} (${L.length})</h2>
+    ${L.length ? `<div class="im-wrap"><table class="im-tbl"><tbody>${L.map(x => `<tr><td class="n42t">${n42When(n42Ms(x.lastAt))}</td>
+      <td><b>${esc(x.msg || '')}</b><div class="hint">#${esc(x.page || '')} · ${esc(x.ua || '')}${x.line ? ` · line ${esc(String(x.line))}` : ''}</div></td>
+      <td>${esc(t('n42Times', x.n || 1))}</td><td><button class="btn-link" type="button" data-act="n42edel" data-v="${esc(x.id)}">${esc(t('n42ErrDel'))}</button></td></tr>`).join('')}</tbody></table></div>`
+      : `<p class="empty-s">${esc(t('n42ErrNone'))}</p>`}</div>`;
+}
+ACT.n42edel = async function(el){
+  const db = n42Db(), id = el.dataset.v; if (!db || !id) return;
+  try { await db.collection('errLog').doc(id).delete(); state.n42.err = state.n42.err.filter(x => x.id !== id); render(); } catch (e) { toast(n42Err(e)); }
+};
+const n42Over0 = admOver;
+admOver = function(){
+  const h = n42Over0();
+  if ((state.n22 && state.n22.rev) || (state.n24 && state.n24.view)) return h;
+  const tc = n34TodayCard(), i = h.indexOf(tc);
+  if (i < 0) return h + n42ResCard() + n42ErrCard();
+  const end = i + tc.length;
+  return h.slice(0, end) + n42ResCard() + h.slice(end) + n42ErrCard();
+};
+
+(() => { const st = document.createElement('style'); st.textContent = `
+.n42on{color:#17683C;font-weight:700;white-space:nowrap}
+.n42ago{color:var(--muted);white-space:nowrap}
+.n42t{font-size:13px;color:var(--muted);margin-top:2px}
+.n42vn{color:var(--muted);font-size:12px}
+.n42lbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 10px}
+.n42lbar input{flex:1;min-width:200px}
+.n42pill{background:#FBE7EE;color:var(--primary);border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700}
+.n42big{font-size:16px;margin:4px 0 12px}
+.n42fun{list-style:none;padding:0;margin:0;display:grid;gap:6px}
+.n42fun li{display:grid;grid-template-columns:minmax(0,1fr) auto 56px;gap:10px;align-items:baseline;padding:8px 12px;border-radius:10px;background:#FAF6F7}
+.n42fun b{font-size:18px}.n42pct{color:var(--muted);text-align:right}
+.n42q{position:fixed;inset:0;background:rgba(30,10,20,.45);display:grid;place-items:center;z-index:1000;padding:16px}
+.n42qc{background:#fff;border-radius:18px;padding:22px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25);display:grid;gap:12px;text-align:center}
+.n42qc h2{margin:0;font-size:20px}.n42qb{display:grid;gap:8px}
 `; document.head.appendChild(st); })();
 
 render();
