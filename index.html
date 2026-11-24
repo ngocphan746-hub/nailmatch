@@ -7701,7 +7701,7 @@ Object.assign(T.vi, {
   hw_track:'Ai đã mở link, ai chưa trả lời lời mời hoặc đơn ứng tuyển.',
   hw_mod:'Tin người dùng tự đăng, chờ bạn duyệt trước khi lên web.',
   hw_new:'Tự tay soạn một tin tuyển thợ hoặc một hồ sơ thợ.',
-  hw_rep:'Tin bị người dùng báo xấu.',
+  hw_rep:'Tin hoặc người dùng bị báo xấu.',
   hw_set:'Số điện thoại hỗ trợ, thông báo hiện trên web, múi giờ.'
 });
 Object.assign(T.en, {
@@ -7715,7 +7715,7 @@ Object.assign(T.en, {
   hw_track:'Who opened a link, and who has not answered an offer or application.',
   hw_mod:'Posts users wrote themselves, waiting for you to approve.',
   hw_new:'Write a job post or a tech profile by hand.',
-  hw_rep:'Listings users reported.',
+  hw_rep:'Listings or users that were reported.',
   hw_set:'Support phone number, the notice shown on the site, time zone.'
 });
 
@@ -13144,20 +13144,21 @@ function n34ReqCard(){
   all.forEach(x => { const k = (x.members || []).slice().sort().join('|'); (groups[k] = groups[k] || []).push(x); });
   const lastMs = x => n34Ms(x.lastAt) || n34Ms(x.createdAt);
   const keys = Object.keys(groups).sort((a, b) => Math.max(...groups[b].map(lastMs)) - Math.max(...groups[a].map(lastMs)));
-  const row = (x, sub) => {
+  const row = (x, sub, gN) => {
     const nm = x.names || {}, from = n34Nm(nm[x.from]), to = n34Nm(nm[(x.members || []).find(m => m !== x.from)]);
     const offer = x.kind === 'offer';
     const st = x.status === 'accepted' ? t('trOk') : x.status === 'declined' ? t('trNo') : x.status === 'blocked' ? t('trBlock') : x.status === 'withdrawn' ? (lang === 'vi' ? 'Đã rút' : 'Withdrawn') : t('trPend');
     const d = Math.max(0, Math.floor((Date.now() - lastMs(x)) / N34_DAY));
-    const late = (!x.status || x.status === 'pending') && Date.now() - lastMs(x) >= N34_DAY;
+    const late = (!x.status || x.status === 'pending') && Date.now() - lastMs(x) >= N34_DAY && !(typeof n42GoneTh === 'function' && n42GoneTh(x));
+    const mN = gN != null ? gN : (x.msgN || 0);
     return `<tr class="${late ? 'tr-late' : ''}${sub ? ' n34sub' : ''}"><td>${esc(from)}</td><td>${esc(to)}</td>
-      <td>${esc(t(offer ? 'n34Offer' : 'n34Apply'))}</td><td>${esc(st)}${late ? ` <b class="im-x">${t('trLate')}</b>` : ''}</td><td>${x.msgN ? `<button class="btn-link" type="button" data-act="n42pair" data-v="${esc(x.id)}">💬 ${x.msgN}</button>` : '—'}</td><td>${typeof n44StageCell === 'function' ? n44StageCell(x) : ''}</td>
+      <td>${esc(t(offer ? 'n34Offer' : 'n34Apply'))}</td><td>${esc(st)}${late ? ` <b class="im-x">${t('trLate')}</b>` : ''}</td><td>${mN ? `<button class="btn-link" type="button" data-act="n42pair" data-v="${esc(x.id)}">💬 ${mN}</button>` : '—'}</td><td>${typeof n44StageCell === 'function' ? n44StageCell(x) : ''}</td>
       <td>${esc(t('trDays', d))}</td><td>${late && !sub ? `<button class="btn-link" type="button" data-act="trnudge" data-v="${offer ? 'tech' : 'salon'}" data-t="${esc((x.about || {}).title || '')}">${t('trNudge')}</button>` : ''}</td></tr>`;
   };
   const rows = keys.map(k => {
     const g = groups[k].slice().sort((a, b) => lastMs(b) - lastMs(a)), open = !!state.n34.trOpen[k];
     const more = g.length > 1 ? `<tr class="n34more"><td colspan="8"><button class="btn-link" type="button" data-act="n34tr" data-v="${esc(k)}">${esc(open ? t('n34OlderHide') : t('n34Older', g.length - 1))}</button></td></tr>` : '';
-    return row(g[0]) + more + (open ? g.slice(1).map(x => row(x, true)).join('') : '');
+    return row(g[0], false, g.reduce((a, y) => a + (y.msgN || 0), 0)) + more + (open ? g.slice(1).map(x => row(x, true)).join('') : '');
   }).join('');
   return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('trReq')} (${keys.length})</h2>
       <p class="hint">${esc(t('trOnly'))}</p>
@@ -14984,6 +14985,7 @@ function n42Report(msg, line){
   try {
     msg = String(msg || '').replace(/\s+/g, ' ').trim().slice(0, 280);
     if (!msg || /ResizeObserver loop|^Script error\.?$|Non-Error promise rejection|AbortError|NetworkError|Failed to fetch|Load failed|network-request-failed/i.test(msg)) return;
+    if (/runtime\.sendMessage|chrome-extension|safari-(web-)?extension|moz-extension|Extension context|webkit-masked-url/i.test(msg)) return; /* lỗi của tiện ích trình duyệt, không phải của web */
     if (state.n42.errN >= 5) return;
     const page = (location.hash || '#home').replace(/^#/, '').replace(/-[A-Za-z0-9_]{6,}$/, '-…').slice(0, 40) || 'home';
     const id = n42Hash(msg + '|' + (line || 0));
@@ -15022,7 +15024,12 @@ function n42When(ms){
 function n42LogCard(){
   const q = state.n42.q.trim().toLowerCase(), pair = state.n42.pair;
   let L = state.n42.log || [];
-  if (pair) L = L.filter(x => x.tid === pair);
+  if (pair){
+    /* gộp theo cặp: tin nhắn ở cuộc trò chuyện cũ của cùng 2 người cũng hiện */
+    const th = ((state.tr && state.tr.threads) || []).find(x => x.id === pair);
+    const key = th && th.members ? th.members.slice().sort().join('|') : '';
+    L = L.filter(x => x.tid === pair || (key && [x.from, x.to].sort().join('|') === key));
+  }
   if (q) L = L.filter(x => (String(x.fromName) + ' ' + String(x.toName)).toLowerCase().indexOf(q) >= 0);
   const rows = L.map(x => `<tr><td><b>${esc(x.fromName || '—')}</b> → ${esc(x.toName || '—')}<div class="n42t">${n42When(n42Ms(x.at))}</div></td>
     <td>${pair ? '' : `<button class="btn-link" type="button" data-act="n42pair" data-v="${esc(x.tid)}">${esc(t('n42LogOne'))}</button>`}</td></tr>`).join('');
@@ -15084,7 +15091,7 @@ function n42ResCard(){
     <p>${s.rt.length ? t('n42Resp', esc(n42Dur(avg)), s.rt.length) : esc(t('n42RespNone'))}</p></div>`;
 }
 function n42ErrCard(){
-  const L = state.n42.err || [];
+  const L = (state.n42.err || []).filter(x => !/runtime\.sendMessage|chrome-extension|safari-(web-)?extension|moz-extension|Extension context|webkit-masked-url/i.test(String(x.msg || '')));
   return `<div class="card adm-card n42errc"><h2 class="sec" style="margin-top:0">${t('n42Err')} (${L.length})</h2>
     ${L.length ? `<div class="im-wrap"><table class="im-tbl"><tbody>${L.map(x => `<tr><td class="n42t">${n42When(n42Ms(x.lastAt))}</td>
       <td><b>${esc(x.msg || '')}</b><div class="hint">#${esc(x.page || '')} · ${esc(x.ua || '')}${x.line ? ` · line ${esc(String(x.line))}` : ''}</div></td>
