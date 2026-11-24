@@ -2950,7 +2950,7 @@ const LEGAL = {
         {vi:'<b>Công khai:</b> tin đăng, hồ sơ thợ (tên, khu vực, dịch vụ, kinh nghiệm, ảnh/video tác phẩm) và tên tiệm bạn ghi.', en:'<b>Public:</b> your ads, tech profile (name, area, services, experience, work photos/videos), and any salon name you enter.'},
         {vi:'<b>Luôn được giữ kín:</b> số điện thoại, email, số bằng TDLR và thông tin liên lạc của người giới thiệu. Người khác không thấy các thông tin này.', en:'<b>Always private:</b> your phone number, email, TDLR license number, and reference contact details. Other users never see them.'},
         {vi:'<b>Tin nhắn:</b> chỉ bạn và người nhận đọc được.', en:'<b>Messages:</b> only you and the other person can read them.'},
-        {vi:'<b>Quản trị viên (admin):</b> để hỗ trợ người dùng, admin thấy ai gửi lời mời/ứng tuyển cho ai, thời gian gửi tin và số tin nhắn, lần đăng nhập gần nhất, trạng thái online, kết quả tuyển dụng bạn tự báo và lỗi kỹ thuật của trang. Admin <b>không bao giờ</b> thấy nội dung tin nhắn.', en:'<b>Admins:</b> to support users, admins can see who invited or applied to whom, when messages were sent and how many, your last sign-in, whether you are online, the hiring results you report, and technical errors on the site. Admins <b>never</b> see the content of your messages.'}]},
+        {vi:'<b>Quản trị viên (admin):</b> để hỗ trợ người dùng, admin thấy ai gửi lời mời/ứng tuyển cho ai, thời gian gửi tin và số tin nhắn, lần đăng nhập gần nhất, trạng thái online, kết quả tuyển dụng bạn tự báo và lỗi kỹ thuật của trang. Admin cũng thấy tiến độ (đã chốt / không chốt), lịch hẹn và các báo cáo. Admin <b>không bao giờ</b> thấy nội dung tin nhắn và ghi chú riêng của bạn.', en:'<b>Admins:</b> to support users, admins can see who invited or applied to whom, when messages were sent and how many, your last sign-in, whether you are online, the hiring results you report, and technical errors on the site. Admins also see progress (hired / not a match), appointments and reports. Admins <b>never</b> see the content of your messages or your private notes.'}]},
       {h:{vi:'4. Bên cung cấp dịch vụ', en:'4. Service providers'}, li:[
         {vi:'Chúng tôi dùng Google Firebase (máy chủ ở Mỹ) để đăng nhập, lưu dữ liệu, lưu ảnh/video và gửi mã SMS. Đăng nhập bằng Google do Google xử lý.', en:'We use Google Firebase (servers in the U.S.) for sign-in, data storage, photo/video storage, and sending SMS codes. Google sign-in is handled by Google.'},
         {vi:'Trang web được lưu trữ trên GitHub Pages.', en:'The website is hosted on GitHub Pages.'},
@@ -3144,7 +3144,7 @@ function initLive(){
   function fromDoc(doc){
     try {
       const d = doc.data(EST), o = d.ad || {};
-      return Object.assign({}, o, {id:doc.id, live:true, ownerUid:d.ownerUid, ownerPhone:d.ownerPhone || '', ownerName:d.ownerName || '', daysAgo:daysSince(d.createdAt), postedMs:ms(d.createdAt) || ms(d.updatedAt) || 0, _form:d.form || null, _kind:d.kind || '', avatar:d.avatar || '', filled:!!d.filled, hired:!!d.hired, outcome:d.outcome || '', hiredVia:d.hiredVia || '', expMs:d.expMs || 0, views:d.views || 0, mod:d.mod || '', claim:d.claim || null, licOk2:!!d.licOk2, ready:d.ready ? Object.assign({}, d.ready, {atMs:ms(d.ready.at) || Date.now()}) : null});
+      return Object.assign({}, o, {id:doc.id, live:true, ownerUid:d.ownerUid, ownerPhone:d.ownerPhone || '', ownerName:d.ownerName || '', daysAgo:daysSince(d.createdAt), postedMs:ms(d.createdAt) || ms(d.updatedAt) || 0, _form:d.form || null, _kind:d.kind || '', avatar:d.avatar || '', filled:!!d.filled, hired:!!d.hired, outcome:d.outcome || '', hiredVia:d.hiredVia || '', quick:d.quick || null, filled:!!d.filled || !!(d.quick && d.quick.date && d.quick.date < (typeof n44Today === 'function' ? n44Today() : '0')), expMs:d.expMs || 0, views:d.views || 0, mod:d.mod || '', claim:d.claim || null, licOk2:!!d.licOk2, ready:d.ready ? Object.assign({}, d.ready, {atMs:ms(d.ready.at) || Date.now()}) : null});
     } catch (e) { return null; }
   }
   function replaceLive(arr, list){ for (let i = arr.length - 1; i >= 0; i--) if (arr[i].live) arr.splice(i, 1); arr.unshift(...list); }
@@ -3182,7 +3182,7 @@ function initLive(){
     try { const doc = await db.collection('users').doc(u.uid).get(); d = doc.exists ? doc.data() : null; } catch (e) { console.warn('user doc', e); }
     const base = {uid:u.uid, email:n38Real(u.email) || (d && d.email) || '', phone:(d && d.phone) || (u.phoneNumber ? digits10(u.phoneNumber) : '')};
     if (d && d.name){
-      state.user = Object.assign(base, {name:d.name, role:d.role || 'other', mode:d.mode || '', licNo:d.licNo || '', refContacts:d.refContacts || [], addrs:d.addrs || {}, pics:d.pics || {}, priv:d.priv || {}, avatar:d.avatar || '', saved:d.saved || []}); state.pendingUser = null;
+      state.user = Object.assign(base, {name:d.name, role:d.role || 'other', mode:d.mode || '', licNo:d.licNo || '', refContacts:d.refContacts || [], addrs:d.addrs || {}, pics:d.pics || {}, priv:d.priv || {}, avatar:d.avatar || '', saved:d.saved || [], trusted:!!d.trusted}); state.pendingUser = null;
       startUserListeners();
       if (state.auth.pending || route().view === 'login'){ state.auth = freshAuth(); toast(t('welcome', state.user.name)); afterAuth(); }
       render();
@@ -13151,17 +13151,17 @@ function n34ReqCard(){
     const d = Math.max(0, Math.floor((Date.now() - lastMs(x)) / N34_DAY));
     const late = (!x.status || x.status === 'pending') && Date.now() - lastMs(x) >= N34_DAY;
     return `<tr class="${late ? 'tr-late' : ''}${sub ? ' n34sub' : ''}"><td>${esc(from)}</td><td>${esc(to)}</td>
-      <td>${esc(t(offer ? 'n34Offer' : 'n34Apply'))}</td><td>${esc(st)}${late ? ` <b class="im-x">${t('trLate')}</b>` : ''}</td><td>${x.msgN ? `<button class="btn-link" type="button" data-act="n42pair" data-v="${esc(x.id)}">💬 ${x.msgN}</button>` : '—'}</td>
+      <td>${esc(t(offer ? 'n34Offer' : 'n34Apply'))}</td><td>${esc(st)}${late ? ` <b class="im-x">${t('trLate')}</b>` : ''}</td><td>${x.msgN ? `<button class="btn-link" type="button" data-act="n42pair" data-v="${esc(x.id)}">💬 ${x.msgN}</button>` : '—'}</td><td>${typeof n44StageCell === 'function' ? n44StageCell(x) : ''}</td>
       <td>${esc(t('trDays', d))}</td><td>${late && !sub ? `<button class="btn-link" type="button" data-act="trnudge" data-v="${offer ? 'tech' : 'salon'}" data-t="${esc((x.about || {}).title || '')}">${t('trNudge')}</button>` : ''}</td></tr>`;
   };
   const rows = keys.map(k => {
     const g = groups[k].slice().sort((a, b) => lastMs(b) - lastMs(a)), open = !!state.n34.trOpen[k];
-    const more = g.length > 1 ? `<tr class="n34more"><td colspan="7"><button class="btn-link" type="button" data-act="n34tr" data-v="${esc(k)}">${esc(open ? t('n34OlderHide') : t('n34Older', g.length - 1))}</button></td></tr>` : '';
+    const more = g.length > 1 ? `<tr class="n34more"><td colspan="8"><button class="btn-link" type="button" data-act="n34tr" data-v="${esc(k)}">${esc(open ? t('n34OlderHide') : t('n34Older', g.length - 1))}</button></td></tr>` : '';
     return row(g[0]) + more + (open ? g.slice(1).map(x => row(x, true)).join('') : '');
   }).join('');
   return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${t('trReq')} (${keys.length})</h2>
       <p class="hint">${esc(t('trOnly'))}</p>
-      ${keys.length ? `<div class="im-wrap"><table class="im-tbl"><thead><tr><th>${t('trWho')}</th><th>${t('trTo')}</th><th>${t('trKind')}</th><th>${t('trSt')}</th><th>${t('n42Msgs')}</th><th>${t('trAge')}</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : `<p class="empty-s">${esc(t('trNoReq') || '')}</p>`}</div>`;
+      ${keys.length ? `<div class="im-wrap"><table class="im-tbl"><thead><tr><th>${t('trWho')}</th><th>${t('trTo')}</th><th>${t('trKind')}</th><th>${t('trSt')}</th><th>${t('n42Msgs')}</th><th>${t('n44Prog')}</th><th>${t('trAge')}</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : `<p class="empty-s">${esc(t('trNoReq') || '')}</p>`}</div>`;
 }
 ACT.n34tr = function(el){ const k = el.dataset.v; state.n34.trOpen[k] = !state.n34.trOpen[k]; render(); };
 const n34Track0 = admTrack;
@@ -15064,6 +15064,7 @@ function n42Stats(){
   });
   const adsYes = all.filter(o => o.outcome === 'yes'), techYes = all.filter(o => o.hiredVia === 'yes');
   const hired = new Set(adsYes.concat(techYes).map(ownerOf).filter(Boolean));
+  ths.forEach(x => { if (x.deal && x.deal.state === 'yes') (x.members || []).forEach(m => hired.add(m)); });   /* n144: chốt việc trong chat */
   const ids = users.map(u => u.uid || u.id);
   const f = [ids.length, ids.filter(i => hasPost.has(i)).length, ids.filter(i => conn.has(i)).length, ids.filter(i => msg.has(i)).length, ids.filter(i => hired.has(i)).length];
   const rt = ths.filter(x => x.kind === 'apply' && x.answeredAt).map(x => n42Ms(x.answeredAt) - n42Ms(x.createdAt)).filter(d => d > 0);
@@ -15927,7 +15928,7 @@ if (typeof n26FixThreads === 'function'){
 .n30apps .n30appn.n43ap{display:flex;flex-direction:row;gap:12px;align-items:flex-start}.n43apav .avatar{width:44px;height:44px;font-size:18px;flex:none}
 .n43apb{display:grid;gap:2px;min-width:0}.n43apsub{font-size:13.5px;color:var(--muted)}.n43ap .n30fit{margin-top:4px}
 .n43views{font-weight:500;color:var(--muted);font-size:14px}
-.n43enter{display:block;color:var(--muted);font-size:12px;margin-top:4px}
+.reply{flex-wrap:wrap}.reply .n43enter{flex-basis:100%;order:3}.n43enter{display:block;color:var(--muted);font-size:12px;margin-top:4px}
 .n43cityx{margin-top:8px;width:100%}.n43zipw{color:#8A5A00;background:#FFF7E6;border-radius:10px;padding:8px 10px;font-size:13.5px;margin:8px 0 0}
 .n43hl{outline:2px solid var(--primary);outline-offset:6px;border-radius:10px}
 .n43deltag{color:var(--muted);font-style:italic}.n43forgot{font-size:13px}
@@ -15988,7 +15989,8 @@ function n43Group(th){
 }
 function n43Canon(list){
   const r = s => (s === 'accepted' ? 3 : s === 'pending' ? 2 : 1);
-  return list.slice().sort((a, b) => r(b.status) - r(a.status) || n43Ms(b.lastAt) - n43Ms(a.lastAt))[0] || null;
+  const live = x => (x.adId && ADS.some(a => a.id === x.adId) ? 1 : 0);   /* ưu tiên cuộc của tin còn trên web */
+  return list.slice().sort((a, b) => r(b.status) - r(a.status) || live(b) - live(a) || n43Ms(b.lastAt) - n43Ms(a.lastAt))[0] || null;
 }
 /* dùng khi ứng tuyển / mời làm (n130): cuộc có sẵn của cặp này, không tính cuộc đã chặn */
 function n43PairOf(members, tid){
@@ -16075,6 +16077,537 @@ function n43Events(list){
 (() => { const st = document.createElement('style'); st.textContent = `
 .n43sys{align-self:center;text-align:center;font-size:12.5px;color:var(--muted);background:#F4F1F2;border-radius:999px;padding:4px 12px;margin:6px auto;max-width:90%}
 .n43cnt{color:var(--primary);font-weight:700}`; document.head.appendChild(st); })();
+
+/* ============================================================
+   n144 — 1 Cần thợ gấp (form nhanh) · 2 chốt việc (cả hai bên) · 3 tiến độ + bảng theo dõi
+          4 báo cáo người dùng · 5 lịch hẹn + nhắc · A báo thợ sẵn sàng ở gần · B gợi ý thợ cho tin gấp
+   ============================================================ */
+Object.assign(T.vi, {
+  n44Prog:'Tiến độ',
+  n44St:{wait:'Chờ trả lời', talk:'Đang trao đổi', appt:'Hẹn thử việc', done:'✅ Đã chốt', no:'Không chốt', idle:'Tạm dừng'},
+  n44DealYes:'✅ Đã chốt làm việc', n44DealNo:'Không chốt được',
+  n44DealAskMe:n => `Đang chờ ${n} xác nhận đã chốt làm việc.`, n44DealAskThem:n => `${n} báo hai bên đã chốt làm việc. Bạn xác nhận chứ?`,
+  n44Conf:'Xác nhận', n44NotYet:'Chưa chốt', n44Undo:'Huỷ', n44Reopen:'Mở lại',
+  n44DealDone:d => `✅ Hai bên đã chốt làm việc${d ? ' · ' + d : ''}`, n44DealNoT:r => `Không chốt được${r ? ' · ' + r : ''}`,
+  n44NoQ:'Không chốt được với người này?', n44NoD:'Cuộc trò chuyện vẫn mở. Chọn lý do (không bắt buộc) để Nail101 cải thiện:',
+  n44Why:{pay:'Không hợp lương', hours:'Không hợp giờ làm', skill:'Không hợp tay nghề', found:'Đã tìm được người khác', nocontact:'Không liên lạc được', other:'Lý do khác'},
+  n44CloseAd:'Đóng tin tuyển', n44HideProf:'Ẩn hồ sơ (đã có việc)',
+  n44Appt:'📅 Hẹn lịch', n44ApptK:{trial:'Thử việc', start:'Bắt đầu làm'},
+  n44ApptT:'Hẹn lịch', n44ApptKind:'Loại hẹn', n44ApptDate:'Ngày', n44ApptTime:'Giờ', n44ApptAddr:'Địa chỉ',
+  n44ApptSave:'Gửi lịch hẹn', n44ApptWait:n => `chờ ${n} xác nhận`, n44ApptOk:'đã xác nhận', n44ApptChange:'Đổi giờ', n44ApptCancel:'Huỷ lịch',
+  n44ApptErr:'Chọn ngày (từ hôm nay) và giờ.',
+  n44Note:'Ghi chú riêng (chỉ bạn thấy)', n44NoteSave:'Lưu ghi chú', n44NoteOk:'Đã lưu ghi chú.',
+  n44Rep:'⚑ Báo cáo người này', n44RepQ:n => `Báo cáo ${n}`, n44RepD:'Nail101 sẽ xem xét. Người bị báo cáo không biết ai báo cáo.',
+  n44RepR:{noshow:'Không đến hẹn', fake:'Thông tin sai', rude:'Lời lẽ khiếm nhã', scam:'Lừa đảo / đòi tiền', other:'Khác'},
+  n44RepNote:'Ghi thêm (không bắt buộc)', n44RepSend:'Gửi báo cáo', n44RepThx:'Đã gửi báo cáo. Cảm ơn bạn.', n44RepPick:'Chọn một lý do.',
+  n44Trk:'Bảng theo dõi', n44TrkD:'Tất cả cuộc trò chuyện của bạn và tiến độ từng cuộc.', n44TrkAll:'Tất cả', n44TrkNone:'Chưa có cuộc trò chuyện nào.',
+  n44TrkAcc:'⚙ Tài khoản & hồ sơ', n44Next:'Lịch sắp tới',
+  n44Rem:'📅 Lịch hẹn', n44RemLine:(k, n, d, h) => `${k} với ${n} · ${d} · ${h}`, n44RemAsk:n => `${n} báo đã chốt làm việc – bấm để xác nhận`,
+  n44RemAppt:n => `${n} gửi lịch hẹn – bấm để xác nhận`,
+  n44Urg:'⚡ Cần thợ gấp', n44UrgSub:'Đăng nhanh trong 1 phút', n44UrgT:'⚡ Cần thợ gấp',
+  n44UrgD:'Điền nhanh, tin tự gỡ khi qua ngày cần thợ. Tên tiệm, địa chỉ lấy từ tin tuyển gần nhất của bạn.',
+  n44UrgSvc:'Cần làm dịch vụ gì?', n44UrgDay:'Cần ngày nào?', n44Today:'Hôm nay', n44Tmr:'Ngày mai', n44Pick:'Chọn ngày',
+  n44UrgHrs:'Giờ làm', n44UrgPay:'Lương', n44PayH:'Theo giờ', n44PayD:'Theo ngày', n44UrgAmt:'Số tiền ($)',
+  n44UrgZip:'ZIP Texas của tiệm', n44UrgNote:'Ghi chú ngắn (không bắt buộc)', n44UrgPost:'⚡ Đăng tin gấp',
+  n44UrgErr:{svc:'Chọn ít nhất 1 dịch vụ.', day:'Chọn ngày (từ hôm nay).', hrs:'Chọn giờ bắt đầu và kết thúc.', amt:'Nhập số tiền lớn hơn 0.', zip:'Nhập ZIP Texas 5 số.'},
+  n44UrgOk:'Đã đăng tin gấp!', n44UrgPend:'Đã gửi tin gấp – Nail101 đang duyệt (ưu tiên).',
+  n44UrgSug:'Thợ đang sẵn sàng ở gần', n44UrgSugD:'Mời ngay để có người nhanh nhất:', n44UrgSugNone:'Chưa có thợ nào bật “Sẵn sàng đi làm” gần tiệm. Tin của bạn vẫn hiện ở mục Cần thợ gấp.',
+  n44UrgMailed:n => `Đã báo qua email cho ${n} thợ đang sẵn sàng ở gần.`,
+  n44UrgList:'⚡ Tiệm cần thợ gấp', n44UrgWhen:(d, h) => `Cần ${d} · ${h}`, n44UrgTitle:'Cần thợ gấp',
+  n44UrgQ:'⚡ Tin gấp chờ duyệt', n44Dow:['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'],
+  n44AdmDeal:(a, b, c) => `Chốt việc trong chat: <b>${a}</b> thành công · <b>${b}</b> không chốt · <b>${c}</b> đang trao đổi`,
+  n44AdmWhy:'Lý do không chốt hay gặp:', n44RepUser:(a, b) => `${a} báo cáo ${b}`
+});
+Object.assign(T.en, {
+  n44Prog:'Progress',
+  n44St:{wait:'Waiting for reply', talk:'Talking', appt:'Trial scheduled', done:'✅ Hired', no:'Not a match', idle:'Paused'},
+  n44DealYes:'✅ We agreed to work together', n44DealNo:'Not a match',
+  n44DealAskMe:n => `Waiting for ${n} to confirm.`, n44DealAskThem:n => `${n} says you agreed to work together. Confirm?`,
+  n44Conf:'Confirm', n44NotYet:'Not yet', n44Undo:'Cancel', n44Reopen:'Reopen',
+  n44DealDone:d => `✅ You agreed to work together${d ? ' · ' + d : ''}`, n44DealNoT:r => `Not a match${r ? ' · ' + r : ''}`,
+  n44NoQ:'Not a match with this person?', n44NoD:'The chat stays open. Pick a reason (optional) to help Nail101 improve:',
+  n44Why:{pay:'Pay didn’t fit', hours:'Hours didn’t fit', skill:'Skills didn’t fit', found:'Found someone else', nocontact:'Couldn’t reach them', other:'Other'},
+  n44CloseAd:'Close the job post', n44HideProf:'Hide my profile (found a job)',
+  n44Appt:'📅 Schedule', n44ApptK:{trial:'Trial day', start:'First day'},
+  n44ApptT:'Schedule', n44ApptKind:'Type', n44ApptDate:'Date', n44ApptTime:'Time', n44ApptAddr:'Address',
+  n44ApptSave:'Send', n44ApptWait:n => `waiting for ${n}`, n44ApptOk:'confirmed', n44ApptChange:'Change time', n44ApptCancel:'Cancel',
+  n44ApptErr:'Pick a date (today or later) and a time.',
+  n44Note:'Private note (only you see it)', n44NoteSave:'Save note', n44NoteOk:'Note saved.',
+  n44Rep:'⚑ Report this person', n44RepQ:n => `Report ${n}`, n44RepD:'Nail101 will review it. The person won’t know who reported them.',
+  n44RepR:{noshow:'Didn’t show up', fake:'False information', rude:'Rude language', scam:'Scam / asked for money', other:'Other'},
+  n44RepNote:'Details (optional)', n44RepSend:'Send report', n44RepThx:'Report sent. Thank you.', n44RepPick:'Pick a reason.',
+  n44Trk:'My tracker', n44TrkD:'All your conversations and how each one is going.', n44TrkAll:'All', n44TrkNone:'No conversations yet.',
+  n44TrkAcc:'⚙ Account & profile', n44Next:'Coming up',
+  n44Rem:'📅 Appointment', n44RemLine:(k, n, d, h) => `${k} with ${n} · ${d} · ${h}`, n44RemAsk:n => `${n} says you agreed to work together – tap to confirm`,
+  n44RemAppt:n => `${n} sent an appointment – tap to confirm`,
+  n44Urg:'⚡ Need a tech fast', n44UrgSub:'Post in 1 minute', n44UrgT:'⚡ Need a tech fast',
+  n44UrgD:'Quick post. It disappears after the day you need. Salon name and address come from your latest job post.',
+  n44UrgSvc:'Which services?', n44UrgDay:'Which day?', n44Today:'Today', n44Tmr:'Tomorrow', n44Pick:'Pick a date',
+  n44UrgHrs:'Hours', n44UrgPay:'Pay', n44PayH:'Per hour', n44PayD:'Per day', n44UrgAmt:'Amount ($)',
+  n44UrgZip:'Salon’s Texas ZIP', n44UrgNote:'Short note (optional)', n44UrgPost:'⚡ Post now',
+  n44UrgErr:{svc:'Pick at least 1 service.', day:'Pick a day (today or later).', hrs:'Pick start and end times.', amt:'Enter an amount above 0.', zip:'Enter a 5-digit Texas ZIP.'},
+  n44UrgOk:'Your urgent post is live!', n44UrgPend:'Sent – Nail101 is reviewing it (priority).',
+  n44UrgSug:'Ready techs nearby', n44UrgSugD:'Invite them now to fill the spot fastest:', n44UrgSugNone:'No techs nearby have “Ready to work” on right now. Your post still shows under Need a tech fast.',
+  n44UrgMailed:n => `Emailed ${n} ready tech${n === 1 ? '' : 's'} nearby.`,
+  n44UrgList:'⚡ Salons that need a tech fast', n44UrgWhen:(d, h) => `Needed ${d} · ${h}`, n44UrgTitle:'Need a tech fast',
+  n44UrgQ:'⚡ Urgent post waiting for review', n44Dow:['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  n44AdmDeal:(a, b, c) => `Deals in chat: <b>${a}</b> hired · <b>${b}</b> not a match · <b>${c}</b> still talking`,
+  n44AdmWhy:'Most common reasons:', n44RepUser:(a, b) => `${a} reported ${b}`
+});
+state.n44 = {notes:{}, notesLoaded:{}, trk:'', urg:null, sug:{}};
+const n44Db = () => state.n1ctx && state.n1ctx.db;
+const n44TS = () => firebase.firestore.FieldValue.serverTimestamp();
+const n44Pad = n => String(n).padStart(2, '0');
+function n44Today(off){ const d = new Date(Date.now() + (off || 0) * 864e5); return `${d.getFullYear()}-${n44Pad(d.getMonth() + 1)}-${n44Pad(d.getDate())}`; }
+function n44Day(s){
+  if (!s) return '';
+  const [y, m, d] = s.split('-').map(Number), dt = new Date(y, m - 1, d), dow = t('n44Dow')[dt.getDay()];
+  if (s === n44Today()) return t('n44Today').toLowerCase() === 'hôm nay' ? 'hôm nay' : 'today';
+  if (s === n44Today(1)) return lang === 'vi' ? 'ngày mai' : 'tomorrow';
+  return lang === 'vi' ? `${dow} ${d}/${m}` : `${dow} ${m}/${d}`;
+}
+const n44Hm = h => (typeof fmtTime === 'function' ? fmtTime(h) : h);
+function n44Me(){ return state.user && state.user.uid; }
+function n44Other(x){ const u = n44Me(); return (x.members || []).find(m => m !== u) || ''; }
+function n44OtherName(x){ return ((x.names || {})[n44Other(x)]) || '—'; }
+function n44Threads(){ return ((state.live && state.live.threads) || []); }
+function n44Canons(){
+  const g = {};
+  n44Threads().forEach(x => { const k = n43Key(x.members); (g[k] = g[k] || []).push(x); });
+  return Object.values(g).map(l => n43Canon(l)).filter(Boolean);
+}
+function n44Stage(x){
+  if (!x) return '';
+  if (x.status === 'pending') return 'wait';
+  if (x.status !== 'accepted') return '';
+  const d = x.deal || {};
+  if (d.state === 'yes') return 'done';
+  if (d.state === 'no') return 'no';
+  if (x.appt && x.appt.date && x.appt.date >= n44Today()) return 'appt';
+  if (Date.now() - n43Ms(x.lastAt) > 14 * 864e5) return 'idle';
+  return 'talk';
+}
+function n44StageCell(x){ const s = n44Stage(x); return s ? `<span class="n44st n44st-${s}">${esc(t('n44St')[s])}</span>` : '—'; }
+async function n44Upd(id, data){ const db = n44Db(); if (!db) return false; try { await db.collection('threads').doc(id).update(data); return true; } catch (e) { console.warn('n44', e); toast(n43Err(e)); return false; } }
+function n44Mail(toUid, kind, vi, en, link){
+  const db = n44Db(), u = n44Me(); if (!db || !u || !toUid) return;
+  link = link || 'https://nail101.com/';
+  db.collection('mail').add({toUids:[toUid], kind, by:u, createdAt:n44TS(),
+    message:{subject:'Nail101: ' + vi + ' / ' + en, text:`${vi}\nMở Nail101: ${link}\n\n${en}\nOpen Nail101: ${link}`,
+      html:`<p>${esc(vi)}</p><p><a href="${esc(link)}">Mở Nail101</a></p><hr><p>${esc(en)}</p><p><a href="${esc(link)}">Open Nail101</a></p>`}}).catch(e => console.warn('n44 mail', e));
+}
+/* hộp có ô nhập: trả về {id: value} hoặc null */
+function n44Dlg(title, body, okLabel, check){
+  return new Promise(res => {
+    const old = document.getElementById('n43m'); if (old) old.remove();
+    const box = document.createElement('div'); box.id = 'n43m'; box.className = 'n43m';
+    box.innerHTML = `<div class="n43mc n44dlg" role="dialog" aria-modal="true" aria-labelledby="n44dt"><h2 id="n44dt">${esc(title)}</h2>${body}
+      <p class="err n44derr" hidden></p><div class="n43mb"><button type="button" class="btn btn-primary btn-block" data-i="ok">${esc(okLabel)}</button></div>
+      <button type="button" class="btn-link n43mx" data-i="x">${esc(t('n43Cancel'))}</button></div>`;
+    const vals = () => { const o = {}; box.querySelectorAll('input,select,textarea').forEach(i => { if (i.type === 'radio'){ if (i.checked) o[i.name] = i.value; } else if (i.type === 'checkbox'){ if (i.checked) (o[i.name] = o[i.name] || []).push(i.value); } else o[i.id || i.name] = i.value; }); return o; };
+    const done = v => { box.remove(); document.removeEventListener('keydown', key, true); res(v); };
+    const key = e => { if (e.key === 'Escape'){ e.preventDefault(); done(null); } };
+    box.addEventListener('click', e => {
+      if (e.target === box) return done(null);
+      const b = e.target.closest && e.target.closest('button[data-i]'); if (!b) return;
+      e.stopPropagation();
+      if (b.dataset.i === 'x') return done(null);
+      const v = vals(), err = check ? check(v) : '';
+      if (err){ const p = box.querySelector('.n44derr'); p.textContent = err; p.hidden = false; return; }
+      done(v);
+    });
+    document.addEventListener('keydown', key, true);
+    document.body.appendChild(box);
+    const f = box.querySelector('input,select,textarea,button'); if (f) f.focus();
+  });
+}
+
+/* ================= 2 + 3 + 4 + 5: thanh tiến độ trong khung chat ================= */
+function n44Panel(x){
+  if (!x || x.status !== 'accepted') return '';
+  const u = n44Me(), other = n44OtherName(x), d = x.deal || {}, a = x.appt, st = n44Stage(x);
+  let deal = '';
+  if (d.state === 'yes'){
+    const ad = ADS.find(o => o.id === x.adId), mineAd = ad && n2Mine(ad) && !ad.filled, mp = state.myProfile;
+    deal = `<p class="n44ok">${esc(t('n44DealDone', d.confAt ? new Date(n43Ms(d.confAt) || Date.now()).toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US') : ''))}</p>
+      <div class="n44row">${mineAd ? `<button class="btn btn-ghost" type="button" data-act="n2close" data-k="ads" data-v="${esc(ad.id)}" data-on="1">${esc(t('n44CloseAd'))}</button>` : ''}
+      ${mp && mp.live && n2Mine(mp) && !mp.hired && n43Role() === 'tech' ? `<button class="btn btn-ghost" type="button" data-act="n2close" data-k="techs" data-v="${esc(mp.id)}" data-on="1">${esc(t('n44HideProf'))}</button>` : ''}</div>`;
+  } else if (d.state === 'no'){
+    deal = `<p class="n44no">${esc(t('n44DealNoT', d.reason ? (t('n44Why')[d.reason] || '') : ''))}</p><button class="btn-link" type="button" data-act="n44deal" data-v="${esc(x.id)}" data-o="reset">${esc(t('n44Reopen'))}</button>`;
+  } else if (d.state === 'ask'){
+    deal = d.by === u
+      ? `<p>${esc(t('n44DealAskMe', other))}</p><button class="btn-link" type="button" data-act="n44deal" data-v="${esc(x.id)}" data-o="reset">${esc(t('n44Undo'))}</button>`
+      : `<p><b>${esc(t('n44DealAskThem', other))}</b></p><div class="n44row"><button class="btn btn-primary" type="button" data-act="n44deal" data-v="${esc(x.id)}" data-o="conf">${esc(t('n44Conf'))}</button><button class="btn btn-ghost" type="button" data-act="n44deal" data-v="${esc(x.id)}" data-o="reset">${esc(t('n44NotYet'))}</button></div>`;
+  } else {
+    deal = `<div class="n44row"><button class="btn btn-primary" type="button" data-act="n44deal" data-v="${esc(x.id)}" data-o="ask">${esc(t('n44DealYes'))}</button><button class="btn btn-ghost" type="button" data-act="n44deal" data-v="${esc(x.id)}" data-o="no">${esc(t('n44DealNo'))}</button></div>`;
+  }
+  let ap = '';
+  if (a && a.date && a.date >= n44Today()){
+    const who = a.by === u ? '' : a.by;
+    ap = `<div class="n44appt"><b>📅 ${esc(t('n44ApptK')[a.kind] || '')} · ${esc(n44Day(a.date))} · ${esc(n44Hm(a.time))}</b>${a.addr ? `<span>${esc(a.addr)}</span>` : ''}
+      <small>${esc(a.ok ? t('n44ApptOk') : t('n44ApptWait', a.by === u ? other : (state.user.name || '')))}</small>
+      <div class="n44row">${!a.ok && who ? `<button class="btn btn-primary" type="button" data-act="n44apok" data-v="${esc(x.id)}">${esc(t('n44Conf'))}</button>` : ''}
+      <button class="btn-link" type="button" data-act="n44appt" data-v="${esc(x.id)}">${esc(t('n44ApptChange'))}</button><button class="btn-link danger" type="button" data-act="n44apx" data-v="${esc(x.id)}">${esc(t('n44ApptCancel'))}</button></div></div>`;
+  } else if (d.state !== 'no') ap = `<button class="btn btn-ghost" type="button" data-act="n44appt" data-v="${esc(x.id)}">${esc(t('n44Appt'))}</button>`;
+  const note = state.n44.notes[x.id] || '';
+  return `<div class="card n44panel"><div class="n44top"><span class="n44st n44st-${st}">${esc(t('n44St')[st] || '')}</span></div>
+    <div class="n44deal">${deal}</div>${ap}
+    <details class="n44notes"${note ? ' open' : ''}><summary>${esc(t('n44Note'))}</summary><textarea id="n44-note" rows="2" maxlength="500" data-tid="${esc(x.id)}">${esc(note)}</textarea>
+      <button class="btn-link" type="button" data-act="n44note" data-v="${esc(x.id)}">${esc(t('n44NoteSave'))}</button></details>
+    <button class="btn-link n44rep" type="button" data-act="n44rep" data-v="${esc(x.id)}">${esc(t('n44Rep'))}</button></div>`;
+}
+function n44LoadNote(tid){
+  const db = n44Db(), u = n44Me(); if (!db || !u || state.n44.notesLoaded[tid]) return;
+  state.n44.notesLoaded[tid] = 1;
+  db.collection('users').doc(u).collection('tnotes').doc(tid).get().then(d => {
+    if (d.exists){ state.n44.notes[tid] = (d.data() || {}).text || ''; if (location.hash === '#inbox-' + tid && !(document.activeElement && document.activeElement.id === 'n44-note')) render(); }
+  }).catch(e => console.warn('n44 note', e));
+}
+(() => {
+  const v0 = viewThread;
+  viewThread = function(id){
+    const h = v0(id);
+    const x = n44Threads().find(z => z.id === id);
+    if (!h || !x || location.hash !== '#inbox-' + id) return h;
+    n44LoadNote(id);
+    const p = n44Panel(x);
+    if (!p) return h;
+    let i = h.indexOf('<div class="bubbles">'); if (i < 0) i = h.indexOf('<p class="privacy-note">');
+    return i >= 0 ? h.slice(0, i) + p + h.slice(i) : h;
+  };
+})();
+ACT.n44deal = async function(el){
+  const id = el.dataset.v, o = el.dataset.o, x = n44Threads().find(z => z.id === id); if (!x) return;
+  const u = n44Me(), other = n44Other(x), FV = firebase.firestore.FieldValue;
+  if (o === 'ask'){
+    if (await n44Upd(id, {deal:{state:'ask', by:u, at:Date.now()}})) n44Mail(other, 'deal', `${state.user.name || ''} báo hai bên đã chốt làm việc – vào Nail101 để xác nhận.`, `${state.user.name || ''} says you agreed to work together – open Nail101 to confirm.`, 'https://nail101.com/#inbox-' + id);
+  } else if (o === 'conf'){
+    if (await n44Upd(id, {'deal.state':'yes', 'deal.conf':u, 'deal.confAt':n44TS()})){ x.deal = Object.assign({}, x.deal, {state:'yes', conf:u, confAt:Date.now()}); render(); }
+  } else if (o === 'reset'){
+    await n44Upd(id, {deal:FV.delete()});
+  } else if (o === 'no'){
+    const why = t('n44Why');
+    const v = await n44Dlg(t('n44NoQ'), `<p class="n43mtx">${esc(t('n44NoD'))}</p><div class="n44opts">${Object.keys(why).map(k => `<label class="n44opt"><input type="radio" name="why" value="${k}"> ${esc(why[k])}</label>`).join('')}</div>`, t('n44DealNo'));
+    if (!v) return;
+    await n44Upd(id, {deal:{state:'no', by:u, at:Date.now(), reason:v.why || ''}});
+  }
+};
+ACT.n44appt = async function(el){
+  const id = el.dataset.v, x = n44Threads().find(z => z.id === id); if (!x) return;
+  const a = x.appt || {}, ad = ADS.find(o => o.id === x.adId) || n30MyAd() || {};
+  const addr = a.addr || (ad.address || (ad.ad && ad.ad.address) || '') || [ad.city, ad.zip].filter(Boolean).join(' ');
+  const k = t('n44ApptK');
+  const body = `<div class="fq"><span class="flabel">${esc(t('n44ApptKind'))}</span><div class="n44opts">${Object.keys(k).map((v, i) => `<label class="n44opt"><input type="radio" name="kind" value="${v}"${(a.kind || 'trial') === v ? ' checked' : ''}> ${esc(k[v])}</label>`).join('')}</div></div>
+    <div class="n44two"><div class="fq"><label class="flabel" for="n44-ad">${esc(t('n44ApptDate'))}</label><input id="n44-ad" type="date" min="${n44Today()}" value="${esc(a.date && a.date >= n44Today() ? a.date : '')}"></div>
+    <div class="fq"><label class="flabel" for="n44-at">${esc(t('n44ApptTime'))}</label><input id="n44-at" type="time" value="${esc(a.time || '10:00')}"></div></div>
+    <div class="fq"><label class="flabel" for="n44-aa">${esc(t('n44ApptAddr'))}</label><input id="n44-aa" type="text" maxlength="160" value="${esc(addr)}"></div>`;
+  const v = await n44Dlg(t('n44ApptT'), body, t('n44ApptSave'), o => (!o['n44-ad'] || o['n44-ad'] < n44Today() || !o['n44-at'] ? t('n44ApptErr') : ''));
+  if (!v) return;
+  const appt = {kind:v.kind || 'trial', date:v['n44-ad'], time:v['n44-at'], addr:String(v['n44-aa'] || '').trim().slice(0, 160), by:n44Me(), at:Date.now(), ok:false};
+  if (await n44Upd(id, {appt})){
+    const kv = T.vi.n44ApptK[appt.kind], ke = T.en.n44ApptK[appt.kind];
+    n44Mail(n44Other(x), 'appt', `${state.user.name || ''} hẹn ${kv.toLowerCase()} ngày ${appt.date} lúc ${appt.time}${appt.addr ? ' tại ' + appt.addr : ''}. Vào Nail101 để xác nhận.`,
+      `${state.user.name || ''} scheduled a ${ke.toLowerCase()} on ${appt.date} at ${appt.time}${appt.addr ? ' at ' + appt.addr : ''}. Open Nail101 to confirm.`, 'https://nail101.com/#inbox-' + id);
+  }
+};
+ACT.n44apok = async function(el){
+  const id = el.dataset.v, x = n44Threads().find(z => z.id === id); if (!x || !x.appt) return;
+  if (await n44Upd(id, {'appt.ok':true, 'appt.okBy':n44Me()})){
+    n44Mail(n44Other(x), 'appt', `${state.user.name || ''} đã xác nhận lịch hẹn ngày ${x.appt.date} lúc ${x.appt.time}.`, `${state.user.name || ''} confirmed the appointment on ${x.appt.date} at ${x.appt.time}.`, 'https://nail101.com/#inbox-' + id);
+  }
+};
+ACT.n44apx = async function(el){
+  if (!(await n43Ask(t('n44ApptCancel') + '?', t('n44ApptCancel'), true))) return;
+  await n44Upd(el.dataset.v, {appt:firebase.firestore.FieldValue.delete()});
+};
+ACT.n44note = async function(el){
+  const id = el.dataset.v, ta = document.getElementById('n44-note'), db = n44Db(), u = n44Me(); if (!ta || !db || !u) return;
+  const text = ta.value.trim().slice(0, 500);
+  try { await db.collection('users').doc(u).collection('tnotes').doc(id).set({text, at:n44TS()}); state.n44.notes[id] = text; toast(t('n44NoteOk')); }
+  catch (e) { console.warn('n44 note', e); toast(n43Err(e)); }
+};
+ACT.n44rep = async function(el){
+  const id = el.dataset.v, x = n44Threads().find(z => z.id === id); if (!x) return;
+  const R = t('n44RepR'), name = n44OtherName(x);
+  const v = await n44Dlg(t('n44RepQ', name), `<p class="n43mtx">${esc(t('n44RepD'))}</p><div class="n44opts">${Object.keys(R).map(k => `<label class="n44opt"><input type="radio" name="r" value="${k}"> ${esc(R[k])}</label>`).join('')}</div>
+    <div class="fq"><label class="flabel" for="n44-rn">${esc(t('n44RepNote'))}</label><textarea id="n44-rn" rows="2" maxlength="500"></textarea></div>`, t('n44RepSend'), o => (o.r ? '' : t('n44RepPick')));
+  if (!v) return;
+  const db = n44Db(), u = n44Me(), tg = n44Other(x);
+  try {
+    await db.collection('reports').doc(`u_${tg}__${u}`).set({kind:'user', itemId:tg, ownerUid:tg, threadId:id, title:T.vi.n44RepUser(state.user.name || '', name),
+      reason:T.vi.n44RepR[v.r] || v.r, note:String(v['n44-rn'] || '').trim().slice(0, 500), reporterUid:u, reporterName:state.user.name || '', at:n44TS(), status:'new'});
+    toast(t('n44RepThx'));
+  } catch (e) { console.warn('n44 rep', e); toast(n43Err(e)); }
+};
+document.addEventListener('input', e => { if (e.target && e.target.id === 'n44-note') state.n44.notes[e.target.dataset.tid] = e.target.value; });
+
+/* ================= 3: bảng theo dõi (bấm avatar) ================= */
+function n44Tracker(){
+  if (!state.user) return loginGate();
+  const L = n44Canons().sort((a, b) => n43Ms(b.lastAt) - n43Ms(a.lastAt)), f = state.n44.trk;
+  const order = ['wait', 'talk', 'appt', 'done', 'no', 'idle'], cnt = {};
+  L.forEach(x => { const s = n44Stage(x); cnt[s] = (cnt[s] || 0) + 1; });
+  const chip = (v, lb, n) => `<button type="button" class="chip${f === v ? ' on' : ''}" data-act="n44trk" data-v="${v}" aria-pressed="${f === v}">${esc(lb)} (${n})</button>`;
+  const rows = L.filter(x => !f || n44Stage(x) === f).map(x => {
+    const a = x.appt && x.appt.date >= n44Today() ? x.appt : null;
+    const ab = x.about || {}, title = ab.n43t || String(ab.title || '').split(' – ').slice(1).join(' – ');
+    return `<a class="card n44trow" href="#inbox-${esc(x.id)}"><div><b>${esc(n44OtherName(x))}</b>${title ? `<small>${esc(title)}</small>` : ''}
+      ${a ? `<small class="n44nx">📅 ${esc(t('n44ApptK')[a.kind] || '')} · ${esc(n44Day(a.date))} · ${esc(n44Hm(a.time))}${a.ok ? ' ✓' : ''}</small>` : ''}
+      ${state.n44.notes[x.id] ? `<small class="n44nt">📝 ${esc(state.n44.notes[x.id].slice(0, 80))}</small>` : ''}</div>${n44StageCell(x)}</a>`;
+  }).join('');
+  L.forEach(x => n44LoadNote(x.id));
+  return `<div class="wrap narrow page"><h1 class="pg-title">${esc(t('n44Trk'))}</h1><p class="hint">${esc(t('n44TrkD'))}</p>
+    <a class="btn btn-ghost n44acc" href="#account">${esc(t('n44TrkAcc'))}</a>
+    ${n44Remind(true)}
+    <div class="chips n44chips">${chip('', t('n44TrkAll'), L.length)}${order.filter(s => cnt[s]).map(s => chip(s, t('n44St')[s], cnt[s])).join('')}</div>
+    ${rows || `<p class="empty-s">${esc(t('n44TrkNone'))}</p>`}</div>`;
+}
+ACT.n44trk = function(el){ state.n44.trk = el.dataset.v || ''; render(); };
+/* thẻ nhắc ở đầu trang chủ: lịch hẹn sắp tới + việc cần xác nhận */
+function n44Remind(all){
+  const u = n44Me(); if (!u) return '';
+  const items = [];
+  n44Canons().forEach(x => {
+    if (x.status !== 'accepted') return;
+    const a = x.appt, n = n44OtherName(x);
+    if (x.deal && x.deal.state === 'ask' && x.deal.by !== u) items.push({k:0, h:`<a class="n44rem warn" href="#inbox-${esc(x.id)}">🤝 ${esc(t('n44RemAsk', n))}</a>`});
+    if (a && a.date >= n44Today()){
+      if (!a.ok && a.by !== u) items.push({k:1, d:a.date + a.time, h:`<a class="n44rem warn" href="#inbox-${esc(x.id)}">📅 ${esc(t('n44RemAppt', n))}</a>`});
+      else if (a.ok || all) items.push({k:2, d:a.date + a.time, h:`<a class="n44rem" href="#inbox-${esc(x.id)}">📅 <b>${esc(t('n44RemLine', t('n44ApptK')[a.kind] || '', n, n44Day(a.date), n44Hm(a.time)))}</b>${a.addr ? `<small>${esc(a.addr)}</small>` : ''}</a>`});
+    }
+  });
+  if (!items.length) return '';
+  items.sort((p, q) => p.k - q.k || String(p.d || '').localeCompare(String(q.d || '')));
+  return `<div class="n44rems">${items.slice(0, all ? 20 : 4).map(i => i.h).join('')}</div>`;
+}
+
+/* ================= 1 + B: Cần thợ gấp ================= */
+function n44UrgAds(){ const today = n44Today(); return ADS.filter(a => a && a.live && a.quick && a.quick.date >= today && !a.filled && a.mod !== 'pending' && a.mod !== 'rejected'); }
+function n44UrgCard(a){
+  const q = a.quick, pay = a.hiring && a.hiring.pay;
+  let mi = ''; try { mi = n30Miles(a) || ''; } catch (e) {}
+  return `<a class="card n44uc" href="#ad-${esc(a.id)}"><b>⚡ ${esc(adBiz(a) || '')}</b><span>${esc(t('n44UrgWhen', n44Day(q.date), `${n44Hm(q.from)}–${n44Hm(q.to)}`))}</span>
+    <small>${esc((n32Ids(a.hiring.services || []).map(svcName)).slice(0, 4).join(' · '))}${mi}</small>${typeof payLabel === 'function' && pay ? `<small class="n44pay">${esc(payLabel(a.hiring))}</small>` : ''}</a>`;
+}
+function n44UrgForm(){
+  if (!state.user) return loginGate();
+  const S = state.n44.urg = state.n44.urg || {svc:[], day:'today', date:'', from:'10:00', to:'19:00', pt:'per_hour', amt:'', zip:'', note:'', err:{}};
+  const last = (n1MyAds ? n1MyAds() : []).slice().sort((a, b) => n43Ms(b.updatedAt) - n43Ms(a.updatedAt))[0];
+  const needZip = !(last && /^\d{5}$/.test(last.zip || ''));
+  const SV = ['acrylic_full', 'acrylic_fill', 'dip', 'gel_polish', 'gelx', 'manicure', 'pedicure', 'ombre_french', 'art_basic', 'waxing', 'lashes'];
+  const e = S.err || {}, er = k => (e[k] ? `<p class="err">${esc(e[k])}</p>` : '');
+  return `<div class="wrap narrow page"><a class="back" href="#home">${ICON.back}${t('back')}</a><h1 class="pg-title">${esc(t('n44UrgT'))}</h1><p class="hint">${esc(t('n44UrgD'))}</p>
+    <div class="card form-card n44uf">
+      <div class="fq"><span class="flabel">${esc(t('n44UrgSvc'))}</span><div class="chips">${SV.map(v => `<button type="button" class="chip${S.svc.indexOf(v) >= 0 ? ' on' : ''}" data-act="n44us" data-v="${v}" aria-pressed="${S.svc.indexOf(v) >= 0}">${esc(svcName(v))}</button>`).join('')}</div>${er('svc')}</div>
+      <div class="fq"><span class="flabel">${esc(t('n44UrgDay'))}</span><div class="chips">${[['today', t('n44Today')], ['tmr', t('n44Tmr')], ['pick', t('n44Pick')]].map(([v, l]) => `<button type="button" class="chip${S.day === v ? ' on' : ''}" data-act="n44ud" data-v="${v}" aria-pressed="${S.day === v}">${esc(l)}</button>`).join('')}</div>
+        ${S.day === 'pick' ? `<input id="n44-ud" type="date" min="${n44Today()}" value="${esc(S.date)}" aria-label="${esc(t('n44Pick'))}">` : ''}${er('day')}</div>
+      <div class="fq"><span class="flabel">${esc(t('n44UrgHrs'))}</span><div class="n44two"><input id="n44-uf" type="time" value="${esc(S.from)}" aria-label="from"><input id="n44-ut" type="time" value="${esc(S.to)}" aria-label="to"></div>${er('hrs')}</div>
+      <div class="fq"><span class="flabel">${esc(t('n44UrgPay'))}</span><div class="chips">${[['per_hour', t('n44PayH')], ['per_day', t('n44PayD')]].map(([v, l]) => `<button type="button" class="chip${S.pt === v ? ' on' : ''}" data-act="n44up" data-v="${v}" aria-pressed="${S.pt === v}">${esc(l)}</button>`).join('')}</div>
+        <input id="n44-ua" type="number" inputmode="decimal" min="1" placeholder="${esc(t('n44UrgAmt'))}" value="${esc(S.amt)}" aria-label="${esc(t('n44UrgAmt'))}">${er('amt')}</div>
+      ${needZip ? `<div class="fq"><label class="flabel" for="n44-uz">${esc(t('n44UrgZip'))}</label><input id="n44-uz" type="text" inputmode="numeric" maxlength="5" value="${esc(S.zip)}">${er('zip')}</div>` : ''}
+      <div class="fq"><label class="flabel" for="n44-un">${esc(t('n44UrgNote'))}</label><textarea id="n44-un" rows="2" maxlength="300">${esc(S.note)}</textarea></div>
+      ${e.all ? `<p class="err">${esc(e.all)}</p>` : ''}
+      <button class="btn btn-primary btn-block" type="button" data-act="n44upost">${esc(t('n44UrgPost'))}</button></div></div>`;
+}
+document.addEventListener('input', e => {
+  const S = state.n44.urg; if (!S || !e.target) return;
+  const m = {'n44-ud':'date', 'n44-uf':'from', 'n44-ut':'to', 'n44-ua':'amt', 'n44-uz':'zip', 'n44-un':'note'}[e.target.id];
+  if (m) S[m] = e.target.value;
+});
+ACT.n44us = function(el){ const S = state.n44.urg, v = el.dataset.v, i = S.svc.indexOf(v); if (i >= 0) S.svc.splice(i, 1); else S.svc.push(v); render(); };
+ACT.n44ud = function(el){ state.n44.urg.day = el.dataset.v; render(); };
+ACT.n44up = function(el){ state.n44.urg.pt = el.dataset.v; render(); };
+ACT.n44upost = async function(el){
+  const S = state.n44.urg, db = n44Db(), u = state.user; if (!S || !db || !u) return;
+  const date = S.day === 'today' ? n44Today() : S.day === 'tmr' ? n44Today(1) : S.date;
+  const amt = Number(S.amt), last = (n1MyAds() || []).slice().sort((a, b) => n43Ms(b.updatedAt) - n43Ms(a.updatedAt))[0];
+  const err = {};
+  if (!S.svc.length) err.svc = t('n44UrgErr').svc;
+  if (!date || date < n44Today()) err.day = t('n44UrgErr').day;
+  if (!S.from || !S.to || S.to <= S.from) err.hrs = t('n44UrgErr').hrs;
+  if (!(amt > 0)) err.amt = t('n44UrgErr').amt;
+  const zip = last && /^\d{5}$/.test(last.zip || '') ? last.zip : String(S.zip || '').trim();
+  if (!/^(7[5-9]\d{3}|885\d{2}|733\d{2})$/.test(zip)) err.zip = t('n44UrgErr').zip;
+  S.err = err; if (Object.keys(err).length){ render(); return; }
+  el.disabled = true;
+  /* lấy dữ liệu tin tuyển gần nhất (tên tiệm, địa chỉ, ảnh…) rồi đè phần gấp lên */
+  let base = {};
+  try { if (last){ const d = await db.collection('ads').doc(last.id).get(); base = (d.exists && d.data().form) || {}; } } catch (e) {}
+  const stash = state.forms.hiring;
+  const dk = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][new Date(date + 'T12:00:00').getDay()];
+  const data = Object.assign({city:'San Antonio'}, JSON.parse(JSON.stringify(DEFAULTS.hiring)), JSON.parse(JSON.stringify(base)), {
+    zip, services:S.svc.slice(), jobType:['part_time'], experience:base.experience || 'new_ok',
+    payType:S.pt, amtHour:S.pt === 'per_hour' ? String(amt) : '', amtDay:S.pt === 'per_day' ? String(amt) : '',
+    schedule:{[dk]:[S.from, S.to]}, urgent:true, urgentUntil:new Date(date + 'T23:59:00').getTime(),
+    extras:S.note || base.extras || '', title:'', businessName:base.businessName || (last ? adBiz(last) : '') || u.name || ''});
+  if (!data.city || !CITIES[data.city]){ const z = ZIPS[zip]; if (z && z[2]) data.city = z[2]; }
+  state.forms.hiring = {step:0, data, errors:{}, done:false, titleEdited:false, assist:{text:'', out:null}, aboutDrafted:false, n43sc:1, n43mail:1, n44quick:1};
+  const fs = state.forms.hiring, F = FORMS.hiring;
+  let ok = true;
+  for (let i = 0; i < F.steps.length; i++){ fs.step = i; if (!validateStep('hiring', fs)) { ok = false; break; } }
+  if (!ok){ const k = Object.keys(fs.errors || {})[0] || '', m = (fs.errors || {})[k]; console.warn('n44 urg invalid', k, m); S.err = {all:String(m || '') + (k ? ` (${k})` : '')}; state.forms.hiring = stash; el.disabled = false; render(); return; }
+  fs.step = F.steps.length - 1;
+  const fake = {dataset:{ft:'hiring'}, disabled:false, textContent:'', closest:() => null};
+  N43_AUTO_OK = true;
+  try { await ACT.fpublish(fake); } finally { N43_AUTO_OK = false; }
+  const done = state.forms.hiring, id = done && done.liveId;
+  if (stash && stash !== done) state.forms.hiring = stash; else delete state.forms.hiring;
+  if (!id){ el.disabled = false; S.err = {all:t('n44UrgErr').svc && ''}; render(); return; }
+  try { await db.collection('ads').doc(id).update({quick:{date, from:S.from, to:S.to, at:Date.now()}}); } catch (e) { console.warn('n44 quick', e); }
+  let pend = false; try { const d = await db.collection('ads').doc(id).get(); pend = (d.data() || {}).mod === 'pending'; } catch (e) {}
+  state.n44.urg = null;
+  state.n44.sug[id] = {pend, mailed:pend ? 0 : n44NotifyReady(id, {zip, svc:S.svc, date, from:S.from, to:S.to, biz:(data.businessName || u.name || '')})};
+  location.hash = '#urgent-ok-' + id;
+};
+let N43_AUTO_OK = false;
+(() => {
+  /* đăng tin gấp: hỏi lương ngoài mức thì tự đồng ý (đã kiểm tra số tiền ở form nhanh) */
+  const c = window.confirm;
+  window.confirm = function(m){ return N43_AUTO_OK ? true : c.apply(this, arguments); };
+})();
+function n44NearReady(zip, svc){
+  const z = ZIPS[zip]; if (!z) return [];
+  return TECHS.filter(tc => {
+    if (!tc || !tc.live || tc.hired || n2Mine(tc)) return false;
+    const r = n1Ready(tc); if (!r) return false;
+    const tz = ZIPS[(r && r.zip) || tc.zip]; if (!tz) return false;
+    const mi = n43Mi([z[0], z[1]], [tz[0], tz[1]]); if (mi > 25) return false;
+    const has = n32Ids(tc.services || []); tc.n44mi = Math.round(mi);
+    return !svc.length || svc.some(s => has.indexOf(s) >= 0);
+  }).sort((a, b) => a.n44mi - b.n44mi);
+}
+/* A: báo qua email cho thợ đang sẵn sàng ở gần (mỗi thợ 1 thư riêng) */
+function n44NotifyReady(adId, q){
+  const list = n44NearReady(q.zip, q.svc).slice(0, 30), db = n44Db(), u = n44Me(); let n = 0;
+  if (!db || !u) return 0;
+  list.forEach(tc => {
+    const to = tc.ownerUid; if (!to) return; n++;
+    const link = 'https://nail101.com/#ad-' + adId, d = q.date, h = `${q.from}–${q.to}`;
+    db.collection('mail').add({toUids:[to], kind:'urgent', by:u, createdAt:n44TS(), message:{subject:`Nail101: ⚡ ${q.biz} cần thợ gấp ${d} / Salon needs a tech ${d}`,
+      text:`${q.biz} cần thợ gấp ngày ${d}, ${h}, cách bạn khoảng ${tc.n44mi} dặm.\nXem tin: ${link}\n\n${q.biz} needs a tech on ${d}, ${h}, about ${tc.n44mi} miles from you.\nSee the post: ${link}`,
+      html:`<p>${esc(q.biz)} cần thợ gấp ngày <b>${esc(d)}</b>, ${esc(h)}, cách bạn khoảng ${tc.n44mi} dặm.</p><p><a href="${esc(link)}">Xem tin</a></p><hr><p>${esc(q.biz)} needs a tech on <b>${esc(d)}</b>, ${esc(h)}, about ${tc.n44mi} miles from you.</p><p><a href="${esc(link)}">See the post</a></p>`}})
+      .catch(e => console.warn('n44 notify', e));
+  });
+  db.collection('ads').doc(adId).update({'quick.notified':n}).catch(() => {});
+  return n;
+}
+function n44UrgDone(id){
+  const ad = ADS.find(a => a.id === id), info = state.n44.sug[id] || {};
+  const list = ad ? n44NearReady(ad.zip, n32Ids(ad.hiring.services || [])) : [];
+  return `<div class="wrap narrow page"><div class="card n44done"><h1 class="pg-title" style="margin:0">${esc(t(info.pend ? 'n44UrgPend' : 'n44UrgOk'))}</h1>
+      ${info.mailed ? `<p class="hint">${esc(t('n44UrgMailed', info.mailed))}</p>` : ''}<a class="btn btn-ghost" href="#ad-${esc(id)}">${t('viewAdS') || 'Xem tin'}</a></div>
+    <h2 class="sec">${esc(t('n44UrgSug'))}</h2>${list.length ? `<p class="hint">${esc(t('n44UrgSugD'))}</p><div class="list">${list.slice(0, 12).map(tc => {
+      let card = ''; try { card = n1TechCard(tc); } catch (e) {}
+      return card.replace(/data-act="n1offer"/g, `data-act="n1offer" data-ad="${esc(id)}"`);
+    }).join('')}</div>` : `<p class="empty-s">${esc(t('n44UrgSugNone'))}</p>`}</div>`;
+}
+(() => {
+  const o0 = ACT.n1offer;
+  ACT.n1offer = function(el){ const r = o0.apply(this, arguments); const ad = el && el.dataset && el.dataset.ad; if (ad && state.n1m && state.n1m.kind === 'offer'){ state.n1m.adId = ad; renderModal(); } return r; };
+})();
+
+/* ================= trang chủ: nút "Cần thợ gấp" (tiệm), mục tin gấp (thợ), thẻ nhắc ================= */
+(() => {
+  const h0 = viewHome;
+  viewHome = function(){
+    let h = h0();
+    if (!h || !state.user) return h;
+    const role = n43Role(), rem = n44Remind(false);
+    let add = rem;
+    if (role === 'salon') add += `<a class="card n44ubtn" href="#urgent"><b>${esc(t('n44Urg'))}</b><small>${esc(t('n44UrgSub'))}</small></a>`;
+    if (role === 'tech'){ const L = n44UrgAds().sort((a, b) => (a.quick.date + a.quick.from).localeCompare(b.quick.date + b.quick.from)); if (L.length) add += `<section class="n44ulist"><h2 class="sec">${esc(t('n44UrgList'))}</h2>${L.slice(0, 6).map(n44UrgCard).join('')}</section>`; }
+    if (!add) return h;
+    const m = h.match(/^\s*<div class="wrap[^"]*">/);
+    return m ? m[0] + add + h.slice(m[0].length) : add + h;
+  };
+})();
+
+/* ================= routes: #tracker, #urgent, #urgent-ok-<id> ================= */
+(() => {
+  const r0 = route;
+  route = function(){
+    const h = (location.hash || '').replace(/^#/, '');
+    if (h === 'tracker') return {view:'n44trk'};
+    if (h === 'urgent') return n43Role() === 'salon' || (state.adm && state.adm.on) ? {view:'n44urg'} : {view:'home'};
+    if (h.indexOf('urgent-ok-') === 0) return {view:'n44uok', id:h.slice(10)};
+    return r0();
+  };
+  const rd0 = render;
+  render = function(){
+    const r = route();
+    if (r.view !== 'n44trk' && r.view !== 'n44urg' && r.view !== 'n44uok') return rd0();
+    const main = r.view === 'n44trk' ? n44Tracker() : r.view === 'n44urg' ? n44UrgForm() : n44UrgDone(r.id);
+    document.documentElement.lang = lang;
+    document.getElementById('app').innerHTML = header(r) + `<main id="main">${main}</main>
+      <footer class="site-footer"><div class="wrap"><span>${t('footS')}</span>${typeof LEGAL_LINKS === 'function' ? `<span class="foot-legal">${LEGAL_LINKS()}</span>` : ''}<span>${supLine()}</span></div></footer>${tabBar(r)}`;
+    document.body.classList.toggle('has-mbar', true);
+    renderModal();
+  };
+  const hd0 = header;
+  header = function(r){ const h = hd0(r); return h ? h.replace('<a class="me-btn" href="#account"', '<a class="me-btn" href="#tracker"') : h; };
+})();
+
+/* ================= admin ================= */
+(() => {
+  const tdi0 = n34TodayItems;
+  n34TodayItems = function(){
+    const out = tdi0() || [];
+    ADS.filter(a => a && a.quick && a.mod === 'pending' && a.quick.date >= n44Today()).forEach(a => out.unshift({ic:'⚡', txt:`${t('n44UrgQ')}: ${adBiz(a) || ''} (${n44Day(a.quick.date)})`, act:'href="#admin-mod"'}));
+    return out;
+  };
+  const rc0 = n42ResCard;
+  n42ResCard = function(){
+    const h = rc0(), ths = (state.tr && state.tr.threads) || [];
+    let y = 0, n = 0, talk = 0; const why = {};
+    ths.forEach(x => { if (x.status !== 'accepted') return; const d = x.deal || {}; if (d.state === 'yes') y++; else if (d.state === 'no'){ n++; if (d.reason) why[d.reason] = (why[d.reason] || 0) + 1; } else talk++; });
+    const top = Object.keys(why).sort((a, b) => why[b] - why[a]).slice(0, 3).map(k => `${t('n44Why')[k]} (${why[k]})`).join(' · ');
+    const add = `<p class="n44adm">${t('n44AdmDeal', y, n, talk)}</p>${top ? `<p class="hint">${esc(t('n44AdmWhy'))} ${esc(top)}</p>` : ''}`;
+    return h.replace(/<\/div>\s*$/, add + '</div>');
+  };
+  /* báo cáo người dùng: nút chặn người bị báo cáo */
+  const rp1 = admRep;
+  admRep = function(){
+    let h = rp1();
+    (state.adm.reports || []).filter(r => r.kind === 'user').forEach(r => {
+      const key = esc(r.title || r.itemId);
+      h = h.replace(`<b>${key}</b><span class="n2tag">${esc(r.reason || '')}</span></div>\n      <p class="n1sub">${esc(r.note || '')}</p></div>\n      <div class="adm-acts">`,
+        `<b>${key}</b><span class="n2tag">${esc(r.reason || '')}</span></div>\n      <p class="n1sub">${esc(r.note || '')}</p></div>\n      <div class="adm-acts"><button class="btn-link danger" type="button" data-act="admban" data-v="${esc(r.itemId)}">${t('admBan')}</button>`);
+    });
+    return h;
+  };
+})();
+/* A cho tin gấp được admin duyệt sau: admin duyệt xong thì báo thợ sẵn sàng ở gần */
+(() => {
+  const m0 = ACT.admmod;
+  if (!m0) return;
+  ACT.admmod = async function(el){
+    const r = await m0.apply(this, arguments);
+    try {
+      const ad = el.dataset.k === 'ads' && el.dataset.m === 'ok' ? ADS.find(a => a.id === el.dataset.v) : null;
+      if (ad && ad.quick && !ad.quick.notified && ad.quick.date >= n44Today())
+        n44NotifyReady(ad.id, {zip:ad.zip, svc:n32Ids(ad.hiring.services || []), date:ad.quick.date, from:ad.quick.from, to:ad.quick.to, biz:adBiz(ad) || ''});
+    } catch (e) { console.warn('n44 adm notify', e); }
+    return r;
+  };
+})();
+
+(() => { const st = document.createElement('style'); st.textContent = `
+.n44panel{display:grid;gap:10px;margin:10px 0}.n44row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.n44st{display:inline-block;font-size:12.5px;font-weight:700;padding:3px 10px;border-radius:999px;background:#F4F1F2;color:var(--muted);white-space:nowrap}
+.n44st-talk{background:#EAF2FB;color:#1F5C99}.n44st-appt{background:#FFF4DB;color:#8A5A00}.n44st-done{background:#E8F5EC;color:#17683C}.n44st-no{background:#F4F1F2;color:#6B5A60}.n44st-wait{background:#FBE7EE;color:var(--primary)}
+.n44deal p{margin:0 0 6px}.n44ok{color:#17683C;font-weight:700}.n44no{color:var(--muted)}
+.n44appt{display:grid;gap:4px;padding:10px 12px;border-radius:12px;background:#FFF9EC;border:1px solid #F3D38A}.n44appt span,.n44appt small{color:var(--muted);font-size:13.5px}
+.n44notes summary{cursor:pointer;font-weight:700;font-size:14px}.n44notes textarea{width:100%;margin-top:6px}.n44rep{justify-self:start;color:var(--muted)!important;font-size:13px}
+.n44dlg{text-align:left}.n44opts{display:grid;gap:6px;margin:6px 0}.n44opt{display:flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--line,#eee);border-radius:10px;cursor:pointer}
+.n44two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.n44dlg input[type=date],.n44dlg input[type=time],.n44dlg input[type=text],.n44dlg textarea{width:100%}
+.n44rems{display:grid;gap:8px;margin:0 0 14px}.n44rem{display:grid;gap:2px;padding:12px 14px;border-radius:14px;background:#FFF9EC;border:1px solid #F3D38A;color:var(--ink);text-decoration:none}
+.n44rem.warn{background:#FBE7EE;border-color:#F0B8CB;font-weight:700}.n44rem small{color:var(--muted)}
+.n44ubtn{display:grid;gap:2px;margin:0 0 14px;background:#FFF9EC;border-color:#E0B252;text-decoration:none;color:var(--ink)}.n44ubtn b{font-size:18px}.n44ubtn small{color:var(--muted)}
+.n44ulist{margin:0 0 18px}.n44uc{display:grid;gap:3px;margin-bottom:8px;text-decoration:none;color:var(--ink);border-left:4px solid #E0B252}.n44uc small{color:var(--muted)}.n44uc .n44pay{color:#17683C;font-weight:700}
+.n44uf .chips{display:flex;flex-wrap:wrap;gap:6px}.n44uf input[type=number],.n44uf input[type=date],.n44uf input[type=text],.n44uf textarea{width:100%;margin-top:8px}
+.n44trow{display:flex;justify-content:space-between;align-items:center;gap:10px;text-decoration:none;color:var(--ink);margin-bottom:8px}.n44trow div{display:grid;gap:2px;min-width:0}.n44trow small{color:var(--muted)}
+.n44nx{color:#8A5A00!important}.n44chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}.n44acc{margin:6px 0 14px}.n44done{margin-bottom:14px}.n44adm{margin:8px 0 2px}
+`; document.head.appendChild(st); })();
 
 render();
 })();
