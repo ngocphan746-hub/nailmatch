@@ -4209,7 +4209,7 @@ function n1Live(c){
     db.collection('threads').doc(th.id).collection('priv').doc(other(th)).get().then(d => { L_.priv[key] = {at:Date.now(), d:d.exists ? d.data() : {}}; const r = route(); if (r.view === 'thread' && r.id === th.id) renderKeep(); }).catch(e => console.warn('priv get', e));
     return c0 ? c0.d : null; }
   const grid = arr => arr && arr.length ? `<div class="n1pg">${arr.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="" loading="lazy"></a>`).join('')}</div>` : '';
-  function privCard(th){ const p = loadPriv(th), u = me(), amTech = th.techId === u.uid; if (p === null) return '';
+  function privCard(th){ const p = loadPriv(th), u = me(), amTech = th.techId === u.uid; if (p === null) return `<div class="card n1pv n46load"><h2>${t(amTech ? 'pvSalon' : 'pvTech')}</h2><p class="hint" style="margin:0">${t('loadingTxt')}</p></div>`;   /* n146: giữ chỗ, không làm nhảy bố cục */
     let body = '';
     if (amTech){ const addr = p.addr || th.addr || ''; body = (addr ? `<p>📍 <b>${t('addrLbl')}:</b> ${esc(addr)}</p>` : '') + grid(p.pics); }
     else body = (p.portrait ? `<div class="who"><img class="avatar" style="width:72px;height:72px" src="${esc(p.portrait)}" alt=""><b>${esc(nm(th, other(th)))}</b></div>` : '')
@@ -5138,7 +5138,7 @@ function admLive(c){
 
   function log(what, target){
     if (!me()) return;
-    db.collection('audit').add({by:me().uid, byName:me().name || '', what, target:target || '', at:TS()}).catch(e => console.warn('log', e));
+    db.collection('audit').add({by:me().uid, byName:me().name || '', byPhone:me().phone || '', what, target:target || '', at:TS()}).catch(e => console.warn('log', e));
   }
   /* who is admin */
   async function checkAdmin(){
@@ -6065,7 +6065,7 @@ function imDig(v){ return String(v || '').replace(/\D/g, '').replace(/^1(?=\d{10
 function imCity(txt){
   const keys = Object.keys(typeof CITIES === 'object' ? CITIES : {});
   const hit = keys.find(c => new RegExp(c.replace(/\s+/g, '\\s*'), 'i').test(txt));
-  return hit || 'San Antonio';
+  return hit || '';   /* n146: không tự điền San Antonio */
 }
 function imSvc(txt){
   const out = [];
@@ -6160,7 +6160,7 @@ function imReadTable(txt){
     const c = imCells(l), g = k => { const i = cols.indexOf(k); return i >= 0 ? (c[i] || '') : ''; };
     const svc = g('dichvu').split(/[;|,]/).map(x => x.trim()).filter(Boolean);
     const all = c.join(' ');
-    return {kind:/tho|tech/i.test(g('loai')) ? 'tho' : 'tiem', name:g('ten'), phone:imDig(g('sodienthoai')),
+    return {kind:/tho|tech/i.test(g('loai')) ? 'tho' : 'tiem', kindBad:!!g('loai') && !/th[oơợ]|tech|ti[eệ]m|salon/i.test(g('loai')), name:g('ten'), phone:imDig(g('sodienthoai')),
       city:g('thanhpho') || imCity(all), svc:svc.length ? svc : imSvc(all),
       jobType:g('loaiviec') || 'full_time',
       payType:g('tracong') || (Number(g('phantram')) ? 'commission' : 'per_day'),
@@ -6354,7 +6354,7 @@ function n5Live(c){
   ACT.imclear = function(){ state.im.rows = []; render(); };
   ACT.imdrop = function(el){ state.im.rows.splice(Number(el.dataset.i), 1); render(); };
   ACT.immake = async function(el){
-    const rows = state.im.rows.filter(r => imDig(r.phone).length === 10 && !imTaken(r.phone));
+    const rows = state.im.rows.filter(r => imDig(r.phone).length === 10 && !imTaken(r.phone) && r.city && !r.kindBad);   /* n146: thiếu thành phố / loại sai thì chưa tạo */
     if (!rows.length || state.im.busy) return;
     state.im.busy = true; el.disabled = true;
     let n = 0;
@@ -13240,7 +13240,7 @@ ACT.n34restore = async function(el){
     if (s.exists){ toast(t('n34Exists')); el.disabled = false; return; }
     await ref.set(x.data);
     await c.db.collection('trash').doc(x.id).delete();
-    try { await c.db.collection('audit').add({at:c.TS(), by:(state.user || {}).uid || '', byName:(state.user || {}).name || '', what:'restore', target:x.docId}); } catch (e) {}
+    try { await c.db.collection('audit').add({at:c.TS(), by:(state.user || {}).uid || '', byName:(state.user || {}).name || '', byPhone:(state.user || {}).phone || '', what:'restore', target:x.docId}); } catch (e) {}
     toast(t('n34Restored'));
   } catch (e) { console.warn('n34restore', e); toast(c.errText ? c.errText(e) : String(e)); el.disabled = false; }
 };
@@ -13677,7 +13677,7 @@ ACT.admpost = async function(el){
     const c = state.n1ctx, o = (typeof admAll === 'function' ? admAll() : []).find(x => x.id === el.dataset.v);
     const ph = n34D((o && (o.ownerPhone || admContact(o.id))) || '');
     if (c && ph) await c.db.collection('contacts').doc(ph).collection('log').add({at:c.TS(), by:(state.user || {}).uid || '', byName:(state.user || {}).name || '', kind:'note', outcome:t('n35W_publish')});
-    if (c) await c.db.collection('audit').add({at:c.TS(), by:(state.user || {}).uid || '', byName:(state.user || {}).name || '', what:'publish', target:el.dataset.v});
+    if (c) await c.db.collection('audit').add({at:c.TS(), by:(state.user || {}).uid || '', byName:(state.user || {}).name || '', byPhone:(state.user || {}).phone || '', what:'publish', target:el.dataset.v});
   } catch (e) { console.warn('n35post', e); }
   return r;
 };
@@ -13795,7 +13795,7 @@ function n35Live(c){
     if (!(state.adm && state.adm.on)){ on = false; return; }
     if (on) return; on = true;
     db.collection('audit').orderBy('at', 'desc').limit(60).onSnapshot(s => {
-      state.n35.log = s.docs.map(d => { const x = d.data(); return {what:x.what, target:x.target, byName:x.byName || '', atMs:n34Ms(x.at) || Date.now()}; });
+      state.n35.log = s.docs.map(d => { const x = d.data(); return {what:x.what, target:x.target, byName:x.byName || '', byPhone:x.byPhone || '', atMs:n34Ms(x.at) || Date.now()}; });
       n34Soft();
     }, e => { console.warn('n35log', e); on = false; });
   }, 1500);
@@ -16058,11 +16058,12 @@ function n43LoadSib(tid){
 function n43Events(list){
   const ev = [], nm = x => (id => ((x.names || {})[id]) || '')(x);
   list.forEach(x => {
-    const title = (x.about && (x.about.n43t || String(x.about.title || '').split(' – ').slice(1).join(' – '))) || '';
+    const cur = id => { const ad = id && ADS.find(o => o.id === id); return ad ? titleOf(ad) : ''; };   /* n146: tên tin hiện tại */
+    const title = cur(x.adId) || (x.about && (x.about.n43t || String(x.about.title || '').split(' – ').slice(1).join(' – '))) || '';
     const who = (x.names || {})[x.from] || '';
     const first = (Array.isArray(x.apps) ? x.apps : []);
     if (x.createdAt) ev.push({at:n43Ms(x.createdAt), text:t(x.kind === 'offer' ? 'n43SysOffer' : 'n43SysApply', who, title || '—')});
-    first.forEach(a => ev.push({at:Number(a.at) || 0, text:t(a.kind === 'offer' ? 'n43SysOffer' : 'n43SysApply', (x.names || {})[a.from] || '', String(a.title || '').split(' – ').slice(1).join(' – ') || a.title || '—')}));
+    first.forEach(a => ev.push({at:Number(a.at) || 0, text:t(a.kind === 'offer' ? 'n43SysOffer' : 'n43SysApply', (x.names || {})[a.from] || '', cur(a.adId) || String(a.title || '').split(' – ').slice(1).join(' – ') || a.title || '—')}));
     void nm;
   });
   return ev;
@@ -17122,6 +17123,525 @@ ACT.n45agree = async function(el){
 document.head.appendChild(st); })();
 /* cổng cho test tự động */
 window.__n45 = {commit:n45Commit, can:n45Can, mail:n45Mail, day:n45Day, rl:() => state.n45.rl, load:n45RlLoad};
+
+/* ================= n146: sửa lỗi theo bug list 26/11 (tiệm · thợ · admin) =================
+   tiền tố n46 */
+Object.assign(T.vi, {
+  n44Urg:'⚡ Cần thợ làm 1 ngày', n44UrgT:'⚡ Cần thợ làm 1 ngày', n44UrgList:'⚡ Tiệm cần thợ làm 1 ngày', n44UrgTitle:'Cần thợ làm 1 ngày',
+  n43More:n => `${n} lần ứng tuyển / mời`, n44Undo:'Huỷ báo chốt', n44Conf:'Xác nhận đã chốt',
+  n46ConfQ:n => `Xác nhận bạn đã chốt làm việc với ${n}?\n\nBấm "Xác nhận" nghĩa là hai bên đã đồng ý làm việc. Có thể mở lại sau nếu đổi ý.`,
+  n46AskQ:n => `Báo với ${n} là hai bên đã chốt làm việc?\n\n${n} sẽ nhận email và cần bấm xác nhận.`,
+  n46JtOk:'Hợp loại việc', n46JtNo:'Khác loại việc', n46ExpOk:'Đủ kinh nghiệm', n46ExpNo:y => `Chưa đủ kinh nghiệm (tin cần từ ${y} năm)`,
+  n46Applied:'✓ Đã ứng tuyển', n46AppliedPend:'✓ Đã ứng tuyển · chờ trả lời', n46AppliedQ:'Bạn đã ứng tuyển tin này rồi. Mở cuộc trò chuyện để nhắn thêm.',
+  n46NoPay:'Chưa khai lương', n46NoDays:'Chưa khai ngày rảnh',
+  n46PctBad:'Phần trăm ăn chia cho thợ phải từ 30% đến 80%.',
+  n46SortFit:'Phù hợp nhất', n46SalonName:'Tên tiệm (thợ sẽ thấy tên này)', n46SalonPh:'VD: Mây Nail Studio',
+  n46Hired:n => `🤝 Bạn đã chốt làm việc với ${n} – ẩn hồ sơ để tiệm khác không mời nữa?`,
+  n46GoneSt:'Đã đóng (tài khoản đã xoá)',
+  ctNone:'Chưa có ai trong hồ sơ.', ctBack:'← Hồ sơ', n35Ct:'Hồ sơ', n35NoCt:'Chưa có trong hồ sơ.',   /* A18: thống nhất tên "Hồ sơ" (theo yêu cầu đổi tên trước đây) */
+  n42UOn:'Đang online', n39UBoth:'— Cả hai (Thợ & Tiệm)', imBad:'Thiếu hoặc sai số (cần 10 số)', n46KindBad:'Loại không rõ – chọn lại', n46NoCity:'Thiếu thành phố',
+  n46Dedup:n => `Đã bỏ ${n} dòng trùng số (giữ dòng đầu).`,
+  n42FunNote:'% = so với bước trước. Không tính tài khoản admin. "Có bài" tính cả bài nháp và bài đã đóng. "Tuyển được" = người tự báo + hai bên đã chốt trong chat.',
+  n42LogD:'Ai nhắn cho ai, lúc nào. Không có nội dung tin nhắn. Nhật ký bắt đầu ghi từ 22/11/2026.',
+  n46By:'bởi', n46Gone:'(đã xoá)', n46Maint:'🔧 Công cụ bảo trì (chỉ dùng khi được hướng dẫn)'
+});
+Object.assign(T.en, {
+  n44Urg:'⚡ Need a tech for 1 day', n44UrgT:'⚡ Need a tech for 1 day', n44UrgList:'⚡ Salons needing a tech for 1 day', n44UrgTitle:'Need a tech for 1 day',
+  n43More:n => `${n} applications / offers`, n44Undo:'Cancel deal notice', n44Conf:'Confirm deal',
+  n46ConfQ:n => `Confirm you agreed to work with ${n}?\n\nTapping "Confirm" means both sides agreed. You can reopen it later.`,
+  n46AskQ:n => `Tell ${n} you both agreed to work together?\n\n${n} will get an email and needs to confirm.`,
+  n46JtOk:'Job type fits', n46JtNo:'Different job type', n46ExpOk:'Enough experience', n46ExpNo:y => `Not enough experience (needs ${y}+ years)`,
+  n46Applied:'✓ Applied', n46AppliedPend:'✓ Applied · waiting', n46AppliedQ:'You already applied for this post. Open the chat to add a message.',
+  n46NoPay:'No pay listed', n46NoDays:'No days listed',
+  n46PctBad:'Tech commission must be between 30% and 80%.',
+  n46SortFit:'Best match', n46SalonName:'Salon name (techs will see this)', n46SalonPh:'e.g. Mây Nail Studio',
+  n46Hired:n => `🤝 You agreed to work with ${n} – hide your profile so other salons stop sending offers?`,
+  n46GoneSt:'Closed (account deleted)',
+  n42UOn:'Online now', n39UBoth:'— Both (tech & salon)', imBad:'Missing or wrong number (needs 10 digits)', n46KindBad:'Unknown type – pick one', n46NoCity:'City missing',
+  n46Dedup:n => `Dropped ${n} duplicate rows (kept the first).`,
+  n42FunNote:'% = compared with the step before. Admin accounts not counted. "Has a post" includes drafts and closed posts. "Hired" = self-reported + deals agreed in chat.',
+  n42LogD:'Who messaged whom, and when. No message content. Logging started Nov 22, 2026.',
+  n46By:'by', n46Gone:'(deleted)', n46Maint:'🔧 Maintenance tools (use only when told to)'
+});
+/* A15: chỉ thêm bản dịch mã nhật ký còn thiếu (không đè chữ đã có) */
+(() => {
+  const W = {vi:{draft:'Tạo tin nháp', mod_rejected:'Từ chối tin', mod_ok:'Duyệt', mod_approved:'Duyệt', ban:'Khoá tài khoản', unban:'Mở khoá tài khoản', delete:'Xoá', del:'Xoá', restore:'Khôi phục', publish:'Đăng'},
+    en:{draft:'Draft created', mod_rejected:'Rejected', mod_ok:'Approved', mod_approved:'Approved', ban:'Locked account', unban:'Unlocked account', delete:'Deleted', del:'Deleted', restore:'Restored', publish:'Published'}};
+  ['vi', 'en'].forEach(l => Object.keys(W[l]).forEach(k => { if (T[l]['n35W_' + k] === undefined) T[l]['n35W_' + k] = W[l][k]; }));
+})();
+/* số ít / số nhiều (EN) */
+(() => { const plu = n => (n === 1 ? '1 tech' : `${n} techs`);
+  T.en.n3ReadyChip = n => `⚡ ${plu(n)} ready to work today`; T.en.n26RdyT = n => `${plu(n)} ready to work today`; })();
+
+/* ---------- tiện ích ---------- */
+const N46_GONE = /Tài khoản đã xoá|Deleted account/i;
+function n46Uid(){ return state.user && state.user.uid; }
+function n46Ths(){ return (state.live && state.live.threads) || []; }
+function n46Yrs(v){ return {new:0, lt1:0.5, '1_3':1, '3_5':3, '5p':5}[v]; }
+function n46ExpMin(h){
+  const a = n27A(h && h.experience).filter(x => x && x !== 'any');
+  if (!a.length) return null;
+  return Math.min.apply(null, a.map(x => ({new_ok:0, '1':1, '3':3, '5':5}[x])).filter(x => x != null));
+}
+
+/* ================= P1-2 / T3 / P2-1: so khớp loại việc + kinh nghiệm ================= */
+function n46FitExtra(ad, tc){
+  const h = ad && ad.hiring, out = [];
+  if (!h || !tc) return out;
+  const aj = n27A(h.jobType).filter(x => !n27X(x)), tj = n27A(tc.jobType).filter(x => !n27X(x));
+  if (aj.length && tj.length){
+    const part = x => x === 'part_time' || x === 'weekends';
+    const hit = aj.some(x => tj.indexOf(x) >= 0 || (part(x) && tj.some(part)));
+    out.push(hit ? ['ok', t('n46JtOk')] : ['warn', t('n46JtNo')]);
+  }
+  const need = n46ExpMin(h), have = n46Yrs(tc.years);
+  if (need != null && need > 0 && have != null) out.push(have >= need ? ['ok', t('n46ExpOk')] : ['warn', t('n46ExpNo', need)]);
+  return out;
+}
+(() => {
+  const f0 = n30Fit;
+  n30Fit = function(ad, tc, techSide){
+    let h = f0(ad, tc, techSide);
+    const ex = n46FitExtra(ad, tc); if (!ex.length) return h;
+    const ic = {ok:'✓ ', mid:'', warn:'⚠ '};
+    const spans = ex.map(([c, x]) => `<span class="n32${c}">${ic[c]}${esc(x)}</span>`).join('');
+    if (!h) return `<div class="n30fit">${spans}</div>`;
+    const warn = ex.filter(x => x[0] === 'warn').map(([c, x]) => `<span class="n32${c}">${ic[c]}${esc(x)}</span>`).join('');
+    const ok = ex.filter(x => x[0] !== 'warn').map(([c, x]) => `<span class="n32${c}">${ic[c]}${esc(x)}</span>`).join('');
+    return h.replace('<div class="n30fit">', '<div class="n30fit">' + warn).replace(/<\/div>\s*$/, ok + '</div>');
+  };
+})();
+/* kinh nghiệm: tin chỉ chọn 1 mức; tin cũ chọn nhiều thì hiện mức thấp nhất */
+(() => {
+  const o0 = opt;
+  opt = function(g, v){
+    if (g === 'experience' && Array.isArray(v)){
+      const a = n27A(v).filter(x => x && x !== 'any');
+      if (a.length > 1){ const ord = ['new_ok', '1', '3', '5']; a.sort((p, q) => ord.indexOf(p) - ord.indexOf(q)); return o0(g, a[0]); }
+    }
+    return o0(g, v);
+  };
+  const m0 = ACT.fmulti;
+  ACT.fmulti = function(el){
+    if (el && el.dataset && el.dataset.ft === 'hiring' && el.dataset.fk === 'experience'){
+      const fs = getForm('hiring'), v = el.dataset.v, cur = n27A(fs.data.experience);
+      fs.data.experience = cur.length === 1 && cur[0] === v ? [] : [v];
+      delete fs.errors.experience; render(); return;
+    }
+    return m0.apply(this, arguments);
+  };
+})();
+
+/* ================= T1 + P1-5: đã ứng tuyển → khoá nút, không ứng tuyển lại cùng tin ================= */
+function n46Applied(adId){
+  const u = n46Uid(); if (!u || !adId) return null;
+  return n46Ths().find(x => (x.members || []).indexOf(u) >= 0 && (
+    (x.adId === adId && x.from === u && x.kind === 'apply' && x.status !== 'withdrawn' && x.status !== 'declined')
+    || (Array.isArray(x.apps) && x.apps.some(a => a && a.adId === adId && a.from === u && a.kind === 'apply')))) || null;
+}
+(() => {
+  const a0 = n1Action;
+  n1Action = function(it, o){
+    if (it && !TECHS.includes(it) && !it.sample){
+      const th = n46Applied(it.id);
+      if (th){
+        const canon = typeof n43Canon === 'function' && typeof n43Group === 'function' ? (n43Canon(n43Group(th)) || th) : th;
+        return `<a class="btn btn-ghost n46done" href="#inbox-${esc(canon.id)}">${esc(t(canon.status === 'pending' && canon.from === n46Uid() ? 'n46AppliedPend' : 'n46Applied'))}</a>`;
+      }
+    }
+    return a0.apply(this, arguments);
+  };
+  const ap0 = ACT.n1apply;
+  ACT.n1apply = function(el){
+    const th = n46Applied(el && el.dataset && el.dataset.v);
+    if (th){ toast(t('n46AppliedQ')); const c = typeof n43Canon === 'function' ? (n43Canon(n43Group(th)) || th) : th; location.hash = '#inbox-' + c.id; return; }
+    return ap0.apply(this, arguments);
+  };
+})();
+
+/* ================= P2-5 + P2-2: thẻ thợ ================= */
+(() => {
+  const c0 = n1TechCard;
+  n1TechCard = function(tc, o){
+    let h = c0(tc, o);
+    const miss = [];
+    if (!techPay(tc.payWanted)) miss.push(t('n46NoPay'));
+    if (!(Array.isArray(tc.days) && tc.days.length)) miss.push(t('n46NoDays'));
+    if (miss.length) h = h.replace(/(<div class="n1pay">)([\s\S]*?)(<\/div>)/, (m, a, b, c) => `${a}${b}${b.trim() ? ' · ' : ''}<span class="n46miss">${esc(miss.join(' · '))}</span>${c}`);
+    return h;
+  };
+})();
+
+/* ================= P1-6: ghi chú "chỉ thợ đã kết nối mới thấy" chỉ đứng trên Địa chỉ + Ảnh tiệm ================= */
+(() => {
+  const fl = FORMS.hiring && FORMS.hiring.steps[0].fields; if (!fl) return;
+  const h = fl.findIndex(f => f.k === '_h1'); if (h < 0) return;
+  const pub = ['zip', 'cover', 'techsNeeded', 'extras'], moved = fl.filter((f, i) => i > h && pub.indexOf(f.k) >= 0);
+  if (!moved.length) return;
+  for (let i = fl.length - 1; i > h; i--) if (pub.indexOf(fl[i].k) >= 0) fl.splice(i, 1);
+  fl.splice(fl.findIndex(f => f.k === '_h1'), 0, ...moved);
+})();
+
+/* ================= P2-3: dấu "Cần gấp" đã hết hạn thì bỏ tick khi mở sửa tin ================= */
+(() => {
+  const v0 = viewForm;
+  viewForm = function(type){
+    const fs = state.forms && state.forms[type];
+    if (type === 'hiring' && fs && fs.data && fs.editId && !fs.n46u){
+      fs.n46u = true;
+      const until = typeof n28Ms === 'function' ? n28Ms(fs.data.urgentUntil) : 0;
+      if (fs.data.urgent === true && until && until < Date.now()){ fs.data.urgent = false; fs.data.urgentUntil = 0; }
+    }
+    return v0.apply(this, arguments);
+  };
+})();
+
+/* ================= T6: % ăn chia 30–80 ================= */
+(() => {
+  const p0 = ACT.n1pub;
+  ACT.n1pub = function(el){
+    const type = el && el.dataset && el.dataset.ft;
+    if (type === 'hiring'){
+      const fs = getForm(type), d = fs.data, v = n27Num(d.commissionPct);
+      if (n27A(d.payType).some(x => /^commission/.test(x)) && v != null && (v < 30 || v > 80)){
+        fs.errors.commissionPct = t('n46PctBad'); toast(t('n46PctBad')); render();
+        setTimeout(() => { const q = document.querySelector('.fq.has-err') || document.getElementById('f-hiring-commissionPct'); if (q) q.scrollIntoView({block:'center'}); }, 30);
+        return;
+      }
+    }
+    return p0.apply(this, arguments);
+  };
+})();
+
+/* ================= T9: tên tin tự sinh bị lặp ("Bột & Bột"), chữ hoa không đều ================= */
+(() => {
+  const t0 = titleOf;
+  titleOf = function(ad){
+    let s = t0.apply(this, arguments);
+    if (typeof s !== 'string') return s;
+    s = s.replace(/([A-Za-zÀ-ỹ\-/]+) & \1\b/gi, '$1');
+    if (lang === 'vi') s = s.replace(/^(Cần (?:\d+ )?thợ )([A-ZÀ-Ỹ])([a-zà-ỹ]*)/, (m, a, b, c) => (/^(SNS|Gel-X|Dip)$/i.test(b + c) && b + c !== 'Dip' ? m : a + b.toLowerCase() + c));
+    return s;
+  };
+})();
+
+/* ================= P3-1: mô tả dịch vụ không lồng ngoặc + thêm mô tả còn thiếu ================= */
+Object.assign(N30_SVC_DESC, {
+  pedicure:['Làm chân, sơn thường', 'Pedicure with regular polish'], manicure:['Làm tay, sơn thường', 'Manicure with regular polish'],
+  gel_polish:['Sơn gel trên móng thật', 'Gel color on natural nails']
+});
+svcCardsStatic = function(list){
+  const vi = lang === 'vi';
+  return `<div class="svc-cards">${n30SortSvc(list.slice()).map(s => { const d = N30_SVC_DESC[s.id];
+    return `<div class="svc-card${s.need ? ' ' + s.need : ''}">${svcArt(s.id)}<span class="nm">${esc(svcShort(s.id))}${d ? `<small class="n30desc n46desc">${esc(d[vi ? 0 : 1])}</small>` : ''}</span></div>`; }).join('')}</div>`;
+};
+
+/* ================= P3-3: lịch làm gộp các ngày giống nhau ================= */
+(() => {
+  schedTable = function(sc){
+    const rows = []; let cur = null;
+    OPTS.days.forEach(d => {
+      const v = hrsText(sc[d.v]), off = !sc[d.v];
+      if (cur && cur.v === v){ cur.to = d; return; }
+      cur = {from:d, to:d, v, off}; rows.push(cur);
+    });
+    return `<div class="sched-tbl n46sched">${rows.map(r => `<span>${esc(L(r.from))}${r.to !== r.from ? '–' + esc(L(r.to)) : ''}</span><b class="${r.off ? 'off' : ''}">${esc(r.v)}</b>`).join('')}</div>`;
+  };
+})();
+
+/* ================= T5: sắp xếp "Phù hợp nhất" (mặc định) ================= */
+function n46Score(ad, tc){
+  const h = ad && ad.hiring; if (!h || !tc) return 0;
+  let s = 0;
+  const need = n32Ids((h.services || []).filter(x => !x || !x.need || x.need === 'must')), has = n32Ids(tc.services || []);
+  if (need.length) s += 4 * need.filter(x => has.indexOf(x) >= 0).length / need.length;
+  n46FitExtra(ad, tc).forEach(([c]) => { s += c === 'ok' ? 1 : -2; });
+  const pa = n27A(h.payType), pt = tc.payWanted ? n27A(tc.payWanted.type) : [];
+  if (pa.length && pt.length){ const fam = x => (/^commission/.test(x) ? 'c' : x); s += pt.some(x => pa.some(y => fam(x) === fam(y))) ? 1 : -1; }
+  return s;
+}
+if (state.n28 && state.n28.sortT === 'all') state.n28.sortT = 'fit';
+if (state.n28 && state.n28.sortJ === 'all') state.n28.sortJ = 'fit';
+(() => {
+  const a0 = n28Apply;
+  n28Apply = function(list, kind){
+    const v = kind === 'T' ? state.n28.sortT : state.n28.sortJ;
+    if (v !== 'fit') return a0.apply(this, arguments);
+    const mine = kind === 'T' ? (typeof n30MyAd === 'function' ? n30MyAd() : null) : (state.myProfile && state.myProfile.live ? state.myProfile : null);
+    const base = (kind === 'T' ? (state.n28.sortT = 'all') : (state.n28.sortJ = 'all'), a0(list, kind));
+    if (kind === 'T') state.n28.sortT = 'fit'; else state.n28.sortJ = 'fit';
+    if (!mine) return base;
+    const sc = new Map(base.map(x => [x, kind === 'T' ? n46Score(mine, x) : n46Score(x, mine)]));
+    return base.slice().sort((p, q) => sc.get(q) - sc.get(p));
+  };
+  const b0 = n28SortBar;
+  n28SortBar = function(kind){
+    const h = b0.apply(this, arguments), cur = kind === 'T' ? state.n28.sortT : state.n28.sortJ;
+    return h.replace(/(<select id="q-sort"[^>]*>)/, `$1<option value="fit"${cur === 'fit' ? ' selected' : ''}>${esc(t('n46SortFit'))}</option>`);
+  };
+})();
+
+/* ================= P2-7: nút Xoá cuộc trò chuyện xuống cuối trang ================= */
+(() => {
+  const v0 = viewThread;
+  viewThread = function(id){
+    const h = v0.apply(this, arguments);
+    if (!h) return h;
+    const m = h.match(/<div class="n28thbar">[\s\S]*?<\/div>/);
+    if (!m) return h;
+    return h.replace(m[0], '') + `<div class="wrap narrow n46thend">${m[0]}</div>`;
+  };
+})();
+
+/* ================= lỗi "tự chốt": hỏi lại trước khi báo chốt / xác nhận chốt ================= */
+(() => {
+  const d0 = ACT.n44deal;
+  ACT.n44deal = async function(el){
+    const o = el.dataset.o, x = n44Threads().find(z => z.id === el.dataset.v);
+    if (x && (o === 'conf' || o === 'ask')){
+      const ok = await n43Ask(t(o === 'conf' ? 'n46ConfQ' : 'n46AskQ', n44OtherName(x)), t(o === 'conf' ? 'n44Conf' : 'n43Ok'));
+      if (!ok) return;
+    }
+    return d0.apply(this, arguments);
+  };
+})();
+/* thẻ chốt / lịch hẹn: lấy bản mới nhất trong cả cặp (các cuộc đã gộp) */
+(() => {
+  const p0 = n44Panel;
+  n44Panel = function(x){
+    if (!x || typeof n43Group !== 'function') return p0(x);
+    const g = n43Group(x), at = d => n43Ms((d && (d.confAt || d.at)) || 0);
+    const dealSrc = g.filter(y => y.deal && y.deal.state).sort((a, b) => at(b.deal) - at(a.deal))[0];
+    if (!dealSrc || dealSrc === x || (x.deal && at(x.deal) >= at(dealSrc.deal))) return p0(x);
+    return p0(Object.assign({}, x, {deal:dealSrc.deal}));
+  };
+})();
+/* T12: đã chốt → nhắc thợ ẩn hồ sơ */
+(() => {
+  const r0 = n44Remind;
+  n44Remind = function(all){
+    let h = r0.apply(this, arguments);
+    const mp = state.myProfile, u = n46Uid();
+    if (!u || !mp || !mp.live || mp.hired || n43Role() !== 'tech') return h;
+    const th = n44Canons().find(x => x.status === 'accepted' && x.deal && x.deal.state === 'yes');
+    if (!th) return h;
+    const item = `<a class="n44rem warn" href="#inbox-${esc(th.id)}">${esc(t('n46Hired', n44OtherName(th)))}</a>`;
+    return h ? h.replace('<div class="n44rems">', '<div class="n44rems">' + item) : `<div class="n44rems">${item}</div>`;
+  };
+})();
+
+/* ================= T2: đăng ký vai tiệm hỏi "Tên tiệm" ================= */
+(() => {
+  const v0 = viewLogin;
+  viewLogin = function(){
+    let h = v0.apply(this, arguments);
+    const a = state.auth || {};
+    if (!state.user && a.step === 'profile' && a.role === 'salon' && /id="au-name"/.test(h)){
+      h = h.replace(/(<label class="flabel" for="au-name">)[\s\S]*?(<\/label>)/, `$1${esc(t('n46SalonName'))}$2`)
+           .replace(/(<input[^>]*id="au-name"[^>]*placeholder=")[^"]*(")/, `$1${esc(t('n46SalonPh'))}$2`);
+    }
+    return h;
+  };
+})();
+
+/* ================= T10: ảnh đã tải lên không báo "hơi nhỏ"; đủ ảnh thì ẩn dòng "Bắt buộc" ================= */
+(() => {
+  const a0 = analyze;
+  analyze = async function(url){
+    const r = await a0.apply(this, arguments);
+    if (r && /^https?:/.test(String(url || ''))) r.w = Math.max(r.w || 0, 1200);   /* ảnh đã lưu đã được kiểm tra lúc tải lên */
+    return r;
+  };
+  const f0 = renderField;
+  renderField = function(type, f, fs){
+    let h = f0.apply(this, arguments);
+    if (f && f.minPhotos && fs && fs.data && (fs.data.photos || []).length >= f.minPhotos) h = h.replace(/<p class="hint req-hint">[\s\S]*?<\/p>/, '');
+    return h;
+  };
+})();
+
+/* ================= P3-4: trang tài khoản bỏ dòng vai trò trùng ================= */
+(() => {
+  const v0 = viewAccount;
+  viewAccount = function(){
+    const h = v0.apply(this, arguments);
+    const rl = (state.user || {}).role;
+    return /n39row/.test(h) || (rl !== 'salon' && rl !== 'tech') ? h : h.replace(/<p class="n2note n3role">([\s\S]*?)<\/p>/, (m, inner) => (/data-act|<button|<select/.test(inner) ? m : ''));   /* còn nút đổi vai thì giữ */
+  };
+})();
+
+/* ================= admin ================= */
+/* A1: chỉ cảnh báo "chưa gắn số" cho bài admin đăng thay (chủ chưa có tài khoản) */
+(() => {
+  const r0 = n22Row;
+  n22Row = function(o, tech){
+    const h = r0.apply(this, arguments);
+    const own = o && o.ownerUid, us = (state.n34 && state.n34.users) || [];
+    const u = own && us.find(z => (z.uid || z.id) === own);
+    const realOwner = u && (typeof n34Role === 'function' ? n34Role(u) : u.role) !== 'admin';
+    if (!realOwner) return h;
+    return h.replace(/<span class="ct-p ct-warn">[^<]*<\/span><br><button class="n23-fix"[^>]*>[\s\S]*?<\/button>/, '');
+  };
+})();
+/* A16: ẩn nút bảo trì "Gắn lại số" */
+(() => {
+  const s0 = admSet;
+  admSet = function(){
+    const main = String((state.user || {}).phone || '').replace(/\D/g, '').slice(-10) === '2108687686';
+    let h = s0.apply(this, arguments).replace(/<details class="card adm-card n35rep">([\s\S]*?data-act="n20fix"[\s\S]*?)<\/details>/, (m, inner) => inner.replace(/^<summary>[\s\S]*?<\/summary>/, ''));
+    return h.replace(/<div class="card adm-card"><h2 class="sec" style="margin-top:0">[^<]*<\/h2>\s*<p class="hint">[^<]*<\/p>\s*<button class="btn btn-ghost btn-block" type="button" data-act="n20fix"[\s\S]*?<\/div>/,
+      m => main ? `<details class="card adm-card n35rep n46maint"><summary>${esc(t('n46Maint'))}</summary>${m}</details>` : '');
+  };
+})();
+/* A5: mở chi tiết danh bạ: điền sẵn thành phố (danh sách lấy từ tin nháp) */
+(() => {
+  const o0 = ACT.ctopen;
+  ACT.ctopen = function(el){
+    const r = o0.apply(this, arguments);
+    const e = state.ct && state.ct.edit;
+    if (e && !e.city && typeof n35Draft === 'function'){
+      const d = n35Draft(e.phone || (el && el.dataset && el.dataset.v)), c = d && (d.city || (d.hiring || {}).city);
+      if (c){ e.city = c; render(); }
+    }
+    return r;
+  };
+})();
+/* A6: "Tuyển được" một nguồn số: tự báo + đã chốt trong chat */
+(() => {
+  const s0 = n42Stats;
+  n42Stats = function(){
+    const s = s0.apply(this, arguments);
+    const users = (state.n34.users || []).filter(u => n34Role(u) !== 'admin');
+    const ths = (state.tr && state.tr.threads) || [], hired = new Set();
+    ADS.concat(TECHS).forEach(o => { if ((o.outcome === 'yes' || o.hiredVia === 'yes') && o.ownerUid) hired.add(o.ownerUid); });
+    ths.forEach(x => { if (x.deal && x.deal.state === 'yes') (x.members || []).forEach(m => hired.add(m)); });
+    const role = u => n34Role(u);
+    s.adsYes = users.filter(u => hired.has(u.uid || u.id) && (role(u) === 'salon' || role(u) === 'both')).length;
+    s.techYes = users.filter(u => hired.has(u.uid || u.id) && (role(u) === 'tech' || role(u) === 'both')).length;
+    return s;
+  };
+})();
+/* A9: cột Hoạt động lấy cả lần vào web cuối */
+(() => {
+  const a0 = n42ActCell;
+  n42ActCell = function(u){
+    if (u && !n42Ms(u.seenAt) && !n42Ms(u.loginAt) && n42Ms(u.lastSeen)) return `<span class="n42ago">${esc(n42Ago(n42Ms(u.lastSeen)))}</span>`;
+    return a0.apply(this, arguments);
+  };
+})();
+/* A13: tin nháp gửi cho số đã có tài khoản → ghi rõ */
+(() => {
+  const t0 = admTrack;
+  admTrack = function(){
+    const h = t0.apply(this, arguments), i = h.indexOf(t('trReq'));
+    const head = i > 0 ? h.slice(0, i) : h, tail = i > 0 ? h.slice(i) : '';
+    return head.replace(/(<td>)(\(\d{3}\) \d{3}-\d{4})(<\/td>)/g, (m, a, ph, c) => a + ph + (typeof n34Badge === 'function' ? n34Badge(ph.replace(/\D/g, ''), '') : '') + c) + tail;
+  };
+})();
+/* A2 + A15: nhật ký ghi số người làm, dịch mã, ghi rõ bài đã xoá */
+(() => {
+  if (typeof n35LogHtml !== 'function') return;
+  n35LogHtml = function(){
+    const L0 = state.n35.log; if (!L0) return null;
+    return `<table class="adm-tbl"><tbody>${L0.slice(0, 40).map(x => {
+      const k = 'n35W_' + x.what, w = T[lang][k] ? t(k) : String(x.what || '').replace(/_/g, ' ');
+      const tg = n35Target(x) || (x.target ? (/^\d{10}$/.test(x.target) ? admPretty(x.target) : t('n46Gone')) : '');
+      const who = x.byName ? `${t('n46By')} ${x.byName}${x.byPhone ? ' · ' + admPretty(x.byPhone) : ''}` : '';
+      return `<tr><td>${esc(n34When(x.atMs))}</td><td><b>${esc(w)}</b> ${esc(tg)}</td><td class="hint">${esc(who)}</td></tr>`;
+    }).join('')}</tbody></table>`;
+  };
+})();
+/* A11: nhập hàng loạt – giữ dòng đầu khi trùng số, giữ nội dung đã dán */
+(() => {
+  const r0 = ACT.imread;
+  ACT.imread = function(el){
+    const k = el && el.dataset && el.dataset.v, ta = document.getElementById(k === 'raw' ? 'im-raw' : 'im-tab');
+    state.im['n46' + k] = ta ? ta.value : '';
+    const out = r0.apply(this, arguments);
+    const seen = {}, keep = []; let drop = 0;
+    (state.im.rows || []).forEach(r => { const p = r.phone; if (p && p.length === 10){ if (seen[p]){ drop++; return; } seen[p] = 1; } keep.push(r); });
+    if (drop){ state.im.rows = keep; toast(t('n46Dedup', drop)); render(); }
+    return out;
+  };
+  const i0 = admImp;
+  admImp = function(){
+    let h = i0.apply(this, arguments);
+    h = h.replace(/(<textarea id="im-raw"[^>]*>)<\/textarea>/, (m, a) => a + esc(state.im.n46raw || '') + '</textarea>')
+         .replace(/(<textarea id="im-tab"[^>]*>)<\/textarea>/, (m, a) => a + esc(state.im.n46tab || '') + '</textarea>');
+    return h;
+  };
+  const row0 = imRow;
+  imRow = function(r, i){
+    const h = row0.apply(this, arguments);
+    let out = r && r.kindBad ? h.replace(/(<td>)(<select data-im="kind")/, `$1<span class="im-x">${esc(t('n46KindBad'))}</span>$2`) : h;
+    if (r && !r.city) out = out.replace(/(<input data-im="city"[^>]*>)/, `$1<span class="im-x">${esc(t('n46NoCity'))}</span>`);
+    return out;
+  };
+  document.addEventListener('change', e => { const s = e.target; if (s && s.dataset && s.dataset.im === 'kind'){ const r = (state.im.rows || [])[Number(s.dataset.i)]; if (r) r.kindBad = false; } }, true);
+})();
+
+/* ================= sau khi vẽ trang: các chỉnh nhỏ ================= */
+function n46Before(){
+  /* P1-7 / A20: cuộc đang chờ với tài khoản đã xoá → coi như đã đóng */
+  const fix = L => (L || []).forEach(x => {
+    if (!x || x.status !== 'pending' || x.n46g) return;
+    const gone = (x.members || []).some(m => N46_GONE.test(String((x.names || {})[m] || '')));   /* chỉ dựa vào tên đã ghi khi xoá tài khoản */
+    if (gone){ x.status = 'withdrawn'; x.n46g = true; }
+  });
+  fix(n46Ths()); fix(state.tr && state.tr.threads);
+}
+function n46After(){
+  const r = route(), body = document.body;
+  /* T4 + T13: luôn giữ thanh điều hướng dưới; thanh nút "Tôi muốn làm" nằm trên nó */
+  const app = document.getElementById('app');
+  const mb = app && app.querySelector('.mbar'), tb = app && app.querySelector('.tabbar');
+  if (app && !tb && typeof tabBar === 'function' && r.view !== 'form' && r.view !== 'login'){
+    app.insertAdjacentHTML('beforeend', tabBar(r));
+  }
+  body.classList.toggle('n46both', !!mb);
+  const tb2 = app && app.querySelector('.tabbar');
+  if (mb && tb2 && getComputedStyle(tb2).display !== 'none') mb.style.bottom = tb2.offsetHeight + 'px';
+  body.classList.toggle('n46thr', r.view === 'thread');
+  if (r.view === 'thread') body.classList.add('has-mbar');
+  /* P3-7: đang ở Bảng theo dõi → sáng tab Tài khoản */
+  if (r.view === 'n44trk'){ const a = app && app.querySelector('.tabbar a[href="#account"]'); if (a) a.classList.add('on'); }
+  /* T14: hộp thư giữ cột ngày khi chữ xem trước dài */
+  document.querySelectorAll('.thread-row .last').forEach(p => {
+    if (p.querySelector('.n46lt') || !p.querySelector('.n40t')) return;
+    const sp = document.createElement('span'); sp.className = 'n46lt';
+    while (p.firstChild && !(p.firstChild.classList && p.firstChild.classList.contains('n40t'))) sp.appendChild(p.firstChild);
+    p.insertBefore(sp, p.firstChild);
+  });
+  /* A19: "Gửi tin ở tab Liên hệ" bấm được */
+  document.querySelectorAll('span.n13-at').forEach(s => { const a = document.createElement('a'); a.className = s.className; a.href = '#admin-send'; a.textContent = s.textContent + ' →'; s.replaceWith(a); });
+}
+(() => {
+  const r0 = render;
+  render = function(){
+    try { n46Before(); } catch (e) { console.warn('n46b', e); }
+    const out = r0.apply(this, arguments);
+    try { n46After(); } catch (e) { console.warn('n46a', e); }
+    return out;
+  };
+})();
+
+(() => { const st = document.createElement('style'); st.textContent = `
+.chips .chip,.n44chips .chip{border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:8px 14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;min-height:40px}
+.chips .chip.on,.n44chips .chip.on,.chips .chip[aria-pressed="true"]{background:var(--primary);border-color:var(--primary);color:#fff}
+.chips .chip:focus-visible{outline:3px solid #F4B8CB;outline-offset:2px}
+.thread-row.unread h3::before{content:'';display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--primary);margin-right:7px;vertical-align:middle}
+.thread-row .mname{min-width:0;flex:1}.thread-row .last{max-width:100%}
+.thread-row .last .n46lt{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+a.n1main[href^="#tech-"] .n1pay,.n43apsub{color:var(--ink-2,#4A4A55);font-weight:600}.n46miss{color:var(--muted);font-weight:500}
+.n46desc{display:block;font-weight:500}
+.n1pv{min-height:120px}
+body.n46both .mbar{bottom:calc(58px + env(safe-area-inset-bottom))}
+body.n46both.has-mbar{padding-bottom:calc(150px + env(safe-area-inset-bottom))}
+body.n46thr .reply{bottom:calc(64px + env(safe-area-inset-bottom))}
+@media (min-width:900px){body.n46both .mbar{bottom:0}}
+.n46maint summary{cursor:pointer;font-weight:700;color:var(--muted)}.n46thend{margin:18px auto 8px}.n46done{pointer-events:auto}
+.ct-p{margin-left:4px}.n42vn{margin-left:4px}`;
+document.head.appendChild(st); })();
 
 render();
 })();
