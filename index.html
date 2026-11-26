@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.google.com https://apis.google.com https://www.recaptcha.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https: wss: blob: data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nail101 – Nơi tiệm nail và thợ nail kết nối</title>
 <meta name="description" content="Tiệm nail tìm thợ, thợ nail tìm việc – bấm nút, đồng ý là nhắn tin được.">
@@ -3423,7 +3424,7 @@ function initLive(){
     const tg = contactTarget(itemId), tid = `${itemId}__${me.uid}`, ref = db.collection('threads').doc(tid);
     await ref.set(Object.assign({members:[me.uid, owner], names:{[me.uid]:me.name, [owner]:it.ownerName || tg.name || '—'},
       about:{id:itemId, kind:tg.kind, title:tg.title || ''}, lastText:text.slice(0, 200), lastAt:TS(), lastFrom:me.uid, readAt:{[me.uid]:TS()}}, extra || {}), {merge:true});
-    await ref.collection('messages').add({from:me.uid, text, at:TS()});
+    await n45MsgAdd(ref, {from:me.uid, text, at:TS()});
     return tid;
   }
   function guardContact(id){
@@ -3461,10 +3462,10 @@ function initLive(){
       const tid = el.dataset.v, ref = db.collection('threads').doc(tid), uid = state.user.uid;
       el.disabled = true;
       try {
+        await n45MsgAdd(ref, {from:uid, text, at:TS()});   /* n145: tin nhắn trước, bị chặn thì không đổi lastText */
         await ref.update({lastText:text.slice(0, 200), lastAt:TS(), lastFrom:uid, ['readAt.' + uid]:TS()});
-        await ref.collection('messages').add({from:uid, text, at:TS()});
         const n = document.getElementById('th-text'); if (n) n.value = '';
-      } catch (e) { console.warn(e); toast(errText(e)); }
+      } catch (e) { console.warn(e); toast(n45ErrMsg(e, errText)); }
       el.disabled = false;
     },
     msgclear(){}, thchan(){}
@@ -3528,19 +3529,20 @@ function initLive(){
         const tref = db.collection('techs').doc(tid0), cur = TECHS.find(x => x.live && x.id === tid0), exists = !!cur;
         /* admin sửa hồ sơ nháp của người khác: giữ nguyên tên chủ hồ sơ */
         if (exists) await tref.update(Object.assign({updatedAt:TS(), ad:clean, form, kind:'profile'}, ownerOf(cur) === me.uid ? {ownerName:me.name} : {}));
-        else await tref.set({ownerUid:me.uid, ownerName:me.name, createdAt:TS(), updatedAt:TS(), ad:clean, form, kind:'profile'});
+        else { const np = {ownerUid:me.uid, ownerName:me.name, createdAt:TS(), updatedAt:TS(), ad:clean, form, kind:'profile'}; await n45Commit('po', b => b.set(tref, np)); }
         fs.liveId = tid0;
       } else if (fs.editId){
         await db.collection('ads').doc(fs.editId).update({ad:clean, form, updatedAt:TS()});
         fs.liveId = fs.editId;
       } else {
-        const ref = await db.collection('ads').add({ownerUid:me.uid, ownerName:me.name, kind:type, createdAt:TS(), ad:clean, form});
+        const ref = db.collection('ads').doc(), newAd = {ownerUid:me.uid, ownerName:me.name, kind:type, createdAt:TS(), ad:clean, form};
+        await n45Commit('po', b => b.set(ref, newAd));   /* n145: tối đa 5 bài / giờ */
         fs.liveId = ref.id;
       }
       fs.done = true; fs.busy = false; render(); window.scrollTo(0, 0); toast(fs.editId ? t('updated') : t('published'));
     } catch (e) {
       console.warn(e); fs.busy = false; render();
-      toast(e && e.code === 'too-big' ? t('fileTooBig') : t('publishErr') + ' ' + errText(e));
+      toast(e && e.code === 'too-big' ? t('fileTooBig') : e && e.code === 'n45' ? e.message : t('publishErr') + ' ' + errText(e));
     }
   };
   const origForm = viewForm;
@@ -11736,7 +11738,7 @@ function n30Live(c){
     const [sv, bv, se, be] = MAIL[kind](fromName || 'Nail101'), link = site() + '#inbox';
     const text = `${bv}\nMở Nail101 để xem: ${link}\n\n${be}\nOpen Nail101: ${link}`;
     const html = `<p>${esc(bv)}</p><p><a href="${esc(link)}">Mở Nail101 để xem</a></p><hr><p>${esc(be)}</p><p><a href="${esc(link)}">Open Nail101</a></p>`;
-    try { await db.collection('mail').add({toUids:[toUid], message:{subject:sv + ' / ' + se, text, html}, kind, by:me().uid, createdAt:TS()}); }
+    try { await n45Mail({toUids:[toUid], message:{subject:sv + ' / ' + se, text, html}, kind, by:me().uid, createdAt:TS()}); }
     catch (e) { console.warn('n30 mail', e); }
   }
 
@@ -12105,7 +12107,7 @@ function n31Live(c){
     };
     if (!toUid || !MAIL[kind]) return;
     const [sv, bv, se, be] = MAIL[kind](fromName || 'Nail101'), link = location.origin + location.pathname + '#inbox';
-    db.collection('mail').add({toUids:[toUid], message:{subject:sv + ' / ' + se, text:`${bv}\nMở Nail101 để xem: ${link}\n\n${be}\nOpen Nail101: ${link}`,
+    n45Mail({toUids:[toUid], message:{subject:sv + ' / ' + se, text:`${bv}\nMở Nail101 để xem: ${link}\n\n${be}\nOpen Nail101: ${link}`,
       html:`<p>${esc(bv)}</p><p><a href="${esc(link)}">Mở Nail101 để xem</a></p><hr><p>${esc(be)}</p><p><a href="${esc(link)}">Open Nail101</a></p>`}, kind, by:me().uid, createdAt:TS()})
       .catch(e => console.warn('n31 mail', e));
   };
@@ -12143,18 +12145,18 @@ function n31Live(c){
         if (pair.status === 'pending' && pair.from !== u.uid){ upd.status = 'accepted'; upd.answeredAt = TS(); }
         else if (pair.status === 'pending'){ upd.note = note; }
         else if (pair.status !== 'accepted'){ Object.assign(upd, {status:'pending', from:u.uid, kind:doc.kind, note, urgent:!!doc.urgent}); }
-        await db.collection('threads').doc(pair.id).update(upd);
+        await n45Commit(m.kind === 'apply' ? 'ap' : 'of', b => b.update(db.collection('threads').doc(pair.id), upd));   /* n145: hẹn giờ ứng tuyển */
         await pushPriv({id:pair.id, techId:pair.techId || doc.techId, adId:pair.adId || doc.adId});
         mailOf(doc.members[1], m.kind === 'apply' ? 'apply' : 'offer', doc.names[u.uid]);
         state.modal = null; renderModal(); toast(t(m.kind === 'apply' ? 'sentApply' : 'sentOffer'));
         if (pair.status === 'accepted' || upd.status === 'accepted') location.hash = '#inbox-' + pair.id;
         render(); return;
       }
-      await db.collection('threads').doc(tid).set(doc);
+      await n45Commit(m.kind === 'apply' ? 'ap' : 'of', b => b.set(db.collection('threads').doc(tid), doc));   /* n145: hẹn giờ ứng tuyển */
       await pushPriv({id:tid, techId:doc.techId, adId:doc.adId});
       mailOf(doc.members[1], m.kind === 'apply' ? 'apply' : 'offer', doc.names[u.uid]);
       state.modal = null; renderModal(); toast(t(m.kind === 'apply' ? 'sentApply' : 'sentOffer')); render();
-    } catch (e) { console.warn(e); el.disabled = false; el.textContent = t(m.kind === 'apply' ? 'sendBtn' : 'sendOffer'); toast(errText(e)); }
+    } catch (e) { console.warn(e); el.disabled = false; el.textContent = t(m.kind === 'apply' ? 'sendBtn' : 'sendOffer'); toast(n45ErrMsg(e, errText)); }
   };
   /* nút cũ (Nhắn tin / Ứng tuyển kiểu cũ) cũng đi qua đúng một đường */
   const toNew = el => { const id = el.dataset.v; if (ADS.find(a => a.id === id)) return ACT.n1apply(el); if (TECHS.find(x => x.id === id)) return ACT.n1offer(el); };
@@ -16199,7 +16201,7 @@ async function n44Upd(id, data){ const db = n44Db(); if (!db) return false; try 
 function n44Mail(toUid, kind, vi, en, link){
   const db = n44Db(), u = n44Me(); if (!db || !u || !toUid) return;
   link = link || 'https://nail101.com/';
-  db.collection('mail').add({toUids:[toUid], kind, by:u, createdAt:n44TS(),
+  n45Mail({toUids:[toUid], kind, by:u, createdAt:n44TS(),
     message:{subject:'Nail101: ' + vi + ' / ' + en, text:`${vi}\nMở Nail101: ${link}\n\n${en}\nOpen Nail101: ${link}`,
       html:`<p>${esc(vi)}</p><p><a href="${esc(link)}">Mở Nail101</a></p><hr><p>${esc(en)}</p><p><a href="${esc(link)}">Open Nail101</a></p>`}}).catch(e => console.warn('n44 mail', e));
 }
@@ -16490,7 +16492,7 @@ function n44NotifyReady(adId, q){
   list.forEach(tc => {
     const to = tc.ownerUid; if (!to) return; n++;
     const link = 'https://nail101.com/#ad-' + adId, d = q.date, h = `${q.from}–${q.to}`;
-    db.collection('mail').add({toUids:[to], kind:'urgent', by:u, createdAt:n44TS(), message:{subject:`Nail101: ⚡ ${q.biz} cần thợ gấp ${d} / Salon needs a tech ${d}`,
+    n45Mail({toUids:[to], kind:'urgent', by:u, createdAt:n44TS(), message:{subject:`Nail101: ⚡ ${q.biz} cần thợ gấp ${d} / Salon needs a tech ${d}`,
       text:`${q.biz} cần thợ gấp ngày ${d}, ${h}, cách bạn khoảng ${tc.n44mi} dặm.\nXem tin: ${link}\n\n${q.biz} needs a tech on ${d}, ${h}, about ${tc.n44mi} miles from you.\nSee the post: ${link}`,
       html:`<p>${esc(q.biz)} cần thợ gấp ngày <b>${esc(d)}</b>, ${esc(h)}, cách bạn khoảng ${tc.n44mi} dặm.</p><p><a href="${esc(link)}">Xem tin</a></p><hr><p>${esc(q.biz)} needs a tech on <b>${esc(d)}</b>, ${esc(h)}, about ${tc.n44mi} miles from you.</p><p><a href="${esc(link)}">See the post</a></p>`}})
       .catch(e => console.warn('n44 notify', e));
@@ -16615,6 +16617,507 @@ function n44UrgDone(id){
 .n44trow{display:flex;justify-content:space-between;align-items:center;gap:10px;text-decoration:none;color:var(--ink);margin-bottom:8px}.n44trow div{display:grid;gap:2px;min-width:0}.n44trow small{color:var(--muted)}
 .n44nx{color:#8A5A00!important}.n44chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}.n44acc{margin:6px 0 14px}.n44done{margin-bottom:14px}.n44adm{margin:8px 0 2px}
 `; document.head.appendChild(st); })();
+
+/* ================= n145: Terms of Use – bản của sếp (Nov 24, 2026), EN nguyên văn + bản dịch VI =================
+   khối: ['p', text] đoạn · ['ul', [..]] gạch đầu dòng · ['ol', [..]] danh sách số · ['h3', text] tiêu đề nhỏ */
+const N45_TERMS_V = '2026-11-24';
+const N45_TERMS = {
+  en:{title:'Nail101.com Terms of Use', date:'Last updated: Nov 24, 2026', secs:[
+    ['1. Acceptance of These Terms', [
+      ['p', 'By using Nail101.com, you agree to these Terms of Use. If you do not agree, do not use the site.'],
+      ['p', 'These Terms govern your access to and use of Nail101.com, its mobile versions, and related services, including our classified advertising service (together, the "Service"). "Nail101," "we," "us," and "our" mean SoftLab Studios LLC, the operator of Nail101.com. "You" means any visitor, registered user, or advertiser. Our Privacy Policy is part of these Terms.']]],
+    ['2. Eligibility', [
+      ['p', 'You must be at least 18 years old and able to form a binding contract to use the Service. If you use the Service for a business (such as a nail salon, spa, supplier, or beauty school), you confirm you have authority to bind that business. In that case, "you" includes the business.']]],
+    ['3. Changes to These Terms', [
+      ['p', 'We may update these Terms at any time. We will change the date at the top of this page and, for material changes, may give notice on the site or by email. Continued use of the Service after changes take effect means you accept the updated Terms.']]],
+    ['4. Nail101 Is a Venue Only', [
+      ['p', 'Nail101 provides an online venue where users post and browse classified ads for the nail and beauty industry. Examples include salon jobs, salons for sale, booth and chair rentals, equipment, supplies, and services.'],
+      ['ul', ['We are not a party to any transaction, hiring decision, lease, or sale between users.',
+        'We are not an employer, employment agency, real estate broker, or business broker.',
+        'We do not screen, endorse, or guarantee any user, ad, product, job, or business.',
+        'We do not verify the accuracy of ads, the identity of users, or any license, permit, or credential.']],
+      ['p', 'You are solely responsible for evaluating ads and the people you deal with.']]],
+    ['5. Accounts', [
+      ['p', 'Some features require an account. You agree to:'],
+      ['ul', ['Provide accurate, current information and keep it updated.',
+        'Keep your password confidential and not share your account.',
+        'Tell us promptly at the contact address below if you suspect unauthorized use.']],
+      ['p', 'You are responsible for all activity under your account. We may refuse, suspend, or close any account at our discretion.']]],
+    ['6. Posting Classified Ads', [
+      ['p', 'You are fully responsible for every ad you post. By posting, you confirm that:'],
+      ['ul', ['The ad is accurate, current, and not misleading, including prices, pay, location, and business details.',
+        'You have the right to offer what you advertise, and the ad complies with all applicable laws.',
+        'Each ad is for one real job, business, item, or service, placed in the correct category and location.',
+        'You will remove or update the ad once the position is filled or the item is sold.']],
+      ['h3', 'Job ads'],
+      ['p', 'Job ads must comply with all employment laws, including anti-discrimination, wage and hour, worker classification, and immigration laws. Ads may not state a preference or limitation based on race, color, religion, sex, national origin, age, disability, or any other protected characteristic, except where the law allows. You are responsible for correctly classifying workers as employees, independent contractors, or booth renters.'],
+      ['h3', 'Salons for sale and booth rentals'],
+      ['p', 'Ads for salons, businesses, or space must describe the offering truthfully, including revenue figures, lease terms, and condition. Nail101 does not review these claims. Buyers and renters should do their own due diligence and consult professionals.'],
+      ['h3', 'Licensing'],
+      ['p', 'Where your state requires a license (for example, a nail technician, manicurist, or salon license), you are responsible for holding it and for checking that anyone you hire or rent to holds it.']]],
+    ['7. Prohibited Content', [
+      ['p', 'You may not post content that:'],
+      ['ul', ['Is false, fraudulent, deceptive, or a scam, including fake jobs, "pay to apply" schemes, or advance-fee requests.',
+        'Offers illegal goods or services, or services requiring a license you do not hold.',
+        'Involves human trafficking, forced labor, unpaid labor below minimum wage, or sexual or adult services of any kind.',
+        'Discriminates, harasses, threatens, or promotes hate or violence.',
+        'Infringes anyone\'s copyright, trademark, privacy, or publicity rights, including photos you do not own.',
+        'Sells unsafe, recalled, counterfeit, or banned products (for example, prohibited chemicals such as liquid MMA monomer where restricted).',
+        'Contains malware, spam, chain letters, pyramid schemes, or links to unrelated sites.',
+        'Duplicates an ad you already posted, or posts in the wrong category or location.',
+        'Includes another person\'s personal information without their consent.']]]],
+    ['8. Fees, Paid Ads, and Refunds', [
+      ['p', 'Some ads or features (such as featured placement or extended listings) may require payment. Prices are shown before you pay.'],
+      ['ul', ['Fees are charged when you place the order and cover the stated listing period only.',
+        'Fees are non-refundable, including when we remove an ad for violating these Terms, unless the law requires otherwise or we decide in our discretion to issue a refund.',
+        'Payments are processed by third-party payment providers under their own terms. We do not store full card numbers.',
+        'We may change prices at any time. Changes do not affect ads already paid for.']]]],
+    ['9. User Conduct', [
+      ['p', 'When using the Service, you will not:'],
+      ['ul', ['Use contact information from ads to send spam, unsolicited marketing, or harassment.',
+        'Scrape, crawl, copy, or collect content or user data by automated means without our written permission.',
+        'Impersonate any person or business, or misrepresent your affiliation.',
+        'Interfere with the Service\'s security or operation, or try to access accounts or systems you are not authorized to use.',
+        'Circumvent fees, limits, or any removal or ban we apply.']]]],
+    ['10. Dealing With Other Users', [
+      ['p', 'All dealings between users are solely between those users. Use common sense and caution:'],
+      ['ul', ['Meet in public places and verify identities and licenses before hiring, renting, buying, or selling.',
+        'Never send money by wire transfer, gift card, or cryptocurrency to someone you have not verified.',
+        'Be wary of overpayment checks, requests for personal financial details, or offers that seem too good to be true.',
+        'Inspect equipment and review a salon\'s records, lease, and permits before any purchase.']],
+      ['p', 'If you suspect fraud, trafficking, or illegal activity, report the ad to us and contact the appropriate authorities. We are not responsible for losses arising from user dealings.']]],
+    ['11. Your Content and License to Nail101', [
+      ['p', 'You keep ownership of the text, photos, and other content you post ("User Content"). By posting, you grant Nail101 a worldwide, non-exclusive, royalty-free, transferable, sublicensable license to host, store, display, reproduce, adapt, distribute, and promote your User Content in connection with operating and marketing the Service. This license ends when you delete the content, except for copies kept in backups, as required by law, or already shared with others.'],
+      ['p', 'You confirm you own or have permission to use all User Content you post.']]],
+    ['12. Moderation and Removal', [
+      ['p', 'We may, but are not obligated to, review, edit, refuse, or remove any ad or content at any time, for any reason, without notice. We may also limit posting, suspend, or ban users. Our failure to remove content does not mean we approve it.']]],
+    ['13. Nail101 Intellectual Property', [
+      ['p', 'The Service, including its design, logos, software, and compilation of content, is owned by Nail101 or its licensors and protected by intellectual property laws. You may not copy, modify, or use our name or logo without our written permission.']]],
+    ['14. Copyright Complaints (DMCA)', [
+      ['p', 'If you believe content on the Service infringes your copyright, send a notice to our designated agent at the address below. Include:'],
+      ['ol', ['Your physical or electronic signature.', 'Identification of the copyrighted work.', 'The infringing material and its URL on Nail101.com.', 'Your contact information.',
+        'A statement that you believe in good faith the use is not authorized.', 'A statement, under penalty of perjury, that your notice is accurate and you are authorized to act for the owner.']],
+      ['p', 'We may remove the material and terminate repeat infringers\' accounts.']]],
+    ['15. Privacy', [
+      ['p', 'Our Privacy Policy explains how we collect, use, and share personal information. Information you include in a public ad, such as your phone number or email, will be visible to anyone. Post only what you are comfortable sharing.']]],
+    ['16. Third-Party Links and Services', [
+      ['p', 'The Service may contain links to, or ads from, third-party websites and services. We do not control and are not responsible for them. Your use of them is at your own risk and under their terms.']]],
+    ['17. Disclaimers', [
+      ['p', 'THE SERVICE AND ALL CONTENT ARE PROVIDED "AS IS" AND "AS AVAILABLE," WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMITTED BY LAW, NAIL101 DISCLAIMS ALL WARRANTIES, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT.'],
+      ['p', 'WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, SECURE, OR ERROR-FREE, OR THAT ANY AD, USER, JOB, BUSINESS, PRODUCT, OR SERVICE IS ACCURATE, LEGAL, SAFE, OR AS DESCRIBED.']]],
+    ['18. Limitation of Liability', [
+      ['p', 'TO THE FULLEST EXTENT PERMITTED BY LAW, NAIL101 AND ITS OWNERS, OFFICERS, EMPLOYEES, AND AGENTS WILL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR FOR LOST PROFITS, REVENUE, DATA, OR GOODWILL, ARISING FROM YOUR USE OF THE SERVICE OR ANY DEALINGS WITH OTHER USERS.'],
+      ['p', 'OUR TOTAL LIABILITY FOR ANY CLAIM RELATING TO THE SERVICE WILL NOT EXCEED THE GREATER OF (A) THE AMOUNT YOU PAID US IN THE 12 MONTHS BEFORE THE CLAIM, OR (B) US $100.'],
+      ['p', 'Some jurisdictions do not allow certain limitations, so some of the above may not apply to you.']]],
+    ['19. Indemnification', [
+      ['p', 'You agree to defend, indemnify, and hold harmless Nail101 and its owners, officers, employees, and agents from any claims, damages, losses, and expenses (including reasonable attorneys\' fees) arising from your User Content, your use of the Service, your dealings with other users, or your violation of these Terms or any law.']]],
+    ['20. Termination', [
+      ['p', 'We may suspend or end your access to the Service at any time, with or without notice, for any reason, including violation of these Terms. You may stop using the Service and close your account at any time. Sections that by their nature should survive (including 11 and 15 through 22) survive termination.']]],
+    ['21. Governing Law and Disputes', [
+      ['p', 'These Terms are governed by the laws of the State of Texas, without regard to conflict-of-law rules. Any dispute arising from these Terms or the Service will be resolved exclusively in the state or federal courts located in Bexar County, Texas, and you consent to their jurisdiction. Either party may bring a qualifying claim in small claims court.'],
+      ['p', 'To the extent permitted by law, claims must be brought individually, not as a plaintiff or class member in any class or representative action. Any claim must be filed within one year after it arises, or it is permanently barred.']]],
+    ['22. General', [
+      ['ul', ['<b>Entire agreement:</b> These Terms and the Privacy Policy are the entire agreement between you and Nail101 about the Service.',
+        '<b>Severability:</b> If any provision is found unenforceable, the rest remain in effect.',
+        '<b>No waiver:</b> Our failure to enforce a provision is not a waiver of it.',
+        '<b>Assignment:</b> You may not transfer these Terms without our consent. We may assign them freely.',
+        '<b>Notices:</b> We may give notice by email, on the site, or through your account.']]]],
+    ['23. Contact Us', [
+      ['p', 'Questions, ad reports, or copyright notices:'],
+      ['p', 'SoftLab Studios LLC (operator of Nail101.com)<br>5706 Grandwood Dr, San Antonio, TX 78239<br>Email: <a href="mailto:info@nail101.com">info@nail101.com</a><br>Copyright agent: <a href="mailto:info@nail101.com">info@nail101.com</a>']]]
+  ]},
+  vi:{title:'Điều khoản sử dụng Nail101.com', date:'Cập nhật lần cuối: 24/11/2026',
+    note:'Đây là bản dịch tiếng Việt để bạn tiện đọc. Nếu có khác biệt, <b>bản tiếng Anh</b> là bản có hiệu lực.', secs:[
+    ['1. Chấp nhận các điều khoản', [
+      ['p', 'Khi sử dụng Nail101.com, bạn đồng ý với các Điều khoản sử dụng này. Nếu không đồng ý, vui lòng không sử dụng trang.'],
+      ['p', 'Các Điều khoản này áp dụng cho việc bạn truy cập và sử dụng Nail101.com, các phiên bản trên điện thoại và các dịch vụ liên quan, bao gồm dịch vụ đăng tin rao vặt (gọi chung là "Dịch vụ"). "Nail101", "chúng tôi" nghĩa là SoftLab Studios LLC, đơn vị vận hành Nail101.com. "Bạn" là bất kỳ người truy cập, người dùng đã đăng ký hoặc người đăng tin nào. Chính sách quyền riêng tư là một phần của các Điều khoản này.']]],
+    ['2. Điều kiện sử dụng', [
+      ['p', 'Bạn phải từ 18 tuổi trở lên và có đủ năng lực ký kết hợp đồng có hiệu lực ràng buộc để sử dụng Dịch vụ. Nếu bạn dùng Dịch vụ cho một doanh nghiệp (như tiệm nail, spa, nhà cung cấp hoặc trường dạy nghề làm đẹp), bạn xác nhận mình có quyền đại diện cho doanh nghiệp đó. Khi đó, "bạn" bao gồm cả doanh nghiệp.']]],
+    ['3. Thay đổi điều khoản', [
+      ['p', 'Chúng tôi có thể cập nhật các Điều khoản này bất cứ lúc nào. Chúng tôi sẽ đổi ngày ở đầu trang và, với thay đổi quan trọng, có thể thông báo trên trang hoặc qua email. Việc bạn tiếp tục dùng Dịch vụ sau khi thay đổi có hiệu lực nghĩa là bạn chấp nhận bản cập nhật.']]],
+    ['4. Nail101 chỉ là nơi đăng tin', [
+      ['p', 'Nail101 là nơi trực tuyến để người dùng đăng và xem tin rao vặt ngành nail và làm đẹp, ví dụ: việc làm ở tiệm, sang tiệm, cho thuê bàn/ghế, thiết bị, vật tư và dịch vụ.'],
+      ['ul', ['Chúng tôi không phải là một bên trong bất kỳ giao dịch, quyết định tuyển dụng, hợp đồng thuê hay mua bán nào giữa người dùng.',
+        'Chúng tôi không phải chủ lao động, công ty giới thiệu việc làm, môi giới bất động sản hay môi giới kinh doanh.',
+        'Chúng tôi không sàng lọc, xác nhận hay bảo đảm cho bất kỳ người dùng, tin đăng, sản phẩm, việc làm hay doanh nghiệp nào.',
+        'Chúng tôi không kiểm tra độ chính xác của tin đăng, danh tính người dùng hay bất kỳ giấy phép, chứng chỉ nào.']],
+      ['p', 'Bạn tự chịu trách nhiệm đánh giá tin đăng và những người bạn giao dịch.']]],
+    ['5. Tài khoản', [
+      ['p', 'Một số tính năng cần có tài khoản. Bạn đồng ý:'],
+      ['ul', ['Cung cấp thông tin chính xác, mới nhất và cập nhật khi thay đổi.',
+        'Giữ bí mật mật khẩu (mã PIN) và không cho người khác dùng tài khoản của bạn.',
+        'Báo ngay cho chúng tôi theo địa chỉ liên hệ bên dưới nếu nghi ngờ tài khoản bị dùng trái phép.']],
+      ['p', 'Bạn chịu trách nhiệm về mọi hoạt động trong tài khoản của mình. Chúng tôi có thể từ chối, tạm khóa hoặc đóng bất kỳ tài khoản nào theo quyết định của chúng tôi.']]],
+    ['6. Đăng tin rao vặt', [
+      ['p', 'Bạn hoàn toàn chịu trách nhiệm về mọi tin bạn đăng. Khi đăng tin, bạn xác nhận rằng:'],
+      ['ul', ['Tin đăng chính xác, mới nhất và không gây hiểu lầm, kể cả giá, lương, địa điểm và thông tin tiệm.',
+        'Bạn có quyền rao những gì mình đăng, và tin đăng tuân thủ mọi luật hiện hành.',
+        'Mỗi tin dành cho một việc làm, doanh nghiệp, món hàng hoặc dịch vụ có thật, đăng đúng mục và đúng địa điểm.',
+        'Bạn sẽ gỡ hoặc cập nhật tin khi đã tuyển đủ người hoặc đã bán xong.']],
+      ['h3', 'Tin tuyển dụng'],
+      ['p', 'Tin tuyển dụng phải tuân thủ mọi luật lao động, bao gồm luật chống phân biệt đối xử, luật về lương và giờ làm, phân loại người lao động và luật di trú. Tin không được nêu ưu tiên hay giới hạn dựa trên chủng tộc, màu da, tôn giáo, giới tính, nguồn gốc quốc gia, tuổi tác, khuyết tật hoặc bất kỳ đặc điểm nào được luật bảo vệ, trừ khi luật cho phép. Bạn chịu trách nhiệm phân loại đúng người làm là nhân viên, người làm độc lập (independent contractor) hay người thuê bàn (booth renter).'],
+      ['h3', 'Sang tiệm và cho thuê bàn'],
+      ['p', 'Tin sang tiệm, doanh nghiệp hoặc mặt bằng phải mô tả trung thực, kể cả doanh thu, điều kiện thuê và tình trạng. Nail101 không kiểm tra các thông tin này. Người mua và người thuê nên tự tìm hiểu kỹ và hỏi ý kiến chuyên gia.'],
+      ['h3', 'Giấy phép hành nghề'],
+      ['p', 'Nếu tiểu bang của bạn yêu cầu giấy phép (ví dụ: giấy phép thợ nail, manicurist hoặc giấy phép tiệm), bạn chịu trách nhiệm có giấy phép đó và kiểm tra người bạn thuê hoặc cho thuê cũng có.']]],
+    ['7. Nội dung bị cấm', [
+      ['p', 'Bạn không được đăng nội dung:'],
+      ['ul', ['Sai sự thật, gian lận, lừa dối hoặc lừa đảo, kể cả việc làm giả, kiểu "trả tiền để được ứng tuyển" hay đòi tiền trước.',
+        'Rao bán hàng hóa, dịch vụ trái phép, hoặc dịch vụ cần giấy phép mà bạn không có.',
+        'Liên quan đến buôn người, lao động cưỡng bức, lao động không lương hoặc dưới lương tối thiểu, hay bất kỳ dịch vụ tình dục/người lớn nào.',
+        'Phân biệt đối xử, quấy rối, đe dọa hoặc cổ xúy thù ghét, bạo lực.',
+        'Vi phạm bản quyền, nhãn hiệu, quyền riêng tư hay quyền hình ảnh của người khác, kể cả dùng ảnh không phải của bạn.',
+        'Bán sản phẩm không an toàn, bị thu hồi, hàng giả hoặc hàng cấm (ví dụ: hóa chất bị cấm như dung dịch MMA ở nơi bị hạn chế).',
+        'Chứa mã độc, thư rác, thư dây chuyền, mô hình kim tự tháp hoặc link tới trang không liên quan.',
+        'Trùng với tin bạn đã đăng, hoặc đăng sai mục, sai địa điểm.',
+        'Có thông tin cá nhân của người khác khi chưa được họ đồng ý.']]]],
+    ['8. Phí, tin trả phí và hoàn tiền', [
+      ['p', 'Một số tin hoặc tính năng (như đưa tin lên đầu hoặc gia hạn tin) có thể phải trả phí. Giá được hiện trước khi bạn thanh toán.'],
+      ['ul', ['Phí được tính khi bạn đặt mua và chỉ áp dụng cho thời gian đăng tin đã nêu.',
+        'Phí không được hoàn lại, kể cả khi chúng tôi gỡ tin vì vi phạm các Điều khoản này, trừ khi luật yêu cầu khác hoặc chúng tôi tự quyết định hoàn tiền.',
+        'Thanh toán do bên cung cấp dịch vụ thanh toán thứ ba xử lý theo điều khoản của họ. Chúng tôi không lưu đầy đủ số thẻ.',
+        'Chúng tôi có thể đổi giá bất cứ lúc nào. Thay đổi không ảnh hưởng tới tin đã trả tiền.']]]],
+    ['9. Quy tắc ứng xử', [
+      ['p', 'Khi dùng Dịch vụ, bạn không được:'],
+      ['ul', ['Dùng thông tin liên lạc trong tin đăng để gửi thư rác, quảng cáo không được yêu cầu hoặc quấy rối.',
+        'Dùng công cụ tự động để thu thập, sao chép nội dung hay dữ liệu người dùng khi chưa có sự đồng ý bằng văn bản của chúng tôi.',
+        'Mạo danh người hay doanh nghiệp khác, hoặc khai sai mối quan hệ của bạn.',
+        'Can thiệp vào bảo mật hay hoạt động của Dịch vụ, hoặc cố truy cập tài khoản, hệ thống mà bạn không có quyền.',
+        'Lách phí, các giới hạn, hoặc việc gỡ tin, khóa tài khoản mà chúng tôi áp dụng.']]]],
+    ['10. Giao dịch với người dùng khác', [
+      ['p', 'Mọi giao dịch giữa người dùng là việc riêng giữa những người đó. Hãy tỉnh táo và cẩn thận:'],
+      ['ul', ['Gặp nhau ở nơi công cộng và kiểm tra danh tính, giấy phép trước khi thuê người, cho thuê, mua hoặc bán.',
+        'Không bao giờ chuyển tiền qua chuyển khoản quốc tế (wire), thẻ quà tặng hay tiền điện tử cho người chưa xác minh.',
+        'Cảnh giác với séc trả dư, yêu cầu cung cấp thông tin tài chính cá nhân, hoặc lời mời tốt đến mức khó tin.',
+        'Kiểm tra thiết bị và xem sổ sách, hợp đồng thuê, giấy phép của tiệm trước khi mua.']],
+      ['p', 'Nếu nghi ngờ lừa đảo, buôn người hoặc hoạt động phạm pháp, hãy báo tin đó cho chúng tôi và liên hệ cơ quan chức năng. Chúng tôi không chịu trách nhiệm về thiệt hại phát sinh từ giao dịch giữa người dùng.']]],
+    ['11. Nội dung của bạn và quyền sử dụng cho Nail101', [
+      ['p', 'Bạn vẫn là chủ sở hữu chữ, ảnh và nội dung khác mà bạn đăng ("Nội dung người dùng"). Khi đăng, bạn cấp cho Nail101 quyền sử dụng trên toàn thế giới, không độc quyền, miễn phí bản quyền, có thể chuyển nhượng và cấp lại, để lưu trữ, hiển thị, sao chép, chỉnh sửa định dạng, phân phối và quảng bá Nội dung người dùng nhằm vận hành và tiếp thị Dịch vụ. Quyền này chấm dứt khi bạn xóa nội dung, trừ các bản sao còn trong bản sao lưu, theo yêu cầu của luật, hoặc đã được chia sẻ cho người khác.'],
+      ['p', 'Bạn xác nhận mình sở hữu hoặc được phép dùng mọi nội dung bạn đăng.']]],
+    ['12. Kiểm duyệt và gỡ tin', [
+      ['p', 'Chúng tôi có thể (nhưng không bắt buộc) xem, sửa, từ chối hoặc gỡ bất kỳ tin hay nội dung nào, bất cứ lúc nào, vì bất kỳ lý do gì, không cần báo trước. Chúng tôi cũng có thể giới hạn việc đăng tin, tạm khóa hoặc cấm người dùng. Việc chúng tôi chưa gỡ một nội dung không có nghĩa là chúng tôi đồng ý với nội dung đó.']]],
+    ['13. Tài sản trí tuệ của Nail101', [
+      ['p', 'Dịch vụ, bao gồm thiết kế, logo, phần mềm và cách tổng hợp nội dung, thuộc sở hữu của Nail101 hoặc bên cấp phép, và được luật sở hữu trí tuệ bảo vệ. Bạn không được sao chép, chỉnh sửa hoặc dùng tên, logo của chúng tôi khi chưa có sự đồng ý bằng văn bản.']]],
+    ['14. Khiếu nại bản quyền (DMCA)', [
+      ['p', 'Nếu bạn cho rằng nội dung trên Dịch vụ vi phạm bản quyền của bạn, hãy gửi thông báo tới người đại diện của chúng tôi theo địa chỉ bên dưới, gồm:'],
+      ['ol', ['Chữ ký tay hoặc chữ ký điện tử của bạn.', 'Thông tin xác định tác phẩm có bản quyền.', 'Nội dung vi phạm và đường link của nó trên Nail101.com.', 'Thông tin liên lạc của bạn.',
+        'Lời khẳng định bạn tin một cách thiện chí rằng việc sử dụng đó chưa được phép.', 'Lời khẳng định, chịu trách nhiệm trước pháp luật về khai man, rằng thông báo là chính xác và bạn có quyền thay mặt chủ sở hữu.']],
+      ['p', 'Chúng tôi có thể gỡ nội dung đó và đóng tài khoản của người vi phạm nhiều lần.']]],
+    ['15. Quyền riêng tư', [
+      ['p', 'Chính sách quyền riêng tư giải thích cách chúng tôi thu thập, sử dụng và chia sẻ thông tin cá nhân. Thông tin bạn ghi trong tin đăng công khai, như số điện thoại hay email, sẽ ai cũng thấy được. Chỉ đăng những gì bạn thấy thoải mái chia sẻ.']]],
+    ['16. Link và dịch vụ bên thứ ba', [
+      ['p', 'Dịch vụ có thể chứa link tới, hoặc quảng cáo từ, các trang web và dịch vụ của bên thứ ba. Chúng tôi không kiểm soát và không chịu trách nhiệm về các trang đó. Bạn tự chịu rủi ro khi dùng chúng và phải theo điều khoản của họ.']]],
+    ['17. Miễn trừ bảo đảm', [
+      ['p', 'DỊCH VỤ VÀ MỌI NỘI DUNG ĐƯỢC CUNG CẤP "NGUYÊN TRẠNG" VÀ "TÙY KHẢ NĂNG SẴN CÓ", KHÔNG CÓ BẤT KỲ BẢO ĐẢM NÀO, DÙ RÕ RÀNG HAY NGẦM ĐỊNH. Ở MỨC TỐI ĐA LUẬT CHO PHÉP, NAIL101 TỪ CHỐI MỌI BẢO ĐẢM, BAO GỒM BẢO ĐẢM VỀ KHẢ NĂNG THƯƠNG MẠI, PHÙ HỢP VỚI MỤC ĐÍCH CỤ THỂ, QUYỀN SỞ HỮU VÀ KHÔNG VI PHẠM.'],
+      ['p', 'CHÚNG TÔI KHÔNG BẢO ĐẢM DỊCH VỤ SẼ HOẠT ĐỘNG LIÊN TỤC, AN TOÀN HAY KHÔNG CÓ LỖI, CŨNG KHÔNG BẢO ĐẢM BẤT KỲ TIN ĐĂNG, NGƯỜI DÙNG, VIỆC LÀM, DOANH NGHIỆP, SẢN PHẨM HAY DỊCH VỤ NÀO LÀ CHÍNH XÁC, HỢP PHÁP, AN TOÀN HOẶC ĐÚNG NHƯ MÔ TẢ.']]],
+    ['18. Giới hạn trách nhiệm', [
+      ['p', 'Ở MỨC TỐI ĐA LUẬT CHO PHÉP, NAIL101 CÙNG CHỦ SỞ HỮU, CÁN BỘ, NHÂN VIÊN VÀ ĐẠI DIỆN KHÔNG CHỊU TRÁCH NHIỆM VỀ BẤT KỲ THIỆT HẠI GIÁN TIẾP, NGẪU NHIÊN, ĐẶC BIỆT, HỆ QUẢ HAY MANG TÍNH TRỪNG PHẠT NÀO, HOẶC VỀ MẤT LỢI NHUẬN, DOANH THU, DỮ LIỆU HAY UY TÍN, PHÁT SINH TỪ VIỆC BẠN DÙNG DỊCH VỤ HOẶC GIAO DỊCH VỚI NGƯỜI DÙNG KHÁC.'],
+      ['p', 'TỔNG TRÁCH NHIỆM CỦA CHÚNG TÔI CHO MỌI KHIẾU NẠI LIÊN QUAN ĐẾN DỊCH VỤ KHÔNG VƯỢT QUÁ SỐ LỚN HƠN GIỮA (A) SỐ TIỀN BẠN ĐÃ TRẢ CHO CHÚNG TÔI TRONG 12 THÁNG TRƯỚC KHIẾU NẠI, HOẶC (B) 100 ĐÔ LA MỸ.'],
+      ['p', 'Một số nơi không cho phép một số giới hạn này, nên có thể một phần ở trên không áp dụng với bạn.']]],
+    ['19. Bồi hoàn', [
+      ['p', 'Bạn đồng ý bảo vệ, bồi hoàn và giữ cho Nail101 cùng chủ sở hữu, cán bộ, nhân viên và đại diện không bị thiệt hại trước mọi khiếu nại, thiệt hại, mất mát và chi phí (kể cả phí luật sư hợp lý) phát sinh từ Nội dung người dùng của bạn, việc bạn dùng Dịch vụ, việc bạn giao dịch với người dùng khác, hoặc việc bạn vi phạm các Điều khoản này hay bất kỳ luật nào.']]],
+    ['20. Chấm dứt', [
+      ['p', 'Chúng tôi có thể tạm ngưng hoặc chấm dứt quyền truy cập Dịch vụ của bạn bất cứ lúc nào, có hoặc không báo trước, vì bất kỳ lý do gì, kể cả vi phạm các Điều khoản này. Bạn có thể ngừng dùng Dịch vụ và đóng tài khoản bất cứ lúc nào. Các mục mà theo bản chất cần tiếp tục có hiệu lực (gồm mục 11 và từ mục 15 đến 22) vẫn có hiệu lực sau khi chấm dứt.']]],
+    ['21. Luật áp dụng và giải quyết tranh chấp', [
+      ['p', 'Các Điều khoản này tuân theo luật của Tiểu bang Texas, không xét đến quy tắc xung đột pháp luật. Mọi tranh chấp phát sinh từ các Điều khoản này hoặc Dịch vụ sẽ chỉ được giải quyết tại tòa án tiểu bang hoặc liên bang ở Quận Bexar, Texas, và bạn đồng ý với thẩm quyền của các tòa án đó. Mỗi bên đều có thể đưa khiếu nại đủ điều kiện ra tòa án khiếu nại nhỏ (small claims court).'],
+      ['p', 'Trong phạm vi luật cho phép, khiếu nại phải được đưa ra với tư cách cá nhân, không với tư cách nguyên đơn hay thành viên trong vụ kiện tập thể hoặc đại diện. Mọi khiếu nại phải được nộp trong vòng một năm kể từ khi phát sinh, nếu không sẽ vĩnh viễn mất quyền khiếu nại.']]],
+    ['22. Điều khoản chung', [
+      ['ul', ['<b>Toàn bộ thỏa thuận:</b> Các Điều khoản này và Chính sách quyền riêng tư là toàn bộ thỏa thuận giữa bạn và Nail101 về Dịch vụ.',
+        '<b>Tính độc lập:</b> Nếu một điều khoản không thể thi hành, các điều khoản còn lại vẫn có hiệu lực.',
+        '<b>Không từ bỏ quyền:</b> Việc chúng tôi chưa thực thi một điều khoản không có nghĩa là từ bỏ điều khoản đó.',
+        '<b>Chuyển nhượng:</b> Bạn không được chuyển nhượng các Điều khoản này khi chưa có sự đồng ý của chúng tôi. Chúng tôi có thể tự do chuyển nhượng.',
+        '<b>Thông báo:</b> Chúng tôi có thể thông báo qua email, trên trang hoặc qua tài khoản của bạn.']]]],
+    ['23. Liên hệ', [
+      ['p', 'Câu hỏi, báo cáo tin đăng hoặc thông báo bản quyền:'],
+      ['p', 'SoftLab Studios LLC (đơn vị vận hành Nail101.com)<br>5706 Grandwood Dr, San Antonio, TX 78239<br>Email: <a href="mailto:info@nail101.com">info@nail101.com</a><br>Người nhận khiếu nại bản quyền: <a href="mailto:info@nail101.com">info@nail101.com</a>']]]
+  ]}
+};
+
+/* ================= n145: bảo vệ web =================
+   1 hẹn giờ ứng tuyển / lời mời (rules + đếm ngược)   2 tối đa 5 bài / 1 giờ
+   3 Điều khoản mới (EN nguyên văn + VI) + tick đồng ý khi đăng ký + băng nhắc người dùng cũ
+   4 footer có info@nail101.com   5 tin nhắn / mail: mã tài liệu theo ngày → máy chủ chặn quá số lượng
+   6 sai PIN 5 lần → khoá 15 phút */
+const N45 = {ap:{cd:3 * 60e3, max:8}, of:{cd:2 * 60e3, max:15}, po:{win:3600e3, max:5}, pend:5, msgMax:200, mailMax:300, pinMax:5, pinLock:15 * 60e3};
+state.n45 = {rl:null, rlUid:'', rlBusy:false, mailN:{}, tv:{}, tvBusy:{}, agree:false, agreeErr:false};
+
+Object.assign(T.vi, {
+  n45Wait:m => `Bạn vừa gửi xong. Đợi ${m} nữa để gửi tiếp.`, n45ApMax:n => `Hôm nay bạn đã ứng tuyển ${n} lần (tối đa). Ngày mai thử lại nhé.`,
+  n45OfMax:n => `Hôm nay bạn đã gửi ${n} lời mời (tối đa). Ngày mai thử lại nhé.`,
+  n45Pend:n => `Bạn đang có ${n} đơn ứng tuyển chờ trả lời. Đợi tiệm trả lời hoặc rút bớt đơn rồi ứng tuyển tiếp.`,
+  n45PoMax:m => `Bạn đã đăng 5 bài trong 1 giờ (tối đa). Thử lại sau ${m}.`, n45MsgMax:'Bạn đã gửi quá nhiều tin nhắn trong cuộc trò chuyện này hôm nay. Ngày mai nhắn tiếp nhé.',
+  n45Slow:'Bạn gửi nhanh quá. Đợi 2 giây rồi gửi lại.',
+  n45Agree:'Tôi đủ 18 tuổi và đồng ý với <a href="#terms" target="_blank">Điều khoản sử dụng</a> và <a href="#privacy" target="_blank">Chính sách quyền riêng tư</a>.',
+  n45AgreeErr:'Vui lòng tick ô đồng ý để tạo tài khoản.',
+  n45Tb:'Nail101 đã cập nhật <b>Điều khoản sử dụng</b>. Vui lòng đọc và bấm đồng ý để tiếp tục dùng web.', n45TbRead:'Xem điều khoản', n45TbOk:'Tôi đồng ý',
+  n45PinLock:m => `Nhập sai mã PIN quá nhiều lần. Đợi ${m} phút rồi thử lại, hoặc bấm "Quên mã PIN?".`
+});
+Object.assign(T.en, {
+  n45Wait:m => `You just sent one. Please wait ${m} before sending another.`, n45ApMax:n => `You've applied ${n} times today (the limit). Try again tomorrow.`,
+  n45OfMax:n => `You've sent ${n} offers today (the limit). Try again tomorrow.`,
+  n45Pend:n => `You have ${n} applications waiting for an answer. Wait for a reply or withdraw one before applying again.`,
+  n45PoMax:m => `You've posted 5 times in the last hour (the limit). Try again in ${m}.`, n45MsgMax:'You’ve sent too many messages in this chat today. Please continue tomorrow.',
+  n45Slow:'You’re sending too fast. Wait 2 seconds and try again.',
+  n45Agree:'I am 18 or older and I agree to the <a href="#terms" target="_blank">Terms of Use</a> and <a href="#privacy" target="_blank">Privacy Policy</a>.',
+  n45AgreeErr:'Please tick the box to agree before creating your account.',
+  n45Tb:'Nail101 has updated its <b>Terms of Use</b>. Please read them and tap agree to keep using the site.', n45TbRead:'Read the terms', n45TbOk:'I agree',
+  n45PinLock:m => `Too many wrong PIN tries. Wait ${m} minutes and try again, or tap "Forgot PIN?".`
+});
+
+/* ---------- tiện ích ---------- */
+function n45Day(ms){ return Math.floor(((ms == null ? Date.now() : ms) - 21600000) / 86400000); }   /* ngày theo giờ Texas (UTC-6), giống rules */
+function n45Ms(v){ if (!v) return 0; if (typeof v.toMillis === 'function') return v.toMillis(); if (typeof v === 'number') return v; if (v.__tsv) return v.__tsv; if (v.seconds) return v.seconds * 1000; return 0; }
+function n45Mmss(ms){ const s = Math.max(1, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+function n45LsGet(k){ try { return Number(localStorage.getItem(k)) || 0; } catch (e) { return 0; } }
+function n45LsSet(k, v){ try { localStorage.setItem(k, String(v)); } catch (e) {} }
+function n45Off(){ return !state.user || !!(state.adm && state.adm.on) || !!window.__n45off; }
+function n45Perm(e){ return /permission/i.test(String((e && e.code) || '')); }
+function n45ErrMsg(e, fb){ return e && e.code === 'n45' ? e.message : fb(e); }
+
+/* ---------- 1 + 2: giới hạn (đọc từ rl/{uid}) ---------- */
+function n45Left(kind){
+  if (n45Off()) return 0;
+  const r = state.n45.rl || {}, now = Date.now();
+  if (kind === 'po'){ const w = n45Ms(r.poW); return w && now < w + N45.po.win && (r.poN || 0) >= N45.po.max ? w + N45.po.win - now : 0; }
+  const T = n45Ms(r[kind + 'T']); return T && now < T + N45[kind].cd ? T + N45[kind].cd - now : 0;
+}
+function n45Can(kind){
+  if (n45Off()) return '';
+  const r = state.n45.rl || {}, now = Date.now(), left = n45Left(kind);
+  if (kind === 'po') return left ? t('n45PoMax', n45Mmss(left)) : '';
+  if (left) return t('n45Wait', n45Mmss(left));
+  const T = n45Ms(r[kind + 'T']);
+  if (T && n45Day(T) === n45Day(now) && (r[kind + 'N'] || 0) >= N45[kind].max) return t(kind === 'ap' ? 'n45ApMax' : 'n45OfMax', N45[kind].max);
+  if (kind === 'ap'){
+    const u = state.user.uid, ths = (state.live && state.live.threads) || [];
+    if (ths.filter(x => x.from === u && x.kind === 'apply' && (!x.status || x.status === 'pending')).length >= N45.pend) return t('n45Pend', N45.pend);
+  }
+  return '';
+}
+/* giá trị mới cho rl/{uid}. flip = đoán ngược "cùng ngày / cùng giờ" (lệch đồng hồ lúc nửa đêm) */
+function n45Next(kind, o, flip){
+  const ST = firebase.firestore.FieldValue.serverTimestamp(), now = Date.now();
+  if (kind === 'po'){
+    const w = n45Ms(o.poW); let same = !!(w && now < w + N45.po.win); if (flip) same = !same;
+    return same && w ? {poT:ST, poN:(o.poN || 0) + 1} : {poT:ST, poW:ST, poN:1};
+  }
+  const T = n45Ms(o[kind + 'T']); let same = !!(T && n45Day(T) === n45Day(now)); if (flip) same = !same;
+  return {[kind + 'T']:ST, [kind + 'N']:same && T ? (o[kind + 'N'] || 0) + 1 : 1};
+}
+async function n45RlLoad(){
+  const u = state.user; if (!u) return {};
+  try { const s = await firebase.firestore().collection('rl').doc(u.uid).get(); state.n45.rl = s.exists ? (s.data() || {}) : {}; }
+  catch (e) { state.n45.rl = state.n45.rl || {}; }
+  state.n45.rlUid = u.uid; return state.n45.rl;
+}
+/* ghi cùng một lượt (batch): cập nhật bộ đếm rl + việc chính. Rules chỉ cho qua nếu bộ đếm đổi đúng lúc */
+async function n45Commit(kind, fn){
+  const u = state.user; if (!u) throw {code:'unauthenticated'};
+  const db = firebase.firestore(), ref = db.collection('rl').doc(u.uid);
+  const o = await n45RlLoad();
+  const msg = n45Can(kind); if (msg) throw {code:'n45', message:msg};
+  const go = async flip => { const b = db.batch(); b.set(ref, n45Next(kind, o, flip), {merge:true}); fn(b); await b.commit(); };
+  try { await go(false); }
+  catch (e) { if (n45Perm(e) && n45Ms(kind === 'po' ? o.poW : o[kind + 'T'])) await go(true); else throw e; }
+  await n45RlLoad();
+}
+['n1apply', 'n1offer'].forEach((a, i) => {
+  const k = i ? 'of' : 'ap', f0 = ACT[a];
+  if (typeof f0 !== 'function') return;
+  ACT[a] = function(el){
+    if (state.user && !n45Off()){
+      if (state.n45.rlUid !== state.user.uid) n45RlLoad();
+      const m = n45Can(k); if (m){ toast(m); return; }
+    }
+    return f0.apply(this, arguments);
+  };
+});
+(() => {
+  const fp0 = ACT.fpublish; if (typeof fp0 !== 'function') return;
+  ACT.fpublish = function(el){
+    const type = el && el.dataset && el.dataset.ft, fs = type && state.forms && state.forms[type];
+    const isNew = !(fs && fs.editId) && !(type === 'profile' && state.myProfile && state.myProfile.live);
+    if (state.user && isNew){ const m = n45Can('po'); if (m){ toast(m); return; } }
+    return fp0.apply(this, arguments);
+  };
+})();
+/* đếm ngược trên nút Ứng tuyển / Mời làm + nạp bộ đếm khi đăng nhập */
+setInterval(() => {
+  if (!state.user){ state.n45.rlUid = ''; state.n45.rl = null; return; }
+  if (state.n45.rlUid !== state.user.uid && !state.n45.rlBusy){ state.n45.rlBusy = true; n45RlLoad().finally(() => { state.n45.rlBusy = false; }); }
+  [['ap', 'n1apply'], ['of', 'n1offer']].forEach(([k, a]) => {
+    const left = n45Left(k);
+    document.querySelectorAll(`[data-act="${a}"]`).forEach(b => {
+      if (left > 0){ if (b.dataset.n45o == null) b.dataset.n45o = b.innerHTML; b.innerHTML = '⏳ ' + n45Mmss(left); b.classList.add('n45cool'); }
+      else if (b.dataset.n45o != null){ b.innerHTML = b.dataset.n45o; delete b.dataset.n45o; b.classList.remove('n45cool'); }
+    });
+  });
+}, 1000);
+
+/* ---------- 5: tin nhắn + mail: mã tài liệu "<uid>-d<ngày>-n<số>" → mỗi ngày tối đa N cái (máy chủ chặn) ---------- */
+let n45LastMsg = 0;
+async function n45MsgAdd(ref, data){
+  if (Date.now() - n45LastMsg < 2000 && !window.__n45off) throw {code:'n45', message:t('n45Slow')};
+  const uid = data.from, d = n45Day(), key = 'n45m_' + ref.id + '_' + d, col = ref.collection('messages');
+  const id = n => `${uid}-d${d}-n${n}`, has = async n => { try { return (await col.doc(id(n)).get()).exists; } catch (e) { return false; } };
+  let n = n45LsGet(key);
+  for (let tries = 0; tries < 4; tries++){
+    if (n >= N45.msgMax) break;
+    try { await col.doc(id(n)).set(data); n45LsSet(key, n + 1); n45LastMsg = Date.now(); return col.doc(id(n)); }
+    catch (e) {
+      if (!n45Perm(e) || !(await has(n))) throw e;          /* bị chặn thật, không phải trùng mã */
+      let lo = n, hi = N45.msgMax;                              /* tìm số còn trống đầu tiên */
+      while (lo + 1 < hi){ const mid = (lo + hi) >> 1; if (await has(mid)) lo = mid; else hi = mid; }
+      n = hi;
+    }
+  }
+  throw {code:'n45', message:t('n45MsgMax')};
+}
+function n45Mail(data){
+  const u = state.user && state.user.uid; if (!u) return Promise.reject({code:'unauthenticated'});
+  const d = n45Day(), key = 'n45mail_' + u + '_' + d, db = firebase.firestore();
+  const next = () => { const n = Math.max(state.n45.mailN[key] || 0, n45LsGet(key)); state.n45.mailN[key] = n + 1; n45LsSet(key, n + 1); return n; };
+  const attempt = async tries => {
+    const n = next(); if (n >= N45.mailMax) throw {code:'n45', message:'mail limit'};
+    try { await db.collection('mail').doc(`m-${u}-d${d}-n${n}`).set(data); }
+    catch (e) { if (tries > 1 && n45Perm(e)) return attempt(tries - 1); throw e; }
+  };
+  return attempt(5);
+}
+
+/* ---------- 3: Điều khoản ---------- */
+function n45TermsView(){
+  const d = N45_TERMS[lang === 'vi' ? 'vi' : 'en'];
+  const blk = b => b[0] === 'p' ? `<p>${b[1]}</p>` : b[0] === 'h3' ? `<h3 class="n45h3">${b[1]}</h3>` : `<${b[0]} class="jd-list n45l">${b[1].map(x => `<li>${x}</li>`).join('')}</${b[0]}>`;
+  return `<div class="wrap narrow page legal n45terms"><a class="back" href="#home">${ICON.back}${t('back')}</a>
+    <h1 class="pg-title">${d.title}</h1><p class="hint">${d.date}</p>${d.note ? `<p class="n45note">${d.note}</p>` : ''}
+    ${d.secs.map(s => `<section class="jd-sec"><h2>${s[0]}</h2>${s[1].map(blk).join('')}</section>`).join('')}
+    ${lang === 'vi' ? `<p><button class="btn-link" type="button" data-act="lang" data-v="en">Read the official English version →</button></p>` : ''}
+    <p style="margin-top:16px"><a class="btn-link" href="#privacy">${L(LEGAL.privacy.title)} →</a></p></div>`;
+}
+const N45_ORG = {vi:'SoftLab Studios LLC (đơn vị vận hành Nail101.com)', en:'SoftLab Studios LLC (operator of Nail101.com)'};
+function n45Contact(){
+  return `<p style="margin:0">${L(N45_ORG)}<br>5706 Grandwood Dr, San Antonio, TX 78239<br>Email: <a href="mailto:info@nail101.com">info@nail101.com</a><br>${supLine()}</p>`;
+}
+if (typeof LEGAL !== 'undefined' && LEGAL.privacy){
+  LEGAL.privacy.intro = {
+    vi:'Nail101.com do SoftLab Studios LLC (“chúng tôi”) vận hành, là trang giúp tiệm nail và thợ nail ở Texas kết nối với nhau. Trang này giải thích chúng tôi thu thập thông tin gì, dùng để làm gì và bạn có quyền gì. Chính sách này là một phần của <a href="#terms">Điều khoản sử dụng</a>.',
+    en:'Nail101.com is operated by SoftLab Studios LLC (“we”). It helps nail salons and nail techs in Texas connect. This page explains what information we collect, how we use it, and the choices you have. This policy is part of our <a href="#terms">Terms of Use</a>.'};
+}
+(() => {
+  const v0 = viewLegal;
+  viewLegal = function(kind){
+    if (kind === 'terms') return n45TermsView();
+    let h = v0(kind);
+    h = h.replace(L(LEGAL_DATE), lang === 'vi' ? 'Cập nhật lần cuối: 26/11/2026' : 'Last updated: Nov 26, 2026');
+    h = h.replace(/(<h2>(?:Liên hệ|Contact)<\/h2>)<p style="margin:0">[\s\S]*?<\/p>(<\/section>)/, (m, a, b) => a + n45Contact() + b);
+    return h;
+  };
+})();
+/* 4: footer thêm email */
+(() => { const s0 = supLine; supLine = function(){ return s0.apply(this, arguments) + ` · <a href="mailto:info@nail101.com">info@nail101.com</a>`; }; })();
+
+/* đăng ký: bắt buộc tick đồng ý */
+(() => {
+  const v0 = viewLogin;
+  viewLogin = function(){
+    let h = v0.apply(this, arguments);
+    const a = state.auth || {};
+    if (!state.user && a.step === 'profile' && state.pendingUser && /data-act="audone"/.test(h)){
+      const box = `<label class="n45agree"><input type="checkbox" id="n45-agree"${state.n45.agree ? ' checked' : ''}><span>${t('n45Agree')}</span></label>${state.n45.agreeErr ? `<p class="err n45aerr" role="alert">${t('n45AgreeErr')}</p>` : ''}`;
+      h = h.replace(/(<button class="btn btn-primary btn-block" type="button" data-act="audone")/, box + '$1');
+    }
+    return h;
+  };
+  document.addEventListener('change', e => { if (e.target && e.target.id === 'n45-agree'){ state.n45.agree = e.target.checked; if (state.n45.agree && state.n45.agreeErr){ state.n45.agreeErr = false; const x = document.querySelector('.n45aerr'); if (x) x.remove(); } } });
+  const d0 = ACT.audone;
+  ACT.audone = async function(el){
+    const box = document.getElementById('n45-agree');
+    if (box && !box.checked){
+      const nm = document.getElementById('au-name'), p2 = document.getElementById('au-ph2'), pw = document.getElementById('n38-new');
+      if (nm) state.auth.name = nm.value; if (p2) state.auth.phone2 = p2.value; if (pw && state.n38) state.n38.pw = pw.value;
+      state.n45.agreeErr = true; render(); return;
+    }
+    const agreed = !!box;
+    const r = await d0.apply(this, arguments);
+    if (agreed && state.user){
+      state.n45.agree = false; state.n45.agreeErr = false; state.n45.tv[state.user.uid] = N45_TERMS_V;
+      try { await firebase.firestore().collection('users').doc(state.user.uid).set({terms:N45_TERMS_V, termsAt:firebase.firestore.FieldValue.serverTimestamp()}, {merge:true}); } catch (e) { console.warn('n45 terms', e); }
+    }
+    return r;
+  };
+})();
+/* người dùng cũ: băng nhắc đồng ý điều khoản mới (không chặn thao tác) */
+function n45NeedTerms(){
+  const u = state.user; if (!u || window.__n45off) return false;
+  if (!(u.uid in state.n45.tv)){
+    if (!state.n45.tvBusy[u.uid]){
+      state.n45.tvBusy[u.uid] = true;
+      firebase.firestore().collection('users').doc(u.uid).get()
+        .then(s => { state.n45.tv[u.uid] = (s.exists && (s.data() || {}).terms) || ''; if (state.n45.tv[u.uid] !== N45_TERMS_V) render(); })
+        .catch(() => { state.n45.tv[u.uid] = N45_TERMS_V; });
+    }
+    return false;
+  }
+  return state.n45.tv[u.uid] !== N45_TERMS_V;
+}
+(() => {
+  const r0 = render;
+  render = function(){
+    const out = r0.apply(this, arguments);
+    try {
+      const main = document.getElementById('main'), v = route().view;
+      if (main && v !== 'login' && n45NeedTerms() && !main.querySelector('.n45tb')){
+        const d = document.createElement('div'); d.className = 'n45tb'; d.setAttribute('role', 'region');
+        d.innerHTML = `<p>${t('n45Tb')}</p><div class="n45tbb"><a class="btn btn-ghost" href="#terms">${t('n45TbRead')}</a><button class="btn btn-primary" type="button" data-act="n45agree">${t('n45TbOk')}</button></div>`;
+        main.insertBefore(d, main.firstChild);
+      }
+    } catch (e) {}
+    return out;
+  };
+})();
+ACT.n45agree = async function(el){
+  const u = state.user; if (!u) return;
+  el.disabled = true;
+  try {
+    await firebase.firestore().collection('users').doc(u.uid).set({terms:N45_TERMS_V, termsAt:firebase.firestore.FieldValue.serverTimestamp()}, {merge:true});
+    state.n45.tv[u.uid] = N45_TERMS_V; render();
+  } catch (e) { el.disabled = false; toast(String((e && e.code) || e)); }
+};
+
+/* ---------- 6: sai PIN 5 lần → khoá 15 phút (trên máy này; Firebase cũng tự chặn khi thử dồn dập) ---------- */
+(() => {
+  const l0 = ACT.n38login; if (typeof l0 !== 'function') return;
+  ACT.n38login = async function(el){
+    const ph = String((document.getElementById('au-phone') || {}).value || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+    const key = 'n45pin_' + ph, now = Date.now();
+    let rec = {}; try { rec = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (e) {}
+    if (ph.length === 10 && rec.until && rec.until > now){
+      state.auth.phone = ph; state.auth.msg = t('n45PinLock', Math.ceil((rec.until - now) / 60000)); render(); return;
+    }
+    const r = await l0.apply(this, arguments);
+    if (ph.length === 10){
+      if (state.auth && state.auth.msg && (state.auth.msg === t('n38Bad') || state.auth.msg === t('n38Many'))){
+        rec.n = (rec.n || 0) + 1; rec.until = 0;
+        if (rec.n >= N45.pinMax){ rec = {n:0, until:Date.now() + N45.pinLock}; state.auth.msg = t('n45PinLock', Math.ceil(N45.pinLock / 60000)); render(); }
+        try { localStorage.setItem(key, JSON.stringify(rec)); } catch (e) {}
+      } else if (state.auth && !state.auth.msg){ try { localStorage.removeItem(key); } catch (e) {} }
+    }
+    return r;
+  };
+})();
+
+(() => { const st = document.createElement('style'); st.textContent = `
+.n45terms h2{font-size:18px}.n45terms .n45h3{font-size:15.5px;margin:14px 0 4px}.n45terms ol.n45l{padding-left:22px}.n45terms ol.n45l li{list-style:decimal}
+.n45note{background:#FFF7E6;border:1px solid #F3D9A4;border-radius:10px;padding:10px 12px;font-size:14px}
+.n45agree{display:flex;gap:10px;align-items:flex-start;margin:12px 0 10px;font-size:14px;line-height:1.45;cursor:pointer}
+.n45agree input{width:20px;height:20px;flex:0 0 auto;margin-top:1px;accent-color:var(--primary)}.n45agree a{color:var(--primary);font-weight:700}
+.n45tb{background:#FFF7E6;border:1px solid #F3D9A4;border-radius:14px;padding:12px 14px;margin:12px auto;max-width:1100px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.n45tb p{margin:0;font-size:14px;line-height:1.45;flex:1 1 260px}.n45tbb{display:flex;gap:8px;flex-wrap:wrap}
+.n45cool{opacity:.65;cursor:not-allowed}`;
+document.head.appendChild(st); })();
+/* cổng cho test tự động */
+window.__n45 = {commit:n45Commit, can:n45Can, mail:n45Mail, day:n45Day, rl:() => state.n45.rl, load:n45RlLoad};
 
 render();
 })();
