@@ -692,6 +692,7 @@ details.more summary{cursor:pointer;font-weight:700;color:var(--primary);padding
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -3149,6 +3150,7 @@ function initLive(){
   function fromDoc(doc){
     try {
       const d = doc.data(EST), o = d.ad || {};
+      if (d.delAt) return null;   /* n147: tài khoản đang chờ xoá → ẩn bài */
       return Object.assign({}, o, {id:doc.id, live:true, ownerUid:d.ownerUid, ownerPhone:d.ownerPhone || '', ownerName:d.ownerName || '', daysAgo:daysSince(d.createdAt), postedMs:ms(d.createdAt) || ms(d.updatedAt) || 0, _form:d.form || null, _kind:d.kind || '', avatar:d.avatar || '', filled:!!d.filled, hired:!!d.hired, outcome:d.outcome || '', hiredVia:d.hiredVia || '', quick:d.quick || null, filled:!!d.filled || !!(d.quick && d.quick.date && d.quick.date < (typeof n44Today === 'function' ? n44Today() : '0')), expMs:d.expMs || 0, views:d.views || 0, mod:d.mod || '', claim:d.claim || null, licOk2:!!d.licOk2, ready:d.ready ? Object.assign({}, d.ready, {atMs:ms(d.ready.at) || Date.now()}) : null});
     } catch (e) { return null; }
   }
@@ -3187,7 +3189,7 @@ function initLive(){
     try { const doc = await db.collection('users').doc(u.uid).get(); d = doc.exists ? doc.data() : null; } catch (e) { console.warn('user doc', e); }
     const base = {uid:u.uid, email:n38Real(u.email) || (d && d.email) || '', phone:(d && d.phone) || (u.phoneNumber ? digits10(u.phoneNumber) : '')};
     if (d && d.name){
-      state.user = Object.assign(base, {name:d.name, role:d.role || 'other', mode:d.mode || '', licNo:d.licNo || '', refContacts:d.refContacts || [], addrs:d.addrs || {}, pics:d.pics || {}, priv:d.priv || {}, avatar:d.avatar || '', saved:d.saved || [], trusted:!!d.trusted}); state.pendingUser = null;
+      state.user = Object.assign(base, {name:d.name, role:d.role || 'other', mode:d.mode || '', licNo:d.licNo || '', refContacts:d.refContacts || [], addrs:d.addrs || {}, pics:d.pics || {}, priv:d.priv || {}, avatar:d.avatar || '', saved:d.saved || [], trusted:!!d.trusted, delAt:d.delAt ? (d.delAt.toMillis ? d.delAt.toMillis() : Date.now()) : 0}); state.pendingUser = null;
       startUserListeners();
       if (state.auth.pending || route().view === 'login'){ state.auth = freshAuth(); toast(t('welcome', state.user.name)); afterAuth(); }
       render();
@@ -3311,10 +3313,10 @@ function initLive(){
       const n = document.getElementById('au-name').value.trim(), p2el = document.getElementById('au-ph2');
       a.name = n; if (p2el) a.phone2 = p2el.value;
       if (!n){ a.msg = t('errRequired'); render(); return; }
-      const ph = p.phone || (p2el && digits10(p2el.value).length === 10 ? digits10(p2el.value) : '');
+      const ph = p.phone || '';   /* n147: chỉ lưu số đã xác minh SMS */
       a.busy = true; a.msg = ''; render();
       try {
-        const role = a.role || 'other', mode = role === 'both' ? (a.n39mode === 'tech' ? 'tech' : 'salon') : '', em = p.email || a.n39mail || '';
+        const role = a.role || 'other', mode = role === 'both' ? (a.n39mode === 'tech' ? 'tech' : 'salon') : '', em = p.email || '';   /* n147: email nhập tay phải xác minh bằng mã, không lưu thẳng */
         await db.collection('users').doc(p.uid).set(Object.assign({name:n, role, phone:ph, email:em, createdAt:TS()}, mode ? {mode} : {}), {merge:true});
         state.user = {uid:p.uid, name:n, role, mode, phone:ph, email:em}; state.pendingUser = null;
         state.auth = freshAuth(); startUserListeners(); toast(t('welcome', n)); afterAuth(); render();
@@ -3513,7 +3515,7 @@ function initLive(){
       await uploadPhotos(fs);
       const obj = previewObject(type, fs), me = state.user;
       const formPhone = digits10(fs.data.phone);
-      if (formPhone.length === 10 && !me.phone){ await db.collection('users').doc(me.uid).set({phone:formPhone}, {merge:true}); me.phone = formPhone; }
+      /* n147: số điện thoại chỉ lưu khi đã xác minh bằng SMS (Tài khoản → Thêm số) */
       obj.hasPhone = !!(formPhone.length === 10 || me.phone);
       delete obj.phone; delete obj.id; delete obj.contactBy; delete obj.receiveBy;
       const d = fs.data;
@@ -17642,6 +17644,493 @@ body.n46thr .reply{bottom:calc(64px + env(safe-area-inset-bottom))}
 .n46maint summary{cursor:pointer;font-weight:700;color:var(--muted)}.n46thend{margin:18px auto 8px}.n46done{pointer-events:auto}
 .ct-p{margin-left:4px}.n42vn{margin-left:4px}`;
 document.head.appendChild(st); })();
+
+/* ================= n147: góp ý 27/11 =================
+   1 form "Cần thợ làm 1 ngày" làm lại (nút to, bấm là đổi màu, có "+ Khác")
+   2 số điện thoại: chỉ lưu khi xác minh SMS; đổi số trong Tài khoản
+   3 email: xác minh bằng mã 6 số (Cloud Function), 1 email = 1 tài khoản
+   4 xoá tài khoản: chờ 7 ngày, đăng nhập lại để khôi phục
+   5 tiệm đăng tối đa 2 tin cùng lúc (tin "1 ngày" không tính)
+   tiền tố n47 */
+state.n47 = {em:null, ph:null, delBusy:false};
+const N47_MAXADS = 2;
+
+Object.assign(T.vi, {
+  n47S1:'Cần làm dịch vụ gì?', n47S1h:'Chọn 1 hoặc nhiều', n47S2:'Ngày nào?', n47S3:'Mấy giờ?', n47S4:'Trả lương', n47S5:'Thêm thông tin',
+  n47Other:'+ Khác', n47OtherPh:'VD: vẽ 3D, đắp gel, nối mi…', n47Add:'Thêm', n47Rm:'Bỏ', n47CusMax:'Tối đa 3 dịch vụ tự nhập.',
+  n47HrFull:'Cả ngày', n47HrAm:'Buổi sáng', n47HrPm:'Buổi chiều', n47HrOther:'+ Giờ khác', n47From:'Từ', n47To:'Đến',
+  n47PerH:'Theo giờ', n47PerD:'Theo ngày', n47AmtOther:'+ Số khác', n47AmtPh:'Nhập số tiền', n47Hr:'/giờ', n47Dy:'/ngày',
+  n47Sum:'Tóm tắt', n47SumNone:'Chưa chọn đủ thông tin',
+  n47PhT:'Số điện thoại', n47PhNone:'Chưa có số', n47PhAdd:'Thêm số', n47PhChg:'Đổi số',
+  n47PhModT:'Đổi số điện thoại', n47PhModAddT:'Thêm số điện thoại', n47PhD:'Mình sẽ gửi mã 6 số qua tin nhắn SMS để xác minh số này là của bạn.',
+  n47PhNew:'Số điện thoại mới', n47PhSend:'Gửi mã SMS', n47PhSent:p => `Đã gửi mã tới ${p}. Nhập mã 6 số:`, n47PhOk:'Xác nhận', n47PhBack:'Đổi số khác',
+  n47PhSame:'Đây đã là số của bạn.', n47PhUsed:'Số này đã dùng cho một tài khoản khác. Mỗi số chỉ dùng cho 1 tài khoản.',
+  n47PhCode:'Mã không đúng. Kiểm tra lại tin nhắn.', n47PhRecent:'Vì an toàn, hãy đăng xuất rồi đăng nhập lại, sau đó đổi số.', n47PhMany:'Thử quá nhiều lần. Đợi một lúc rồi thử lại.',
+  n47PhDone:'Đã đổi số điện thoại. Hãy tạo mã PIN mới cho số này.', n47PhAdded:'Đã thêm số điện thoại.', n47PhSignup:'Số điện thoại thêm sau trong Tài khoản (xác minh bằng SMS).',
+  n47EmT:'Email nhận thông báo', n47EmD:'Mình sẽ gửi mã 6 số tới email này. Nhập đúng mã thì email mới được lưu.', n47EmSend:'Gửi mã xác minh',
+  n47EmSent:e => `Đã gửi mã tới ${e}. Kiểm tra cả hộp thư Spam. Nhập mã 6 số:`, n47EmOk:'Xác nhận', n47EmBack:'Đổi email khác', n47EmResend:'Gửi lại mã',
+  n47EmRm:'Gỡ email', n47EmRmQ:'Gỡ email này? Bạn sẽ không nhận được email thông báo nữa.', n47EmRmDone:'Đã gỡ email.',
+  n47EmDone:e => `Đã xác minh và lưu ${e}.`, n47EmBad:'Email không hợp lệ.', n47EmTaken:'Email này đã dùng cho một tài khoản khác. Mỗi email chỉ dùng cho 1 tài khoản.',
+  n47EmWait:'Vừa gửi mã. Đợi 1 phút rồi gửi lại.', n47EmDaily:'Hôm nay đã gửi mã quá nhiều lần. Thử lại ngày mai.', n47EmTries:'Nhập sai quá nhiều lần. Bấm "Gửi lại mã".',
+  n47EmExp:'Mã đã hết hạn (15 phút). Bấm "Gửi lại mã".', n47EmWrong:n => `Mã không đúng. Còn ${n} lần thử.`, n47EmNoCode:'Bấm "Gửi mã xác minh" trước.',
+  n47EmOff:'Chức năng xác minh email đang được cài đặt. Thử lại sau.', n47SignupTaken:'Email này đã dùng cho một tài khoản khác. Hãy đăng nhập bằng số điện thoại của tài khoản đó.',
+  n47DelQ1:'Xoá tài khoản?\n\nHồ sơ và tin đăng của bạn sẽ ẩn ngay. Sau 7 ngày tài khoản bị xoá hẳn.\nTrong 7 ngày, đăng nhập lại để khôi phục.',
+  n47DelDone:'Đã xoá tài khoản. Bạn có 7 ngày để đăng nhập lại và khôi phục.',
+  n47ResT:'Tài khoản đang chờ xoá', n47ResD:n => `Bạn đã bấm xoá tài khoản. Còn ${n} ngày trước khi tài khoản bị xoá hẳn. Hồ sơ và tin đăng đang được ẩn.`,
+  n47ResOk:'Khôi phục tài khoản', n47ResOut:'Đăng xuất', n47ResDone:'Đã khôi phục tài khoản và tin đăng.', n47DelTag:n => `⏳ Chờ xoá (còn ${n} ngày)`,
+  n47MaxT:`Bạn đã có ${N47_MAXADS} tin tuyển đang chạy`, n47MaxD:`Mỗi tiệm đăng được tối đa ${N47_MAXADS} tin tuyển cùng lúc (tin "Cần thợ làm 1 ngày" không tính). Muốn đăng tin mới, hãy đóng hoặc sửa một tin cũ.`,
+  n47Edit:'Sửa', n47Mine:'Xem tin của tôi',
+  n47BfT:'Sổ email (mỗi email 1 tài khoản)', n47BfD:'Ghi email của các tài khoản cũ vào sổ để chặn trùng. Bấm "Kiểm tra" trước để xem có email nào bị trùng.',
+  n47BfDry:'Kiểm tra (không ghi)', n47BfRun:'Ghi vào sổ', n47BfRes:(n, w, d) => `${n} email · ${w} cần ghi · ${d} email bị trùng`, n47BfDone:'Đã ghi sổ email.'
+});
+Object.assign(T.en, {
+  n47S1:'Which services?', n47S1h:'Pick one or more', n47S2:'Which day?', n47S3:'What hours?', n47S4:'Pay', n47S5:'More details',
+  n47Other:'+ Other', n47OtherPh:'e.g. 3D art, gel extensions, lashes…', n47Add:'Add', n47Rm:'Remove', n47CusMax:'Up to 3 custom services.',
+  n47HrFull:'All day', n47HrAm:'Morning', n47HrPm:'Afternoon', n47HrOther:'+ Other hours', n47From:'From', n47To:'To',
+  n47PerH:'Per hour', n47PerD:'Per day', n47AmtOther:'+ Other amount', n47AmtPh:'Enter amount', n47Hr:'/hr', n47Dy:'/day',
+  n47Sum:'Summary', n47SumNone:'Not complete yet',
+  n47PhT:'Phone number', n47PhNone:'No number yet', n47PhAdd:'Add number', n47PhChg:'Change number',
+  n47PhModT:'Change phone number', n47PhModAddT:'Add phone number', n47PhD:'We will text you a 6-digit code to confirm this number is yours.',
+  n47PhNew:'New phone number', n47PhSend:'Text me a code', n47PhSent:p => `Code sent to ${p}. Enter the 6 digits:`, n47PhOk:'Confirm', n47PhBack:'Use another number',
+  n47PhSame:'This is already your number.', n47PhUsed:'This number is already used by another account. Each number can have only 1 account.',
+  n47PhCode:'Wrong code. Check the text message.', n47PhRecent:'For safety, sign out and sign in again, then change your number.', n47PhMany:'Too many tries. Wait a bit and try again.',
+  n47PhDone:'Phone number changed. Please create a new PIN for this number.', n47PhAdded:'Phone number added.', n47PhSignup:'Add a phone number later in Account (confirmed by text).',
+  n47EmT:'Email for notifications', n47EmD:'We will send a 6-digit code to this email. The email is saved only after you enter the code.', n47EmSend:'Send code',
+  n47EmSent:e => `Code sent to ${e}. Check Spam too. Enter the 6 digits:`, n47EmOk:'Confirm', n47EmBack:'Use another email', n47EmResend:'Resend code',
+  n47EmRm:'Remove email', n47EmRmQ:'Remove this email? You will stop getting email notifications.', n47EmRmDone:'Email removed.',
+  n47EmDone:e => `${e} confirmed and saved.`, n47EmBad:'Invalid email.', n47EmTaken:'This email is already used by another account. Each email can have only 1 account.',
+  n47EmWait:'Code just sent. Wait 1 minute before resending.', n47EmDaily:'Too many codes today. Try again tomorrow.', n47EmTries:'Too many wrong tries. Tap "Resend code".',
+  n47EmExp:'The code expired (15 minutes). Tap "Resend code".', n47EmWrong:n => `Wrong code. ${n} tries left.`, n47EmNoCode:'Tap "Send code" first.',
+  n47EmOff:'Email confirmation is being set up. Please try again later.', n47SignupTaken:'This email is already used by another account. Sign in with that account’s phone number.',
+  n47DelQ1:'Delete your account?\n\nYour profile and posts are hidden right away. After 7 days the account is deleted for good.\nSign in within 7 days to restore it.',
+  n47DelDone:'Account deleted. You have 7 days to sign in and restore it.',
+  n47ResT:'Your account is waiting to be deleted', n47ResD:n => `You chose to delete this account. ${n} days left before it is deleted for good. Your profile and posts are hidden.`,
+  n47ResOk:'Restore my account', n47ResOut:'Sign out', n47ResDone:'Your account and posts are restored.', n47DelTag:n => `⏳ Deleting (${n} days left)`,
+  n47MaxT:`You already have ${N47_MAXADS} job posts running`, n47MaxD:`Each salon can run up to ${N47_MAXADS} job posts at once ("1-day" posts don't count). To post a new one, close or edit an old post.`,
+  n47Edit:'Edit', n47Mine:'My posts',
+  n47BfT:'Email registry (1 email = 1 account)', n47BfD:'Record existing accounts’ emails to block duplicates. Tap "Check" first to see duplicate emails.',
+  n47BfDry:'Check (no changes)', n47BfRun:'Record emails', n47BfRes:(n, w, d) => `${n} emails · ${w} to record · ${d} duplicated`, n47BfDone:'Email registry saved.'
+});
+
+function n47Db(){ return firebase.firestore(); }
+function n47Keep(fn){ const y = window.scrollY; fn(); try { window.scrollTo(0, y); } catch (e) {} }
+function n47Ph10(v){ return String(v || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, ''); }
+function n47Pretty(d){ d = n47Ph10(d); return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : d; }
+
+/* ================= 1. form "Cần thợ làm 1 ngày" ================= */
+const N47_SV = ['acrylic_full', 'acrylic_fill', 'dip', 'gel_polish', 'gelx', 'manicure', 'pedicure', 'ombre_french', 'art_basic', 'waxing', 'lashes'];
+const N47_HRS = [['full', '09:30', '19:00'], ['am', '09:00', '14:00'], ['pm', '14:00', '19:00']];
+const N47_AMT = {per_hour:[18, 20, 22, 25], per_day:[150, 180, 200, 250]};
+function n47Hm(v){ const [h, m] = String(v || '').split(':').map(Number); if (isNaN(h)) return v || ''; const ap = h >= 12 ? 'pm' : 'am', hh = ((h + 11) % 12) + 1; return `${hh}${m ? ':' + String(m).padStart(2, '0') : ''}${ap}`; }
+function n47Date(d){ try { const x = new Date(d + 'T12:00:00'); return lang === 'vi' ? `${x.getDate()}/${x.getMonth() + 1}` : x.toLocaleDateString('en-US', {month:'short', day:'numeric'}); } catch (e) { return d; } }
+function n47U(){
+  const S = state.n44.urg = state.n44.urg || {svc:[], day:'today', date:'', from:'09:30', to:'19:00', pt:'per_hour', amt:'', zip:'', note:'', err:{}};
+  if (!S.hp) S.hp = (N47_HRS.find(h => h[1] === S.from && h[2] === S.to) || ['c'])[0];
+  return S;
+}
+function n47Chip(on, act, v, label, extra){
+  return `<button type="button" class="n47c${on ? ' on' : ''}" data-act="${act}" data-v="${esc(v)}" aria-pressed="${on ? 'true' : 'false'}"${extra || ''}>${on ? '<span class="n47ck" aria-hidden="true">✓</span>' : ''}${label}</button>`;
+}
+function n47Sum(S){
+  const date = S.day === 'today' ? n44Today() : S.day === 'tmr' ? n44Today(1) : S.date;
+  const amt = Number(S.amt), sv = S.svc.map(v => (N47_SV.indexOf(v) >= 0 ? svcName(v) : v));
+  if (!sv.length || !date || !(amt > 0) || !S.from || !S.to) return t('n47SumNone');
+  return `${n47Date(date)} · ${n47Hm(S.from)}–${n47Hm(S.to)} · $${amt}${t(S.pt === 'per_day' ? 'n47Dy' : 'n47Hr')} · ${sv.join(', ')}`;
+}
+n44UrgForm = function(){
+  if (!state.user) return loginGate();
+  const S = n47U(), e = S.err || {}, er = k => (e[k] ? `<p class="err" role="alert">${esc(e[k])}</p>` : '');
+  const last = (typeof n1MyAds === 'function' ? n1MyAds() : []).slice().sort((a, b) => n43Ms(b.updatedAt) - n43Ms(a.updatedAt))[0];
+  const needZip = !(last && /^\d{5}$/.test(last.zip || ''));
+  const cus = S.svc.filter(v => N47_SV.indexOf(v) < 0);
+  const svc = N47_SV.map(v => n47Chip(S.svc.indexOf(v) >= 0, 'n47sv', v, esc(svcName(v)))).join('')
+    + cus.map(v => `<span class="n47c on n47cus"><span class="n47ck" aria-hidden="true">✓</span>${esc(v)}<button type="button" class="n47x" data-act="n47cusx" data-v="${esc(v)}" aria-label="${esc(t('n47Rm'))} ${esc(v)}">×</button></span>`).join('')
+    + (cus.length < 3 ? `<button type="button" class="n47c n47add${S.cusOpen ? ' on' : ''}" data-act="n47cus" aria-expanded="${S.cusOpen ? 'true' : 'false'}">${esc(t('n47Other'))}</button>` : '');
+  const day = [['today', t('n44Today'), n47Date(n44Today())], ['tmr', t('n44Tmr'), n47Date(n44Today(1))]].map(([v, l, d]) => n47Chip(S.day === v, 'n47day', v, `${esc(l)} <small>${esc(d)}</small>`)).join('')
+    + n47Chip(S.day === 'pick', 'n47day', 'pick', esc(t('n44Pick')));
+  const hrs = N47_HRS.map(([k, f, to]) => n47Chip(S.hp === k, 'n47hr', k, `${esc(t({full:'n47HrFull', am:'n47HrAm', pm:'n47HrPm'}[k]))} <small>${esc(n47Hm(f))}–${esc(n47Hm(to))}</small>`)).join('')
+    + n47Chip(S.hp === 'c', 'n47hr', 'c', esc(t('n47HrOther')));
+  const amts = N47_AMT[S.pt] || [], pre = amts.indexOf(Number(S.amt)) >= 0 && !S.amtC;
+  const pay = amts.map(a => n47Chip(!S.amtC && Number(S.amt) === a, 'n47amt', String(a), `$${a}<small>${esc(t(S.pt === 'per_day' ? 'n47Dy' : 'n47Hr'))}</small>`)).join('')
+    + n47Chip(!!S.amtC || (!!S.amt && !pre), 'n47amt', 'c', esc(t('n47AmtOther')));
+  const sec = (n, title, body, hint) => `<section class="card n47s"><h2><span class="n47n" aria-hidden="true">${n}</span>${esc(title)}</h2>${hint ? `<p class="hint">${esc(hint)}</p>` : ''}${body}</section>`;
+  return `<div class="wrap narrow page n47u"><a class="back" href="#home">${ICON.back}${t('back')}</a>
+    <h1 class="pg-title">${esc(t('n44UrgT'))}</h1><p class="hint">${esc(t('n44UrgD'))}</p>
+    ${sec(1, t('n47S1'), `<div class="n47cs">${svc}</div>${S.cusOpen ? `<div class="n47row"><input id="n47-cus" type="text" maxlength="30" placeholder="${esc(t('n47OtherPh'))}" aria-label="${esc(t('n47OtherPh'))}"><button class="btn btn-primary" type="button" data-act="n47cusadd">${esc(t('n47Add'))}</button></div>` : ''}${er('svc')}`, t('n47S1h'))}
+    ${sec(2, t('n47S2'), `<div class="n47cs">${day}</div>${S.day === 'pick' ? `<input id="n44-ud" class="n47in" type="date" min="${n44Today()}" value="${esc(S.date)}" aria-label="${esc(t('n44Pick'))}">` : ''}${er('day')}`)}
+    ${sec(3, t('n47S3'), `<div class="n47cs">${hrs}</div>${S.hp === 'c' ? `<div class="n47two"><label>${esc(t('n47From'))}<input id="n44-uf" class="n47in" type="time" value="${esc(S.from)}"></label><label>${esc(t('n47To'))}<input id="n44-ut" class="n47in" type="time" value="${esc(S.to)}"></label></div>` : ''}${er('hrs')}`)}
+    ${sec(4, t('n47S4'), `<div class="n47seg" role="group">${[['per_hour', t('n47PerH')], ['per_day', t('n47PerD')]].map(([v, l]) => `<button type="button" class="${S.pt === v ? 'on' : ''}" data-act="n47pt" data-v="${v}" aria-pressed="${S.pt === v}">${esc(l)}</button>`).join('')}</div>
+      <div class="n47cs">${pay}</div>${S.amtC || (S.amt && !pre) ? `<div class="n47money"><span>$</span><input id="n44-ua" class="n47in" type="number" inputmode="decimal" min="1" placeholder="${esc(t('n47AmtPh'))}" value="${esc(S.amt)}" aria-label="${esc(t('n47AmtPh'))}"><span>${esc(t(S.pt === 'per_day' ? 'n47Dy' : 'n47Hr'))}</span></div>` : ''}${er('amt')}`)}
+    ${sec(5, t('n47S5'), `${needZip ? `<div class="fq"><label class="flabel" for="n44-uz">${esc(t('n44UrgZip'))}</label><input id="n44-uz" class="n47in" type="text" inputmode="numeric" maxlength="5" value="${esc(S.zip)}">${er('zip')}</div>` : ''}
+      <div class="fq"><label class="flabel" for="n44-un">${esc(t('n44UrgNote'))}</label><textarea id="n44-un" rows="2" maxlength="300">${esc(S.note)}</textarea></div>`)}
+    <div class="n47bar"><p class="n47sum"><b>${esc(t('n47Sum'))}:</b> <span id="n47-sum">${esc(n47Sum(S))}</span></p>
+      ${e.all ? `<p class="err" role="alert">${esc(e.all)}</p>` : ''}
+      <button class="btn btn-primary btn-block n47go" type="button" data-act="n44upost">${esc(t('n44UrgPost'))}</button></div></div>`;
+};
+function n47Re(){ n47Keep(render); }
+/* thanh "Đăng tin gấp" nằm ngay trên menu dưới */
+function n47Bar(){ try { const tb = document.querySelector('.tabbar'), vis = tb && getComputedStyle(tb).display !== 'none' && tb.getBoundingClientRect().height; document.documentElement.style.setProperty('--n47tb', (vis ? Math.round(window.innerHeight - tb.getBoundingClientRect().top) : 0) + 'px'); } catch (e) {} }
+window.addEventListener('resize', n47Bar);
+ACT.n47sv = function(el){ const S = n47U(), v = el.dataset.v, i = S.svc.indexOf(v); if (i >= 0) S.svc.splice(i, 1); else S.svc.push(v); if (S.err) delete S.err.svc; n47Re(); };
+ACT.n47cus = function(){ const S = n47U(); S.cusOpen = !S.cusOpen; n47Re(); setTimeout(() => { const i = document.getElementById('n47-cus'); if (i) i.focus(); }, 30); };
+ACT.n47cusadd = function(){
+  const S = n47U(), i = document.getElementById('n47-cus'), raw = i ? i.value : '';
+  const add = raw.split(/[,;]/).map(x => x.trim().replace(/\s+/g, ' ').slice(0, 30)).filter(Boolean);
+  add.forEach(x => { if (S.svc.filter(v => N47_SV.indexOf(v) < 0).length >= 3){ toast(t('n47CusMax')); return; } if (!S.svc.some(v => v.toLowerCase() === x.toLowerCase())) S.svc.push(x); });
+  S.cusOpen = false; if (S.err) delete S.err.svc; n47Re();
+};
+ACT.n47cusx = function(el){ const S = n47U(), i = S.svc.indexOf(el.dataset.v); if (i >= 0) S.svc.splice(i, 1); n47Re(); };
+ACT.n47day = function(el){ const S = n47U(); S.day = el.dataset.v; if (S.err) delete S.err.day; n47Re(); };
+ACT.n47hr = function(el){ const S = n47U(), h = N47_HRS.find(x => x[0] === el.dataset.v); S.hp = el.dataset.v; if (h){ S.from = h[1]; S.to = h[2]; } if (S.err) delete S.err.hrs; n47Re(); };
+ACT.n47pt = function(el){ const S = n47U(); if (S.pt !== el.dataset.v){ S.pt = el.dataset.v; S.amt = ''; S.amtC = false; } n47Re(); };
+ACT.n47amt = function(el){ const S = n47U(); if (el.dataset.v === 'c'){ S.amtC = true; if ((N47_AMT[S.pt] || []).indexOf(Number(S.amt)) >= 0) S.amt = ''; } else { S.amtC = false; S.amt = el.dataset.v; } if (S.err) delete S.err.amt; n47Re();
+  if (S.amtC) setTimeout(() => { const i = document.getElementById('n44-ua'); if (i) i.focus(); }, 30); };
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target && e.target.id === 'n47-cus'){ e.preventDefault(); ACT.n47cusadd(); } });
+document.addEventListener('input', e => { if (e.target && /^n44-u[dftaz]$/.test(e.target.id) && state.n44.urg){ setTimeout(() => { const s = document.getElementById('n47-sum'); if (s) s.textContent = n47Sum(state.n44.urg); }, 0); } });
+
+/* ================= 5. tiệm đăng tối đa 2 tin ================= */
+function n47MyActive(){ try { return (n1MyAds() || []).filter(a => a && a.type === 'hiring' && !a.quick && !a.filled && a.mod !== 'rejected'); } catch (e) { return []; } }
+function n47Full(){ return !(state.adm && state.adm.on) && n47MyActive().length >= (window.__n47max || N47_MAXADS); }
+/* tài khoản "Cả hai" vẫn giữ luật cũ: 1 tin (n139) */
+(() => {
+  const v0 = viewForm;
+  viewForm = function(type){
+    const fs = state.forms && state.forms[type];
+    if (type === 'hiring' && state.user && !(fs && (fs.editId || fs.liveId || fs.done || fs.n44quick)) && n47Full()){
+      const L0 = n47MyActive();
+      return `<div class="wrap narrow page"><div class="card n39one"><h1 class="pg-title">${esc(t('n47MaxT'))}</h1><p class="lead-s">${esc(t('n47MaxD'))}</p>
+        <div class="n47ml">${L0.map(a => `<div class="n47mi"><b>${esc(titleOf(a))}</b><button class="btn btn-ghost" type="button" data-act="liveedit" data-k="ads" data-v="${esc(a.id)}">${esc(t('n47Edit'))}</button></div>`).join('')}</div>
+        <a class="btn btn-primary" href="#myads">${esc(t('n47Mine'))}</a></div></div>`;
+    }
+    return v0.apply(this, arguments);
+  };
+  const p0 = ACT.fpublish;
+  ACT.fpublish = function(el){
+    const type = el && el.dataset && el.dataset.ft, fs = type && state.forms && state.forms[type];
+    if (type === 'hiring' && state.user && fs && !fs.editId && !fs.liveId && !fs.n44quick && n47Full()){ toast(t('n47MaxT')); render(); return; }
+    return p0.apply(this, arguments);
+  };
+})();
+
+/* ================= Cloud Function ================= */
+function n47Fn(name){
+  const app = firebase.app ? firebase.app() : null;
+  const f = app && app.functions ? app.functions('us-central1') : (firebase.functions ? firebase.functions() : null);
+  if (!f) return null;
+  return f.httpsCallable(name);
+}
+function n47FnErr(e){
+  const c = String((e && e.code) || '').replace(/^functions\//, ''), m = String((e && e.message) || '');
+  if (c === 'already-exists') return t('n47EmTaken');
+  if (c === 'invalid-argument') return t('n47EmBad');
+  if (c === 'resource-exhausted') return m === 'daily' ? t('n47EmDaily') : m === 'tries' ? t('n47EmTries') : t('n47EmWait');
+  if (c === 'deadline-exceeded') return t('n47EmExp');
+  if (c === 'not-found' && m === 'no-code') return t('n47EmNoCode');
+  return t('n47EmOff');
+}
+
+/* ================= 3. email: xác minh bằng mã ================= */
+async function n47EmSend(email){
+  const E = state.n47.em = Object.assign(state.n47.em || {}, {email, busy:true, msg:''}); renderModal();
+  const fn = n47Fn('emailStart');
+  try {
+    if (!fn) throw {code:'unavailable'};
+    await fn({email, lang});
+    E.step = 'code'; E.busy = false; renderModal();
+    setTimeout(() => { const c = document.getElementById('n47-ec'); if (c) c.focus(); }, 30);
+  } catch (e) { console.warn('emailStart', e); E.busy = false; E.msg = n47FnErr(e); renderModal(); }
+}
+function n47MailModal(){
+  const E = state.n47.em = state.n47.em || {step:'email', email:''}, u = state.user || {};
+  const x = `<button class="x" type="button" data-act="mclose" aria-label="${t('close')}">×</button>`;
+  const msg = E.msg ? `<p class="err" role="alert">${esc(E.msg)}</p>` : '';
+  if (E.step === 'code'){
+    return `<div class="modal-head"><h2 id="m-title">${esc(t('n47EmT'))}</h2>${x}</div><p class="lead-s">${esc(t('n47EmSent', E.email))}</p>
+      <div class="fq"><input id="n47-ec" class="n47code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="code"></div>${msg}
+      <div class="modal-foot n47mf"><button class="btn-link" type="button" data-act="n47emback">${esc(t('n47EmBack'))}</button><button class="btn-link" type="button" data-act="n47emre">${esc(t('n47EmResend'))}</button>
+      <button class="btn btn-primary" type="button" data-act="n47emok"${E.busy ? ' disabled' : ''}>${esc(t('n47EmOk'))}</button></div>`;
+  }
+  const x2 = u.email ? x : `<button class="x" type="button" data-act="n31later" aria-label="${t('close')}">×</button>`;
+  return `<div class="modal-head"><h2 id="m-title">${esc(t('n47EmT'))}</h2>${x2}</div><p class="lead-s">${esc(t('emailAskD'))} ${esc(t('n47EmD'))}</p>
+    <div class="fq"><label class="sr" for="n47-em">${t('emailLbl')}</label><input id="n47-em" type="email" inputmode="email" autocomplete="email" placeholder="you@gmail.com" value="${esc(E.email || u.email || '')}"></div>${msg}
+    <div class="modal-foot n47mf">${u.email ? `<button class="btn-link n47danger" type="button" data-act="n47emrm">${esc(t('n47EmRm'))}</button>` : `<button class="btn btn-ghost" type="button" data-act="n31later">${t(T[lang].n31Later ? 'n31Later' : 'emailSkip')}</button>`}
+    <button class="btn btn-primary" type="button" data-act="n47emsend"${E.busy ? ' disabled' : ''}>${esc(E.busy ? t('sending') : t('n47EmSend'))}</button></div>`;
+}
+ACT.n2mailopen = function(){ state.n47.em = {step:'email', email:''}; state.n31force = true; openModal('n2e'); setTimeout(() => { const n = document.getElementById('n47-em'); if (n) n.focus(); }, 30); };
+ACT.n47emsend = function(){
+  const v = String((document.getElementById('n47-em') || {}).value || '').trim().toLowerCase();
+  if (!/^[^\s@/]+@[^\s@/]+\.[^\s@/]{2,}$/.test(v)){ state.n47.em = Object.assign(state.n47.em || {}, {email:v, msg:t('n47EmBad')}); renderModal(); return; }
+  n47EmSend(v);
+};
+ACT.n47emre = function(){ const E = state.n47.em || {}; if (E.email) n47EmSend(E.email); };
+ACT.n47emback = function(){ state.n47.em = {step:'email', email:(state.n47.em || {}).email || ''}; renderModal(); };
+ACT.n47emok = async function(){
+  const E = state.n47.em || {}, c = String((document.getElementById('n47-ec') || {}).value || '').replace(/\D/g, '');
+  if (c.length !== 6){ E.msg = t('errCode'); renderModal(); return; }
+  E.busy = true; E.msg = ''; renderModal();
+  try {
+    const fn = n47Fn('emailVerify'); if (!fn) throw {code:'unavailable'};
+    const r = await fn({code:c}), d = (r && r.data) || {};
+    if (!d.ok){ E.busy = false; E.msg = t('n47EmWrong', d.left == null ? 0 : d.left); renderModal(); return; }
+    if (state.user) state.user.email = d.email || E.email;
+    state.n47.em = null; state.modal = null; renderModal(); toast(t('n47EmDone', d.email || E.email)); render();
+  } catch (e) { console.warn('emailVerify', e); E.busy = false; E.msg = n47FnErr(e); renderModal(); }
+};
+ACT.n47emrm = async function(){
+  const u = state.user; if (!u || !u.email) return;
+  if (!(await n43Ask(t('n47EmRmQ'), t('n47EmRm'), true))) return;
+  const db = n47Db(), old = String(u.email).toLowerCase();
+  try {
+    await db.collection('users').doc(u.uid).set({email:''}, {merge:true});
+    await db.collection('emails').doc(old).delete().catch(() => {});
+    u.email = ''; state.n47.em = null; state.modal = null; renderModal(); toast(t('n47EmRmDone')); render();
+  } catch (e) { toast(String((e && e.code) || e)); }
+};
+
+/* ================= 2. số điện thoại: xác minh SMS ================= */
+let n47Rv = null;
+function n47Recap(){
+  if (n47Rv) return n47Rv;
+  let el = document.getElementById('n47recap'); if (!el){ el = document.createElement('div'); el.id = 'n47recap'; document.body.appendChild(el); }
+  n47Rv = new firebase.auth.RecaptchaVerifier('n47recap', {size:'invisible'}); return n47Rv;
+}
+function n47RecapReset(){ try { if (n47Rv) n47Rv.clear(); } catch (e) {} n47Rv = null; const el = document.getElementById('n47recap'); if (el) el.remove(); }
+function n47PhErr(e){
+  const c = String((e && e.code) || '');
+  if (/credential-already-in-use|account-exists|provider-already-linked/.test(c)) return t('n47PhUsed');
+  if (/invalid-verification-code|code-expired|missing-verification-code/.test(c)) return t('n47PhCode');
+  if (/requires-recent-login/.test(c)) return t('n47PhRecent');
+  if (/too-many-requests|quota/.test(c)) return t('n47PhMany');
+  if (/invalid-phone-number/.test(c)) return t('errPhone');
+  return typeof errText === 'function' ? errText(e) : c;
+}
+function n47PhModal(){
+  const P = state.n47.ph = state.n47.ph || {step:'num', phone:''}, u = state.user || {};
+  const x = `<button class="x" type="button" data-act="mclose" aria-label="${t('close')}">×</button>`;
+  const ttl = t(u.phone ? 'n47PhModT' : 'n47PhModAddT'), msg = P.msg ? `<p class="err" role="alert">${esc(P.msg)}</p>` : '';
+  if (P.step === 'code'){
+    return `<div class="modal-head"><h2 id="m-title">${esc(ttl)}</h2>${x}</div><p class="lead-s">${esc(t('n47PhSent', n47Pretty(P.phone)))}</p>
+      <div class="fq"><input id="n47-pc" class="n47code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="code"></div>${msg}
+      <div class="modal-foot n47mf"><button class="btn-link" type="button" data-act="n47phback">${esc(t('n47PhBack'))}</button>
+      <button class="btn btn-primary" type="button" data-act="n47phok"${P.busy ? ' disabled' : ''}>${esc(t('n47PhOk'))}</button></div>`;
+  }
+  return `<div class="modal-head"><h2 id="m-title">${esc(ttl)}</h2>${x}</div><p class="lead-s">${esc(t('n47PhD'))}</p>
+    <div class="fq"><label class="flabel" for="n47-pn">${esc(t('n47PhNew'))}</label><div class="tel-row"><span class="cc">🇺🇸 +1</span><input id="n47-pn" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(210) 555-0123" value="${esc(P.phone ? n47Pretty(P.phone) : '')}"></div></div>${msg}
+    <div class="modal-foot n47mf"><button class="btn btn-ghost" type="button" data-act="mclose">${t('close')}</button>
+    <button class="btn btn-primary" type="button" data-act="n47phsend"${P.busy ? ' disabled' : ''}>${esc(P.busy ? t('sending') : t('n47PhSend'))}</button></div>`;
+}
+ACT.n47phopen = function(){ state.n47.ph = {step:'num', phone:''}; openModal('n47ph'); setTimeout(() => { const n = document.getElementById('n47-pn'); if (n) n.focus(); }, 30); };
+ACT.n47phsend = async function(){
+  const P = state.n47.ph = state.n47.ph || {}, d = n47Ph10((document.getElementById('n47-pn') || {}).value);
+  P.phone = d; P.msg = '';
+  if (d.length !== 10){ P.msg = t('errPhone'); renderModal(); return; }
+  if (state.user && n47Ph10(state.user.phone) === d && firebase.auth().currentUser && firebase.auth().currentUser.phoneNumber){ P.msg = t('n47PhSame'); renderModal(); return; }
+  P.busy = true; renderModal();
+  try {
+    const prov = new firebase.auth.PhoneAuthProvider();
+    P.vid = await prov.verifyPhoneNumber('+1' + d, n47Recap());
+    P.step = 'code'; P.busy = false; renderModal();
+    setTimeout(() => { const c = document.getElementById('n47-pc'); if (c) c.focus(); }, 30);
+  } catch (e) { console.warn('n47 sms', e); n47RecapReset(); P.busy = false; P.msg = n47PhErr(e); renderModal(); }
+};
+ACT.n47phback = function(){ n47RecapReset(); state.n47.ph = {step:'num', phone:(state.n47.ph || {}).phone || ''}; renderModal(); };
+ACT.n47phok = async function(){
+  const P = state.n47.ph || {}, c = String((document.getElementById('n47-pc') || {}).value || '').replace(/\D/g, '');
+  if (c.length !== 6){ P.msg = t('errCode'); renderModal(); return; }
+  const cu = firebase.auth().currentUser, u = state.user; if (!cu || !u) return;
+  P.busy = true; P.msg = ''; renderModal();
+  try {
+    const cred = firebase.auth.PhoneAuthProvider.credential(P.vid, c);
+    const hadPhone = (cu.providerData || []).some(p => p && p.providerId === 'phone');
+    const hadPw = (cu.providerData || []).some(p => p && p.providerId === 'password');
+    if (hadPhone) await cu.updatePhoneNumber(cred); else await cu.linkWithCredential(cred);
+    await cu.getIdToken(true);
+    await n47Db().collection('users').doc(u.uid).set({phone:P.phone}, {merge:true});
+    const changed = !!u.phone && n47Ph10(u.phone) !== P.phone;
+    u.phone = P.phone;
+    if (hadPw && changed){ try { await cu.unlink('password'); } catch (e) { console.warn('unlink pw', e); } if (state.n38) state.n38.force = true; }
+    n47RecapReset(); state.n47.ph = null; state.modal = null; renderModal();
+    toast(t(changed && hadPw ? 'n47PhDone' : 'n47PhAdded')); render();
+  } catch (e) { console.warn('n47 phone', e); P.busy = false; P.msg = n47PhErr(e); renderModal(); }
+};
+/* modal */
+(() => {
+  const m0 = modalAlerts;
+  modalAlerts = function(){
+    if (state.modal === 'n2e') return n47MailModal();
+    if (state.modal === 'n47ph') return n47PhModal();
+    return m0.apply(this, arguments);
+  };
+})();
+/* tài khoản: dòng số điện thoại (thay ô nhập số không xác minh) */
+(() => {
+  const v0 = viewAccount;
+  viewAccount = function(){
+    let h = v0.apply(this, arguments);
+    const u = state.user; if (!u) return h;
+    h = h.replace(/<div class="add-phone">[\s\S]*?data-act="accphone"[^>]*>[^<]*<\/button><\/div>/, '');
+    const row = `<p class="n2note n47phr">📱 ${esc(t('n47PhT'))}: <b>${esc(u.phone ? n47Pretty(u.phone) : t('n47PhNone'))}</b> <button class="btn-link" type="button" data-act="n47phopen">${esc(t(u.phone ? 'n47PhChg' : 'n47PhAdd'))}</button></p>`;
+    const i = h.indexOf('<p class="n2note">' + esc(t('emailLbl')));
+    return i >= 0 ? h.slice(0, i) + row + h.slice(i) : h.replace(/(<\/div>\s*)$/, row + '$1');
+  };
+})();
+/* đăng ký: bỏ ô số điện thoại không xác minh; email trùng thì chặn; email nhập tay thì gửi mã sau khi tạo */
+(() => {
+  const v0 = viewLogin;
+  viewLogin = function(){
+    let h = v0.apply(this, arguments);
+    if (!/id="au-ph2"/.test(h)) return h;
+    return h.replace(/<div class="fq"><label class="flabel" for="au-ph2">[\s\S]*?<input id="au-ph2"[^>]*><\/div><\/div>/, `<p class="hint n47phh">${esc(t('n47PhSignup'))}</p>`);
+  };
+  const d0 = ACT.audone;
+  ACT.audone = async function(el){
+    const p = state.pendingUser, tok = p && p.email ? String(p.email).toLowerCase() : '';
+    const ml = document.getElementById('n39-mail'), extra = ml ? ml.value.trim().toLowerCase() : '';
+    if (p && tok){
+      let taken = false;
+      try { const s = await n47Db().collection('emails').doc(tok).get(); taken = s.exists && (s.data() || {}).uid !== p.uid; } catch (e) { console.warn('emails get', e); }
+      if (taken){
+        state.auth.msg = t('n47SignupTaken'); render();
+        try { const cu = firebase.auth().currentUser; if (cu && cu.uid === p.uid) await cu.delete(); } catch (e) { console.warn('del new user', e); }
+        try { await firebase.auth().signOut(); } catch (e) {}
+        state.pendingUser = null;
+        state.auth = {step:'start', method:(state.auth && state.auth.method) || 'phone', phone:'', email:'', msg:t('n47SignupTaken'), busy:false, role:'tech'};
+        setTimeout(() => { if (state.auth && state.auth.step === 'start' && !state.auth.msg) { state.auth.msg = t('n47SignupTaken'); render(); } }, 400);
+        render(); return;
+      }
+    }
+    const r = await d0.apply(this, arguments);
+    const u = state.user;
+    if (u && p && u.uid === p.uid){
+      if (tok) n47Db().collection('emails').doc(tok).set({uid:u.uid, at:Date.now()}).catch(e => console.warn('emails set', e));
+      else if (extra && /^[^\s@/]+@[^\s@/]+\.[^\s@/]{2,}$/.test(extra)){
+        state.n47.em = {step:'email', email:extra}; n47EmSend(extra);
+        /* sau khi tạo tài khoản web tự đóng hộp thoại → mở lại hộp nhập mã */
+        const reopen = n => setTimeout(() => { if (state.n47.em && state.n47.em.email === extra && state.modal !== 'n2e'){ state.n31force = true; openModal('n2e'); } if (n) reopen(n - 1); }, 500);
+        reopen(3);
+      }
+    }
+    return r;
+  };
+})();
+
+/* ================= 4. xoá tài khoản: chờ 7 ngày ================= */
+ACT.n28delacc = async function(){
+  const u = state.user; if (!u || !u.uid || state.n47.delBusy) return;
+  if (!confirm(t('n47DelQ1'))) return;
+  const w = prompt(t('n28DelQ2'), '');
+  if (w == null) return;
+  if (String(w).trim().toUpperCase() !== t('n28DelWord')){ toast(t('n28DelNo')); return; }
+  state.n47.delBusy = true; render();
+  const db = n47Db(), ST = firebase.firestore.FieldValue.serverTimestamp(), uid = u.uid, warn = e => console.warn('n47 del', e);
+  try {
+    for (const a of ADS.filter(a => a.live && a.ownerUid === uid)) await db.collection('ads').doc(a.id).update({delAt:ST}).catch(warn);
+    for (const x of TECHS.filter(x => x.live && (x.ownerUid === uid || x.id === uid))) await db.collection('techs').doc(x.id).update({delAt:ST}).catch(warn);
+    await db.collection('users').doc(uid).set({delAt:ST}, {merge:true});
+    try { await firebase.auth().signOut(); } catch (e) { warn(e); }
+    toast(t('n47DelDone')); location.hash = '#home';
+  } catch (e) { warn(e); toast(String((e && e.code) || e)); }
+  state.n47.delBusy = false; render();
+};
+function n47DaysLeft(ms){ return Math.max(0, Math.ceil((ms + 7 * 864e5 - Date.now()) / 864e5)); }
+ACT.n47restore = async function(el){
+  const u = state.user; if (!u) return;
+  if (el) el.disabled = true;
+  const db = n47Db(), DEL = firebase.firestore.FieldValue.delete(), warn = e => console.warn('n47 restore', e);
+  try {
+    const refs = {};
+    for (const c of ['ads', 'techs']){
+      try { const s = await db.collection(c).where('ownerUid', '==', u.uid).get(); s.docs.forEach(d => { if ((d.data() || {}).delAt) refs[c + '/' + d.id] = db.collection(c).doc(d.id); }); } catch (e) { warn(e); }
+    }
+    try { const d = await db.collection('techs').doc(u.uid).get(); if (d.exists && (d.data() || {}).delAt) refs['techs/' + u.uid] = db.collection('techs').doc(u.uid); } catch (e) { warn(e); }
+    for (const k in refs){ try { await refs[k].update({delAt:DEL}); } catch (e) { warn(e); } }
+    await db.collection('users').doc(u.uid).update({delAt:DEL});
+    u.delAt = 0; toast(t('n47ResDone')); render();
+  } catch (e) { warn(e); if (el) el.disabled = false; toast(String((e && e.code) || e)); }
+};
+ACT.n47out = function(){ try { firebase.auth().signOut(); } catch (e) {} location.hash = '#home'; };
+(() => {
+  const r0 = render;
+  render = function(){
+    const out = r0.apply(this, arguments);
+    if (document.querySelector('.n47bar')) n47Bar();
+    try {
+      const u = state.user, main = document.getElementById('main');
+      if (u && u.delAt && main && route().view !== 'login' && !main.querySelector('.n47res')){
+        main.innerHTML = `<div class="wrap narrow page n47res"><div class="card"><h1 class="pg-title">${esc(t('n47ResT'))}</h1><p class="lead-s">${esc(t('n47ResD', n47DaysLeft(u.delAt)))}</p>
+          <div class="row"><button class="btn btn-primary" type="button" data-act="n47restore">${esc(t('n47ResOk'))}</button><button class="btn btn-ghost" type="button" data-act="n47out">${esc(t('n47ResOut'))}</button></div></div></div>`;
+      }
+    } catch (e) {}
+    return out;
+  };
+})();
+/* admin: thẻ "Chờ xoá" trong danh sách tài khoản */
+(() => {
+  if (typeof n34AccWarn !== 'function') return;
+  const w0 = n34AccWarn;
+  n34AccWarn = function(u){
+    const h = w0.apply(this, arguments), ms = u && u.delAt ? (u.delAt.toMillis ? u.delAt.toMillis() : Number(u.delAt) || 0) : 0;
+    return ms ? h + `<span class="n47del">${esc(t('n47DelTag', n47DaysLeft(ms)))}</span>` : h;
+  };
+})();
+/* admin: sổ email (chạy thử trước, rồi mới ghi) */
+(() => {
+  const s0 = admSet;
+  admSet = function(){
+    const h = s0.apply(this, arguments), B = state.n47.bf || {};
+    const res = B.res ? `<p class="hint">${esc(t('n47BfRes', B.res.emails, B.res.toWrite, (B.res.dups || []).length))}</p>${(B.res.dups || []).length ? `<ul class="n47dups">${B.res.dups.map(d => `<li><b>${esc(d.email)}</b>: ${esc(d.keep.name || d.keep.uid)} ✓ · ${d.others.map(o => esc(o.name || o.uid)).join(', ')}</li>`).join('')}</ul>` : ''}` : '';
+    return `<div class="card adm-card"><h2 class="sec" style="margin-top:0">${esc(t('n47BfT'))}</h2><p class="hint">${esc(t('n47BfD'))}</p>${B.msg ? `<p class="err">${esc(B.msg)}</p>` : ''}${res}
+      <div class="row"><button class="btn btn-ghost" type="button" data-act="n47bf" data-v="dry"${B.busy ? ' disabled' : ''}>${esc(t('n47BfDry'))}</button>${B.res && B.res.dry ? `<button class="btn btn-primary" type="button" data-act="n47bf" data-v="run"${B.busy ? ' disabled' : ''}>${esc(t('n47BfRun'))}</button>` : ''}</div></div>` + h;
+  };
+  ACT.n47bf = async function(el){
+    const B = state.n47.bf = state.n47.bf || {}, dry = el.dataset.v !== 'run';
+    B.busy = true; B.msg = ''; render();
+    try { const fn = n47Fn('emailBackfill'); if (!fn) throw {code:'unavailable'}; const r = await fn({dry}); B.res = r.data; if (!dry) toast(t('n47BfDone')); }
+    catch (e) { console.warn('backfill', e); B.msg = n47FnErr(e); }
+    B.busy = false; render();
+  };
+})();
+
+(() => { const st = document.createElement('style'); st.textContent = `
+.n47u .pg-title{margin-bottom:4px}.n47s{padding:16px 16px 14px;margin:12px 0}
+.n47s h2{display:flex;align-items:center;gap:10px;font-size:17px;margin:0 0 10px}.n47s .hint{margin:-4px 0 10px}
+.n47n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;font-size:14px;font-weight:800;flex:none}
+.n47cs{display:flex;flex-wrap:wrap;gap:8px}
+.n47c{display:inline-flex;align-items:center;gap:6px;min-height:46px;padding:9px 15px;border:1.5px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);font:inherit;font-size:15px;font-weight:600;cursor:pointer;line-height:1.2;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:background .12s,border-color .12s}
+.n47c small{font-weight:500;color:var(--muted);font-size:12.5px}.n47c:active{transform:scale(.97)}
+.n47c.on{background:#FDE7EF;border-color:var(--primary);color:var(--primary-d,#9E2A54)}.n47c.on small{color:inherit}
+.n47ck{font-weight:900}.n47add{border-style:dashed;color:var(--primary)}
+.n47cus{padding-right:6px}.n47x{border:0;background:transparent;font-size:20px;line-height:1;padding:2px 8px;cursor:pointer;color:inherit}
+.n47row{display:flex;gap:8px;margin-top:10px}.n47row input{flex:1;min-width:0}
+.n47in{min-height:46px;font-size:16px}.n47two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.n47two label{display:grid;gap:4px;font-weight:600;font-size:14px}
+.n47seg{display:inline-grid;grid-template-columns:1fr 1fr;border:1.5px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:10px}
+.n47seg button{border:0;background:#fff;padding:11px 18px;font:inherit;font-weight:700;cursor:pointer;min-height:44px}.n47seg button.on{background:var(--primary);color:#fff}
+.n47money{display:flex;align-items:center;gap:8px;margin-top:10px;font-weight:700}.n47money input{max-width:160px}
+.n47u{padding-bottom:150px}
+.n47bar{position:fixed;left:0;right:0;bottom:var(--n47tb,0px);background:rgba(255,255,255,.97);border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,.06);padding:10px 16px 10px;z-index:40}
+.n47bar>*{max-width:640px;margin-left:auto;margin-right:auto}
+.n47sum{margin:0 0 8px;font-size:13.5px;line-height:1.35;max-height:2.7em;overflow:hidden}.n47go{min-height:52px;font-size:17px}
+.n47code{font-size:26px;letter-spacing:8px;text-align:center;font-weight:700;min-height:56px}
+.n47mf{flex-wrap:wrap;gap:10px;align-items:center}.n47danger{color:#B42318}
+.n47phr button,.n2note button{margin-left:6px}
+.n47del{display:inline-block;margin-left:6px;background:#FFF1E6;color:#9A3412;border-radius:8px;padding:1px 7px;font-size:12px;font-weight:700}
+.n47ml{display:grid;gap:8px;margin:12px 0}.n47mi{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.n47dups{font-size:13.5px;margin:6px 0 10px;padding-left:18px}`;
+document.head.appendChild(st); })();
+/* bấm "Đăng tin gấp" mà còn thiếu → cuộn tới chỗ lỗi đầu tiên (trước đây lỗi nằm khuất, tưởng nút không ăn) */
+(() => {
+  const p0 = ACT.n44upost;
+  ACT.n44upost = async function(){
+    const r = await p0.apply(this, arguments);
+    const S = state.n44.urg;
+    if (S && S.err && Object.keys(S.err).length) setTimeout(() => { const e = document.querySelector('.n47u .err'); if (e){ const c = e.closest('.n47s') || e; c.scrollIntoView({block:'center', behavior:'smooth'}); const i = c.querySelector('input'); if (i) try { i.focus({preventScroll:true}); } catch (x) {} } }, 40);
+    return r;
+  };
+})();
+window.__n47 = {st:() => state, techs:() => TECHS, ads:() => ADS};   /* để test đọc trạng thái */
+/* nút cũ lưu thẳng số / email chưa xác minh → chuyển sang luồng xác minh mới */
+ACT.accphone = function(){ return ACT.n47phopen(); };
+ACT.n2email = function(){ const v = String((document.getElementById('n2-mail') || document.getElementById('n47-em') || {}).value || '').trim().toLowerCase(); state.n47.em = {step:'email', email:v}; if (state.modal !== 'n2e'){ state.n31force = true; openModal('n2e'); } if (v) ACT.n47emsend(); else renderModal(); };
 
 render();
 })();
