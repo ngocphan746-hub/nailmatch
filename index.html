@@ -3163,7 +3163,7 @@ function initLive(){
   }, bad));
   keepListening('techs', (ok, bad) => db.collection('techs').orderBy('updatedAt', 'desc').limit(300).onSnapshot(snap => { ok();
     replaceLive(TECHS, snap.docs.map(fromDoc).filter(x => x && x.name && Array.isArray(x.services)));
-    if (state.user) state.myProfile = TECHS.find(x => x.live && (x.id === state.user.uid || x.ownerUid === state.user.uid)) || null;
+    if (state.user) state.myProfile = TECHS.find(x => x.live && x.id === state.user.uid) || TECHS.find(x => x.live && (x.id === state.user.uid || x.ownerUid === state.user.uid)) || null;   /* n148: hồ sơ 1 trước */
     softRender();
   }, bad));
 
@@ -3175,7 +3175,7 @@ function initLive(){
       L_.threads = snap.docs.map(d => Object.assign({id:d.id}, d.data(EST))); L_.threadsReady = true; softRender();
     }, e => { console.warn('threads', e); L_.threadsReady = true; softRender(); setTimeout(() => { if (state.user && state.user.uid === uid && L_.unsubs.includes(un)){ L_.unsubs.splice(L_.unsubs.indexOf(un), 1); sub(); } }, 5000); }); L_.unsubs.push(un); };
     sub();
-    state.myProfile = TECHS.find(x => x.live && (x.id === uid || x.ownerUid === uid)) || null;
+    state.myProfile = TECHS.find(x => x.live && x.id === uid) || TECHS.find(x => x.live && (x.id === uid || x.ownerUid === uid)) || null;
   }
   function stopUserListeners(){ L_.unsubs.forEach(u => { try { u(); } catch (e) {} }); L_.unsubs = []; L_.threads = []; L_.threadsReady = false; unsubMsgs(); }
   function freshAuth(){ return {step:'start', method:state.auth.method || 'phone', phone:'', email:'', msg:'', busy:false, role:'tech'}; }
@@ -3189,7 +3189,7 @@ function initLive(){
     try { const doc = await db.collection('users').doc(u.uid).get(); d = doc.exists ? doc.data() : null; } catch (e) { console.warn('user doc', e); }
     const base = {uid:u.uid, email:n38Real(u.email) || (d && d.email) || '', phone:(d && d.phone) || (u.phoneNumber ? digits10(u.phoneNumber) : '')};
     if (d && d.name){
-      state.user = Object.assign(base, {name:d.name, role:d.role || 'other', mode:d.mode || '', licNo:d.licNo || '', refContacts:d.refContacts || [], addrs:d.addrs || {}, pics:d.pics || {}, priv:d.priv || {}, avatar:d.avatar || '', saved:d.saved || [], trusted:!!d.trusted, delAt:d.delAt ? (d.delAt.toMillis ? d.delAt.toMillis() : Date.now()) : 0}); state.pendingUser = null;
+      state.user = Object.assign(base, {name:d.name, role:d.role || 'other', mode:d.mode || '', terms:d.terms || '', licNo:d.licNo || '', refContacts:d.refContacts || [], addrs:d.addrs || {}, pics:d.pics || {}, priv:d.priv || {}, avatar:d.avatar || '', saved:d.saved || [], trusted:!!d.trusted, delAt:d.delAt ? (d.delAt.toMillis ? d.delAt.toMillis() : Date.now()) : 0}); state.pendingUser = null;
       startUserListeners();
       if (state.auth.pending || route().view === 'login'){ state.auth = freshAuth(); toast(t('welcome', state.user.name)); afterAuth(); }
       render();
@@ -3531,7 +3531,7 @@ function initLive(){
           await db.collection('users').doc(me.uid).set({licNo:d.licNo || '', refContacts:(d.refs || []).map(r => r.contact || '')}, {merge:true});
           me.licNo = d.licNo || ''; me.refContacts = (d.refs || []).map(r => r.contact || '');
         }
-        const tid0 = admNew ? db.collection('techs').doc().id : (fs.editId || (state.myProfile && state.myProfile.live && state.myProfile.id) || me.uid);
+        const tid0 = admNew ? db.collection('techs').doc().id : (fs.editId || (fs.n48slot === 2 ? me.uid + '-2' : ((state.myProfile && state.myProfile.live && state.myProfile.id) || me.uid)));   /* n148: hồ sơ thứ 2 = <uid>-2 */
         const tref = db.collection('techs').doc(tid0), cur = TECHS.find(x => x.live && x.id === tid0), exists = !!cur;
         /* admin sửa hồ sơ nháp của người khác: giữ nguyên tên chủ hồ sơ */
         if (exists) await tref.update(Object.assign({updatedAt:TS(), ad:clean, form, kind:'profile'}, ownerOf(cur) === me.uid ? {ownerName:me.name} : {}));
@@ -12146,8 +12146,9 @@ function n31Live(c){
       /* n143 (vòng 3, mục 2): mỗi cặp tiệm–thợ chỉ 1 cuộc trò chuyện → dùng lại cuộc đã có */
       const pair = typeof n43PairOf === 'function' ? n43PairOf(doc.members, tid) : null;
       if (pair){
-        const FV = firebase.firestore.FieldValue, entry = {adId:doc.adId || '', kind:doc.kind, from:u.uid, at:Date.now(), title:(doc.about || {}).title || '', note};
+        const FV = firebase.firestore.FieldValue, entry = Object.assign({adId:doc.adId || '', kind:doc.kind, from:u.uid, at:Date.now(), title:(doc.about || {}).title || '', note}, doc.kind === 'apply' ? {techId:doc.techId} : {});
         const upd = {apps:FV.arrayUnion(entry), about:doc.about, lastText:note || doc.lastText, lastAt:TS(), lastFrom:u.uid, ['readAt.' + u.uid]:TS(), ['names.' + u.uid]:doc.names[u.uid]};
+        if (doc.kind === 'apply') upd.techId = doc.techId;   /* n148: hồ sơ thợ chọn khi ứng tuyển */
         if (pair.status === 'pending' && pair.from !== u.uid){ upd.status = 'accepted'; upd.answeredAt = TS(); }
         else if (pair.status === 'pending'){ upd.note = note; }
         else if (pair.status !== 'accepted'){ Object.assign(upd, {status:'pending', from:u.uid, kind:doc.kind, note, urgent:!!doc.urgent}); }
@@ -12510,7 +12511,7 @@ a.n3chiprole:hover{background:none;color:var(--primary);text-decoration:underlin
   };
   const release = () => { if (!hold) return; hold = 0; if (pending){ pending = false; render(); } };
   document.addEventListener('pointerdown', e => {
-    if (e.pointerType === 'mouse') return;
+    if (e.pointerType === 'mouse' || window.__n48morph) return;   /* n148: vẽ lại kiểu morph giữ nguyên nút → không cần chờ */
     if (e.target && e.target.closest && e.target.closest('button, a, [data-act], select, label')) hold = Date.now();
   }, true);
   document.addEventListener('click', () => setTimeout(release, 0), true);
@@ -16955,7 +16956,7 @@ setInterval(() => {
   [['ap', 'n1apply'], ['of', 'n1offer']].forEach(([k, a]) => {
     const left = n45Left(k);
     document.querySelectorAll(`[data-act="${a}"]`).forEach(b => {
-      if (left > 0){ if (b.dataset.n45o == null) b.dataset.n45o = b.innerHTML; b.innerHTML = '⏳ ' + n45Mmss(left); b.classList.add('n45cool'); }
+      if (left > 0){ if (b.dataset.n45o == null) b.dataset.n45o = b.innerHTML; b.innerHTML = N48I('clock') + n45Mmss(left); b.classList.add('n45cool'); }
       else if (b.dataset.n45o != null){ b.innerHTML = b.dataset.n45o; delete b.dataset.n45o; b.classList.remove('n45cool'); }
     });
   });
@@ -18131,6 +18132,2322 @@ window.__n47 = {st:() => state, techs:() => TECHS, ads:() => ADS};   /* để te
 /* nút cũ lưu thẳng số / email chưa xác minh → chuyển sang luồng xác minh mới */
 ACT.accphone = function(){ return ACT.n47phopen(); };
 ACT.n2email = function(){ const v = String((document.getElementById('n2-mail') || document.getElementById('n47-em') || {}).value || '').trim().toLowerCase(); state.n47.em = {step:'email', email:v}; if (state.modal !== 'n2e'){ state.n31force = true; openModal('n2e'); } if (v) ACT.n47emsend(); else renderModal(); };
+
+/* ============================================================
+   n148 – Nail101 tối giản · ĐỢT 1  (đặc tả: SPEC-n148.md)
+   A1 băng điều khoản không hiện lại · A2 trang Tài khoản mới · A3 bấm mượt (vẽ lại kiểu morph, phản hồi ngay, khoá nút khi gửi)
+   B1 nhắn tin trực tiếp (20 cuộc mới / ngày) · B2 tiệm mời nhiều thợ (10 / lần, 30 / ngày)
+   B3 thợ 2 hồ sơ · tiệm 3 tin + 1 tin "1 ngày" / ngày · B4 thông tin riêng: 1 quy tắc
+   Màn mới theo design-demo/: Tin nhắn (3 tab), Trò chuyện (02-chat) + nút ⋯ (11-chatmenu), Tài khoản (04-account), Ứng tuyển 1 bước (08-apply).
+   Lớp này thay hẳn (không bọc) viewInbox / viewThread / viewAccount để bỏ các lớp vá cũ của các màn đó.
+   ============================================================ */
+const N48 = {chMax:20, ofMax:30, ofBatch:10, profMax:2, adMax:3};
+N45.of = {cd:0, max:N48.ofMax};          /* B2: bỏ chờ 2 phút, 30 lời mời / ngày */
+N45.ch = {cd:0, max:N48.chMax};          /* B1: 20 cuộc trò chuyện mới / ngày */
+state.n48 = {busy:{}, drafts:{}, sel:[], itab:'all', pf:'', blk:false, seen:{}};
+
+Object.assign(T.vi, {
+  n48Chat:'Nhắn tin', n48ChMax:n => `Hôm nay bạn đã bắt đầu ${n} cuộc trò chuyện mới (tối đa). Bạn vẫn nhắn tiếp được trong các cuộc đã có; ngày mai mở cuộc mới nhé.`,
+  n48Blocked:'Bạn không nhắn được cho người này (đã chặn).', n48Hello:n => `Gửi lời chào đến ${n} để bắt đầu.`,
+  n48Inbox:'Tin nhắn', n48TabAll:'Tất cả', n48TabWait:'Chưa trả lời', n48TabAppt:'Đã hẹn',
+  n48Empty:'Chưa có cuộc trò chuyện nào', n48EmptyD:'Bấm “Nhắn tin” trên một tin tuyển hoặc hồ sơ thợ để bắt đầu.', n48EmptyTab:'Không có cuộc trò chuyện nào ở mục này.',
+  n48You:'Bạn: ', n48NewApply:'Ứng tuyển mới', n48NewOffer:'Lời mời mới', n48Yesterday:'Hôm qua', n48Today:'Hôm nay',
+  n48MailAdd:'Thêm email để nhận báo khi có tin nhắn mới', n48MailOn:e => `Báo tin nhắn mới qua email: ${e}`,
+  n48Applied:n => `${n} đã ứng tuyển`, n48AppliedMe:'Bạn đã ứng tuyển', n48Offered:n => `${n} đã mời làm`, n48OfferedMe:'Bạn đã mời làm',
+  n48EvAd:x => `Tin “${x}”`, n48AdGone:'(tin đã xoá)', n48Accept:'Nhận', n48Decline:'Từ chối', n48WaitThem:n => `Đang chờ ${n} trả lời`, n48StDec:'Đã từ chối', n48StWd:'Đã rút', n48StAcc:'Đã nhận',
+  n48Seen:'Đã xem', n48Msg:'Nhập tin nhắn…', n48Send:'Gửi', n48More:'Tuỳ chọn', n48Back:'Quay lại',
+  n48ApptLine:(k, d, h) => `<b>${k}</b> · ${d} · ${h}`, n48ApptChg:'Đổi giờ', n48ApptOk:'Xác nhận', n48ApptDone:(k, d, h) => `Đã hẹn ${k.toLowerCase()} ${d} · ${h}`,
+  n48MAppt:'Hẹn thử việc', n48MWd:'Rút đơn ứng tuyển', n48MCancel:'Huỷ lời mời', n48MHide:'Ẩn cuộc trò chuyện', n48MBlock:n => `Chặn ${n}`, n48MRep:'Báo cáo', n48MClose:'Đóng',
+  n48BlockedNote:'Cuộc trò chuyện đã bị chặn. Không gửi tin nhắn được nữa.', n48GoneNote:'Tài khoản này đã bị xoá.',
+  n48PrivT:'Thông tin riêng', n48PrivPortrait:'Ảnh chân dung', n48PrivLic:'Số bằng Texas', n48PrivJobs:'Nơi làm trước', n48PrivAddr:'Địa chỉ tiệm',
+  n48PrivNote:'Chỉ tiệm bạn đã ứng tuyển hoặc đã nhận lời mời mới thấy.', n48PrivAdded:'Đã thêm', n48PrivAdd:'Thêm',
+  /* tài khoản */
+  n48Acc:'Tài khoản', n48AccLogin:'Thông tin đăng nhập', n48AccOther:'Khác', n48AccName:'Tên hiển thị', n48AccPhone:'Số điện thoại', n48AccMail:'Email nhận thông báo',
+  n48AccPin:'Mã PIN đăng nhập', n48AccChg:'Đổi', n48AccAdd:'Thêm', n48AccSet:'Đặt', n48AccNone:'Chưa có', n48AccNoPin:'Chưa đặt', n48AccVer:'Đã xác minh',
+  n48AccPhoto:'Đổi ảnh', n48AccTerms:'Điều khoản sử dụng', n48AccHelp:'Hỗ trợ · (210) 868-7686', n48AccOut:'Đăng xuất', n48AccDel:'Xoá tài khoản',
+  n48AccBlk:n => `Người bạn đã chặn (${n})`, n48AccUnblock:'Bỏ chặn', n48AccSw:n => `Chuyển sang ${n}`,
+  n48RoleSalon:'Chủ tiệm', n48RoleTech:'Thợ nail', n48RoleBoth:'Chủ tiệm + Thợ nail', n48Save:'Lưu', n48Cancel:'Huỷ',
+  /* mời nhiều thợ */
+  n48Pick:n => `Chọn ${n}`, n48Picked:n => `Đã chọn <b>${n} thợ</b>`, n48InvN:n => `Mời ${n} thợ`, n48Max10:'Mỗi lần mời tối đa 10 thợ.',
+  n48InvT:n => `Mời ${n} thợ`, n48InvAd:'Mời làm cho tin', n48InvNote:'Lời nhắn (không bắt buộc)', n48InvPh:'VD: Tiệm cần thợ làm từ tuần sau.',
+  n48InvSend:'Gửi lời mời', n48InvDone:n => `Đã gửi lời mời cho ${n} thợ.`, n48InvSkip:n => `${n} thợ đang chờ trả lời lời mời trước nên không gửi lại.`,
+  n48OfLeft:n => `Hôm nay bạn chỉ còn mời được ${n} thợ.`, n48NeedAd:'Đăng tin tuyển trước rồi mời thợ.',
+  /* hồ sơ / giới hạn */
+  n48ProfMax:'Bạn đã có 2 hồ sơ (tối đa). Sửa một hồ sơ đang có nhé.', n48AddProf:'+ Thêm hồ sơ', n48MyProf:'Hồ sơ của tôi',
+  n48ApplyT:n => `Ứng tuyển · ${n}`, n48ApplyD:'Tiệm sẽ xem hồ sơ bạn chọn và nhắn lại cho bạn.', n48ApplyWhich:'Gửi hồ sơ nào?',
+  n48ApplyNote:'Lời nhắn', n48Opt:'(không bắt buộc)', n48ApplyPh:'VD: Em làm được từ thứ 2 tuần sau.', n48ApplySend:'Gửi ứng tuyển', n48Lic:'Có bằng TX',
+  n48QuickMax:'Hôm nay bạn đã đăng 1 tin “Cần thợ 1 ngày” (tối đa 1 tin / ngày). Ngày mai đăng tiếp nhé.',
+  n47MaxT:'Bạn đã có 3 tin tuyển đang mở', n47MaxD:'Mỗi tiệm mở được tối đa 3 tin tuyển cùng lúc (tin chờ duyệt cũng tính; tin “Cần thợ 1 ngày” không tính). Muốn đăng tin mới, hãy đóng hoặc sửa một tin cũ.',
+  n39One:'Bạn đã có 3 tin tuyển đang mở', n39OneD:'Mỗi tài khoản mở được tối đa 3 tin tuyển cùng lúc. Muốn đăng tin mới, hãy đóng hoặc sửa một tin cũ.',
+  privTechHead:'Chỉ tiệm bạn đã ứng tuyển hoặc đã nhận lời mời mới thấy các mục dưới đây'
+});
+Object.assign(T.en, {
+  n48Chat:'Message', n48ChMax:n => `You've started ${n} new conversations today (the limit). You can keep chatting in existing ones; start new ones tomorrow.`,
+  n48Blocked:'You can’t message this person (blocked).', n48Hello:n => `Say hello to ${n} to get started.`,
+  n48Inbox:'Messages', n48TabAll:'All', n48TabWait:'Not replied', n48TabAppt:'Scheduled',
+  n48Empty:'No conversations yet', n48EmptyD:'Tap “Message” on a job post or a tech profile to start.', n48EmptyTab:'No conversations here.',
+  n48You:'You: ', n48NewApply:'New application', n48NewOffer:'New offer', n48Yesterday:'Yesterday', n48Today:'Today',
+  n48MailAdd:'Add an email to get new-message alerts', n48MailOn:e => `New-message alerts go to: ${e}`,
+  n48Applied:n => `${n} applied`, n48AppliedMe:'You applied', n48Offered:n => `${n} sent a job offer`, n48OfferedMe:'You sent a job offer',
+  n48EvAd:x => `Post “${x}”`, n48AdGone:'(post deleted)', n48Accept:'Accept', n48Decline:'Decline', n48WaitThem:n => `Waiting for ${n} to reply`, n48StDec:'Declined', n48StWd:'Withdrawn', n48StAcc:'Accepted',
+  n48Seen:'Seen', n48Msg:'Type a message…', n48Send:'Send', n48More:'Options', n48Back:'Back',
+  n48ApptLine:(k, d, h) => `<b>${k}</b> · ${d} · ${h}`, n48ApptChg:'Change', n48ApptOk:'Confirm', n48ApptDone:(k, d, h) => `${k} scheduled ${d} · ${h}`,
+  n48MAppt:'Schedule a trial', n48MWd:'Withdraw application', n48MCancel:'Cancel offer', n48MHide:'Hide conversation', n48MBlock:n => `Block ${n}`, n48MRep:'Report', n48MClose:'Close',
+  n48BlockedNote:'This conversation is blocked. Messages can’t be sent.', n48GoneNote:'This account was deleted.',
+  n48PrivT:'Private details', n48PrivPortrait:'Portrait photo', n48PrivLic:'Texas license #', n48PrivJobs:'Previous jobs', n48PrivAddr:'Salon address',
+  n48PrivNote:'Only salons you applied to or whose offer you accepted can see these.', n48PrivAdded:'Added', n48PrivAdd:'Add',
+  n48Acc:'Account', n48AccLogin:'Sign-in details', n48AccOther:'Other', n48AccName:'Display name', n48AccPhone:'Phone number', n48AccMail:'Email for alerts',
+  n48AccPin:'Sign-in PIN', n48AccChg:'Change', n48AccAdd:'Add', n48AccSet:'Set', n48AccNone:'Not added', n48AccNoPin:'Not set', n48AccVer:'Verified',
+  n48AccPhoto:'Change photo', n48AccTerms:'Terms of Use', n48AccHelp:'Help · (210) 868-7686', n48AccOut:'Sign out', n48AccDel:'Delete account',
+  n48AccBlk:n => `People you blocked (${n})`, n48AccUnblock:'Unblock', n48AccSw:n => `Switch to ${n}`,
+  n48RoleSalon:'Salon owner', n48RoleTech:'Nail tech', n48RoleBoth:'Salon owner + Nail tech', n48Save:'Save', n48Cancel:'Cancel',
+  n48Pick:n => `Select ${n}`, n48Picked:n => `Selected <b>${n} tech${n > 1 ? 's' : ''}</b>`, n48InvN:n => `Invite ${n}`, n48Max10:'You can invite up to 10 techs at a time.',
+  n48InvT:n => `Invite ${n} tech${n > 1 ? 's' : ''}`, n48InvAd:'Offer for the job post', n48InvNote:'Message (optional)', n48InvPh:'E.g. We need a tech starting next week.',
+  n48InvSend:'Send offers', n48InvDone:n => `Sent offers to ${n} tech${n > 1 ? 's' : ''}.`, n48InvSkip:n => `${n} tech${n > 1 ? 's are' : ' is'} still answering an earlier offer, so it wasn’t sent again.`,
+  n48OfLeft:n => `You can invite only ${n} more tech${n > 1 ? 's' : ''} today.`, n48NeedAd:'Post a job first, then invite techs.',
+  n48ProfMax:'You already have 2 profiles (the limit). Edit one of them instead.', n48AddProf:'+ Add profile', n48MyProf:'My profile',
+  n48ApplyT:n => `Apply · ${n}`, n48ApplyD:'The salon will see the profile you choose and message you back.', n48ApplyWhich:'Which profile?',
+  n48ApplyNote:'Message', n48Opt:'(optional)', n48ApplyPh:'E.g. I can start next Monday.', n48ApplySend:'Send application', n48Lic:'TX licensed',
+  n48QuickMax:'You already posted a 1-day job today (1 per day). Post another one tomorrow.',
+  n47MaxT:'You already have 3 open job posts', n47MaxD:'Each salon can have up to 3 open job posts (pending posts count; 1-day posts don’t). To post a new one, close or edit an old post.',
+  n39One:'You already have 3 open job posts', n39OneD:'Each account can have up to 3 open job posts. To post a new one, close or edit an old post.',
+  privTechHead:'Only salons you applied to or whose offer you accepted can see the items below'
+});
+
+/* ---------- icon nét 1.8 (đường vẽ lấy từ design-demo/project/*.dc.html) ---------- */
+const N48I = (() => {
+  const P = {
+    back:'<path d="m15 18-6-6 6-6"/>', more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+    cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+    bag:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>',
+    chat:'<path d="M21 12a8.5 8.5 0 0 1-12.3 7.6L3 21l1.4-5.4A8.5 8.5 0 1 1 21 12z"/>', send:'<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',
+    check:'<path d="M20 6 9 17l-5-5"/>', user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    phone:'<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/>', mail:'<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>',
+    lock:'<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+    doc:'<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+    help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6M12 17h.01"/>',
+    out:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>', chev:'<path d="m9 18 6-6-6-6"/>',
+    trash:'<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>', undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+    hide:'<path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6 0 10 7 10 7a17.6 17.6 0 0 1-3.2 3.9M6.6 6.6C3.9 8.4 2 12 2 12s4 7 10 7c1.9 0 3.6-.6 5-1.5M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+    ban:'<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>', flag:'<path d="M4 22V4M4 4h13l-2 4 2 4H4"/>',
+    pin:'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/>', plus:'<path d="M12 5v14M5 12h14"/>',
+    swap:'<path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/>', shield:'<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/>'
+  };
+  const f = (k, cls, extra) => `<svg class="n48i${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" aria-hidden="true"${extra || ''}>${P[k] || ''}</svg>`;
+  f.P = P;   /* các lớp sau thêm icon: Object.assign(N48I.P, {...}) */
+  return f;
+})();
+
+/* ---------- tiện ích ---------- */
+const n48Db = () => (state.n1ctx && state.n1ctx.db) || firebase.firestore();
+const n48TS = () => firebase.firestore.FieldValue.serverTimestamp();
+const n48Uid = () => (state.user && state.user.uid) || '';
+const n48Ms = v => (typeof n43Ms === 'function' ? n43Ms(v) : n45Ms(v));
+function n48Ths(){ return (state.live && state.live.threads) || []; }
+function n48Other(x){ const u = n48Uid(); return ((x && x.members) || []).find(m => m !== u) || ''; }
+function n48Nm(x, uid){ return ((x && x.names) || {})[uid] || '—'; }
+function n48Ini(name, one){
+  const w = String(name || '').trim().split(/\s+/).filter(Boolean); if (!w.length) return '?';
+  const a = w[0][0], z = w.length > 1 ? w[w.length - 1][0] : '';
+  return (one || !z || !/\p{L}/u.test(z) ? a : a + z).toUpperCase();
+}
+const N48_AV = [['#FBE4EC', '#9B1D4F'], ['#E7EEF7', '#2F5A8A'], ['#EFEAEC', '#5E5458'], ['#E6F4EA', '#1E6B3A']];
+function n48Av(name, size, img){
+  if (img) return `<img class="n48av" src="${esc(img)}" alt="" style="width:${size}px;height:${size}px">`;
+  let h = 0; for (const c of String(name || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const [bg, fg] = N48_AV[h % N48_AV.length];
+  return `<span class="n48av" aria-hidden="true" style="width:${size}px;height:${size}px;background:${bg};color:${fg};font-size:${Math.round(size * .37)}px">${esc(n48Ini(name))}</span>`;
+}
+function n48LsGet(k){ try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
+function n48LsSet(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
+function n48Hm(ms){ const d = new Date(ms); return d.toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US', {hour:'numeric', minute:'2-digit'}); }
+function n48DayKey(ms){ const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function n48DayLbl(ms){
+  const k = n48DayKey(ms);
+  if (k === n44Today()) return t('n48Today'); if (k === n44Today(-1)) return t('n48Yesterday');
+  const d = new Date(ms), dow = t('n44Dow')[d.getDay()];
+  return lang === 'vi' ? `${dow} ${d.getDate()}/${d.getMonth() + 1}` : `${dow} ${d.getMonth() + 1}/${d.getDate()}`;
+}
+function n48When(ms){ if (!ms) return ''; const k = n48DayKey(ms); if (k === n44Today()) return n48Hm(ms); if (k === n44Today(-1)) return t('n48Yesterday'); const d = new Date(ms); return lang === 'vi' ? `${d.getDate()}/${d.getMonth() + 1}` : `${d.getMonth() + 1}/${d.getDate()}`; }
+function n48Role(){ return typeof n43Role === 'function' ? n43Role() : ''; }
+function n48Short(s){ return String(s || '').replace(/\s*\(.*?\)\s*/g, ' ').trim(); }
+/* "10:00 sáng" / "2:30 chiều" (dải thử việc) · "10:00" (dòng đã hẹn) */
+function n48Clock(hm, long){
+  const [h, m] = String(hm || '10:00').split(':').map(Number); if (isNaN(h)) return hm || '';
+  if (lang !== 'vi'){ const h12 = h % 12 || 12; return long ? `${h12}:${String(m || 0).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}` : `${h12}:${String(m || 0).padStart(2, '0')}`; }
+  const hh = h > 12 ? h - 12 : h || 12, mm = String(m || 0).padStart(2, '0');
+  return long ? `${hh}:${mm} ${h < 11 ? 'sáng' : h < 13 ? 'trưa' : h < 18 ? 'chiều' : 'tối'}` : `${h}:${mm}`;
+}
+
+/* ================= A3. bấm mượt ================= */
+/* 1) vẽ lại kiểu "morph": chỉ đổi chỗ khác, giữ nguyên phần tử (giữ vị trí cuộn, focus, chữ đang gõ, ảnh đã tải; nút không bị thay giữa lúc chạm) */
+const N48_FORM = /^(INPUT|TEXTAREA|SELECT)$/;
+function n48Same(a, b){
+  if (a.nodeType !== b.nodeType) return false;
+  if (a.nodeType !== 1) return true;
+  if (a.tagName !== b.tagName) return false;
+  if ((a.id || b.id) && a.id !== b.id) return false;
+  if (N48_FORM.test(a.tagName)) for (const k of ['type', 'name', 'data-fk', 'data-ft', 'data-act', 'data-k', 'data-pm', 'data-n1f'])
+    if ((a.getAttribute(k) || '') !== (b.getAttribute(k) || '')) return false;
+  return true;
+}
+function n48Patch(a, b){
+  if (a.nodeType !== 1){ if (a.nodeValue !== b.nodeValue) a.nodeValue = b.nodeValue; return; }
+  const tag = a.tagName;
+  /* ô nhập: chỉ ghi đè giá trị khi trang muốn đổi (thuộc tính value/checked/selected khác lần trước); còn lại giữ chữ người dùng đang gõ */
+  const keepVal = tag === 'INPUT' && (a.getAttribute('value') || '') === (b.getAttribute('value') || '');
+  const keepChk = tag === 'INPUT' && a.hasAttribute('checked') === b.hasAttribute('checked');
+  let selOld = null; if (tag === 'SELECT'){ const o = Array.from(a.options).find(x => x.defaultSelected); selOld = o ? o.value : null; }
+  const ta = tag === 'TEXTAREA' ? [a.defaultValue, b.defaultValue] : null;
+  for (let i = a.attributes.length - 1; i >= 0; i--){ const n = a.attributes[i].name; if (!b.hasAttribute(n)) a.removeAttribute(n); }
+  for (let i = 0; i < b.attributes.length; i++){ const at = b.attributes[i]; if (a.getAttribute(at.name) !== at.value) a.setAttribute(at.name, at.value); }
+  if (tag === 'INPUT'){
+    if (a.type !== 'file' && !keepVal) a.value = b.getAttribute('value') || '';
+    if (!keepChk) a.checked = b.hasAttribute('checked');
+    return;
+  }
+  if (tag === 'TEXTAREA'){ if (ta[0] !== ta[1]){ a.defaultValue = ta[1]; a.value = ta[1]; } return; }
+  n48Kids(a, b);
+  if (tag === 'SELECT'){
+    const o = Array.from(b.options || b.querySelectorAll('option')).find(x => x.hasAttribute('selected')), selNew = o ? o.value : null;
+    if (selNew !== selOld){ if (selNew != null) a.value = selNew; else if (a.options.length) a.selectedIndex = 0; }
+  }
+}
+function n48Kids(p, np){
+  let a = p.firstChild, b = np.firstChild;
+  while (b){
+    const nb = b.nextSibling;
+    if (a && n48Same(a, b)){ n48Patch(a, b); a = a.nextSibling; }
+    else {
+      let m = null;
+      if (b.nodeType === 1 && b.id){ for (let c = a; c; c = c.nextSibling) if (c.nodeType === 1 && c.id === b.id){ m = n48Same(c, b) ? c : null; break; } }
+      if (m){ p.insertBefore(m, a); n48Patch(m, b); }
+      else p.insertBefore(b, a);
+    }
+    b = nb;
+  }
+  while (a){ const n = a.nextSibling; p.removeChild(a); a = n; }
+}
+(() => {
+  const D = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+  const hook = el => {
+    if (!el || el.__n48) return; el.__n48 = 1;
+    Object.defineProperty(el, 'innerHTML', {configurable:true,
+      get(){ return D.get.call(this); },
+      set(v){
+        if (window.__n48nomorph) return D.set.call(this, v);
+        const tp = document.createElement('template'); D.set.call(tp, String(v == null ? '' : v));
+        try { n48Kids(this, tp.content); } catch (e) { console.warn('n48 morph', e); D.set.call(this, v); }
+      }});
+  };
+  hook(document.getElementById('app')); hook(document.getElementById('modal-root'));
+  window.__n48morph = true;
+})();
+
+/* 2) phản hồi ngay khi chạm + 3) khoá nút trong lúc đang gửi (chặn bấm 2 lần) */
+function n48Key(el){ const d = (el && el.dataset) || {}; return [d.act, d.v, d.ft, d.k, d.t, d.o].map(x => (x == null ? '' : x)).join('|'); }
+function n48Busy(k, el, quiet){
+  state.n48.busy[k] = {at:Date.now(), quiet:!!quiet};
+  if (!quiet && el && el.classList){ el.classList.add('is-busy'); el.setAttribute('aria-busy', 'true'); if (!el.querySelector('.n48spin')) el.insertAdjacentHTML('beforeend', '<span class="n48spin" aria-hidden="true"></span>'); }
+  setTimeout(() => { const b = state.n48.busy[k]; if (b && Date.now() - b.at >= 25000) n48Unbusy(k, el); }, 25100);
+}
+function n48Unbusy(k, el){
+  delete state.n48.busy[k];
+  const clear = e => { if (!e || !e.classList) return; e.classList.remove('is-busy'); e.removeAttribute('aria-busy'); const s = e.querySelector('.n48spin'); if (s) s.remove(); };
+  clear(el); document.querySelectorAll('.is-busy').forEach(e => { if (n48Key(e) === k) clear(e); });
+}
+function n48BusyPaint(){
+  const ks = Object.keys(state.n48.busy).filter(k => !state.n48.busy[k].quiet); if (!ks.length) return;
+  document.querySelectorAll('[data-act]').forEach(e => { if (ks.indexOf(n48Key(e)) >= 0 && !e.classList.contains('is-busy')){ e.classList.add('is-busy'); e.setAttribute('aria-busy', 'true'); e.insertAdjacentHTML('beforeend', '<span class="n48spin" aria-hidden="true"></span>'); } });
+}
+function n48Wrap(a){
+  const f = ACT[a]; if (typeof f !== 'function' || f.__n48) return;
+  const w = function(el, ev){
+    const k = n48Key(el);
+    if (state.n48.busy[k]) return;
+    /* người bấm thật vào nút (không phải link): vẽ khung "đã bấm" trước, việc nặng chạy ngay sau đó */
+    const defer = !!(ev && ev.isTrusted && ev.type === 'click' && el && el.tagName && el.tagName !== 'A' && !(el.closest && el.closest('a')) && !window.__n48sync);
+    const self = this;
+    const run = () => {
+      let r;
+      try { r = f.call(self, el, ev); } catch (err){ n48Unbusy(k, el); throw err; }
+      if (r && typeof r.then === 'function'){ n48Busy(k, el); r.then(() => n48Unbusy(k, el), () => n48Unbusy(k, el)); }
+      else if (defer) n48Unbusy(k, el);
+      return r;
+    };
+    if (!defer) return run();
+    n48Busy(k, el, true);
+    /* đổi hình ngay (khung hình này phải được vẽ ra), rồi mới làm việc nặng */
+    if (el.classList) el.classList.add('is-acting');
+    const go = () => { if (el.classList) el.classList.remove('is-acting'); try { return run(); } catch (err){ console.error(err); n48Unbusy(k, el); } };
+    return new Promise(res => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => res(go()), 0))));
+  };
+  w.__n48 = 1; w.__orig = f; ACT[a] = w;
+}
+document.addEventListener('click', e => {
+  const el = e.target && e.target.closest && e.target.closest('[data-act]'); if (!el) return;
+  const a = el.dataset.act; if (a === 'fcheck' || a === 'tfcheck') return;
+  if (state.n48.busy[n48Key(el)]){ e.stopImmediatePropagation(); e.preventDefault(); return; }
+  n48Wrap(a);
+}, true);
+(() => {
+  let last = null;
+  const off = () => { if (last){ const l = last; last = null; setTimeout(() => l.classList.remove('is-pressed'), 90); } };
+  document.addEventListener('pointerdown', e => {
+    const b = e.target && e.target.closest && e.target.closest('button, a[href], [data-act], .chip, summary, [role="tab"]');
+    if (!b || b.disabled) return; off(); last = b; b.classList.add('is-pressed');
+  }, {capture:true, passive:true});
+  ['pointerup', 'pointercancel', 'dragstart'].forEach(n => document.addEventListener(n, off, {capture:true, passive:true}));
+})();
+
+/* ================= A1. băng Điều khoản ================= */
+n45NeedTerms = function(){
+  const u = state.user; if (!u || window.__n45off) return false;
+  const V = N45_TERMS_V, key = 'n45t_' + u.uid;
+  if (u.terms === V || n48LsGet(key) === V){ state.n45.tv[u.uid] = V; return false; }
+  if (!(u.uid in state.n45.tv)){
+    if (!state.n45.tvBusy[u.uid]){
+      state.n45.tvBusy[u.uid] = true;
+      const ref = firebase.firestore().collection('users').doc(u.uid);
+      /* đọc thẳng từ máy chủ (bản trong máy có thể cũ, thiếu "terms") */
+      ref.get({source:'server'}).catch(() => ref.get())
+        .then(s => {
+          const v = (s && s.exists && (s.data() || {}).terms) || '';
+          state.n45.tv[u.uid] = v;
+          if (v === V){ n48LsSet(key, V); if (state.user && state.user.uid === u.uid) state.user.terms = V; }
+          else render();
+        })
+        .catch(() => { state.n45.tv[u.uid] = V; })
+        .finally(() => { state.n45.tvBusy[u.uid] = false; });
+    }
+    return false;
+  }
+  return state.n45.tv[u.uid] !== V;
+};
+(() => {
+  const mark = () => { const u = state.user; if (u && state.n45.tv[u.uid] === N45_TERMS_V){ n48LsSet('n45t_' + u.uid, N45_TERMS_V); u.terms = N45_TERMS_V; } };
+  const a0 = ACT.n45agree; ACT.n45agree = async function(){ const r = await a0.apply(this, arguments); mark(); return r; };
+  const d0 = ACT.audone; ACT.audone = async function(){ const r = await d0.apply(this, arguments); mark(); return r; };
+})();
+
+/* ================= giới hạn: chat (ch) + mời nhiều (of + k) ================= */
+(() => {
+  const c0 = n45Can;
+  n45Can = function(kind, k){
+    if (kind === 'ch'){
+      if (n45Off()) return '';
+      const r = state.n45.rl || {}, T = n45Ms(r.chT);
+      return T && n45Day(T) === n45Day() && (r.chN || 0) >= N48.chMax ? t('n48ChMax', N48.chMax) : '';
+    }
+    if (kind === 'of' && k > 1 && !n45Off()){
+      const r = state.n45.rl || {}, T = n45Ms(r.ofT), used = T && n45Day(T) === n45Day() ? (r.ofN || 0) : 0, left = N48.ofMax - used;
+      if (left <= 0) return t('n45OfMax', N48.ofMax);
+      if (k > left) return t('n48OfLeft', left);
+      return '';
+    }
+    return c0.apply(this, arguments);
+  };
+})();
+/* ghi 1 lượt: bộ đếm tăng k + các việc chính (rules: ofN tăng 1..10, tối đa 30 / ngày) */
+async function n48CommitK(kind, k, fn){
+  const u = state.user; if (!u) throw {code:'unauthenticated'};
+  const db = firebase.firestore(), ref = db.collection('rl').doc(u.uid), o = await n45RlLoad();
+  const msg = n45Can(kind, k); if (msg) throw {code:'n45', message:msg};
+  const next = flip => { const T = n45Ms(o[kind + 'T']); let same = !!(T && n45Day(T) === n45Day()); if (flip) same = !same;
+    return {[kind + 'T']:n48TS(), [kind + 'N']:(same && T ? (o[kind + 'N'] || 0) : 0) + k}; };
+  const go = async flip => { const b = db.batch(); b.set(ref, next(flip), {merge:true}); fn(b); await b.commit(); };
+  try { await go(false); } catch (e){ if (n45Perm(e) && n45Ms(o[kind + 'T'])) await go(true); else throw e; }
+  await n45RlLoad();
+}
+
+/* ================= B1. nhắn tin trực tiếp ================= */
+/* cuộc chính của 1 cặp: đã nhận > đang chờ / đang nhắn > còn lại */
+n43Canon = function(list){
+  const r = s => (s === 'accepted' ? 3 : s === 'pending' || s === 'open' ? 2 : s === 'blocked' ? 0 : 1);
+  const live = x => (x.adId && ADS.some(a => a.id === x.adId) ? 1 : 0);
+  return list.slice().sort((a, b) => r(b.status) - r(a.status) || live(b) - live(a) || n48Ms(b.lastAt) - n48Ms(a.lastAt))[0] || null;
+};
+function n48PairOf(a, b){
+  const k = [a, b].sort().join('|'), l = n48Ths().filter(x => (x.members || []).slice().sort().join('|') === k);
+  return {all:l, live:l.filter(x => x.status !== 'blocked'), canon:n43Canon(l.filter(x => x.status !== 'blocked'))};
+}
+function n48IsBlocked(uid){ return !!(state.n2 && (state.n2.blocked || []).indexOf(uid) >= 0); }
+function n48MyName(){ const u = state.user; if (n48Role() === 'salon'){ const a = (n1MyAds() || [])[0]; if (a && adBiz(a)) return adBiz(a); } return u.name || ''; }
+ACT.n48chat = function(el){
+  const id = el.dataset.v, ad = ADS.find(a => a.id === id), tc = !ad && TECHS.find(x => x.id === id), it = ad || tc;
+  if (!it) return;
+  if (it.sample){ toast(t('sampleNoAct')); return; }
+  if (!state.user){ if (state.n1ctx) state.n1ctx.setAfter({hash:location.hash}); location.hash = '#login'; return; }
+  const u = state.user, other = ad ? n1Owner(ad) : n31TechUid(tc);
+  if (!other || other === u.uid){ toast(t('ownPost')); return; }
+  const P = n48PairOf(u.uid, other);
+  if (n48IsBlocked(other) || (!P.canon && P.all.some(x => x.status === 'blocked'))){ toast(t('n48Blocked')); return; }
+  if (P.canon){ location.hash = '#inbox-' + P.canon.id; return; }
+  if (state.n45.rlUid !== u.uid) n45RlLoad();
+  const m = n45Can('ch'); if (m){ toast(m); return; }
+  const tid = `${it.id}__${u.uid}`, mine = (n1MyAds() || [])[0];
+  const dr = {members:[u.uid, other], names:{[u.uid]:n48MyName(), [other]:ad ? (adBiz(ad) || ad.ownerName || '—') : (tc.name || '—')},
+    from:u.uid, kind:'chat', status:'open', orig:'chat', urgent:false,
+    adId:ad ? ad.id : ((mine && mine.id) || ''), techId:ad ? ((state.myProfile && state.myProfile.id) || u.uid) : tc.id,
+    about:ad ? {id:ad.id, kind:'ad', title:(adBiz(ad) || '') + ' – ' + titleOf(ad)} : {id:tc.id, kind:'tech', title:tc.name || ''}};
+  const op = typeof imDig === 'function' ? imDig(it.ownerPhone || '') : '';
+  if (op.length === 10){ dr.ownerPhone = '+1' + op; dr.ownerUid = it.ownerUid || ''; }
+  state.n48.drafts[tid] = dr;
+  location.hash = '#inbox-' + tid;
+};
+/* tin nhắn đầu tiên mới tạo cuộc trò chuyện (không có cuộc rỗng) */
+(() => {
+  const s0 = ACT.thsend;
+  ACT.thsend = async function(el){
+    const tid = el && el.dataset && el.dataset.v, dr = tid && state.n48.drafts[tid];
+    if (dr){
+      const ta = document.getElementById('th-text'); if (!ta || !ta.value.trim()) return;
+      const u = state.user; if (!u) return;
+      const doc = Object.assign({}, dr, {lastText:'', lastAt:n48TS(), lastFrom:u.uid, readAt:{[u.uid]:n48TS()}, createdAt:n48TS()});
+      try { await n45Commit('ch', b => b.set(n48Db().collection('threads').doc(tid), doc)); }
+      catch (e){ console.warn('n48 chat', e); toast(n45ErrMsg(e, state.n1ctx ? state.n1ctx.errText : String)); return; }
+      delete state.n48.drafts[tid];
+      const L = state.live; if (L && !L.threads.find(x => x.id === tid)) L.threads.push(Object.assign({id:tid}, dr, {lastAt:{toMillis:() => Date.now()}, createdAt:{toMillis:() => Date.now()}}));
+    }
+    return s0.apply(this, arguments);
+  };
+})();
+
+/* nút "Nhắn tin" cạnh Ứng tuyển / Mời làm trên mọi thẻ tin / thẻ thợ */
+(() => {
+  const a0 = n1Action;
+  n1Action = function(it, o){
+    /* cuộc chỉ nhắn tin (open) không tính là "đã ứng tuyển / đã mời" */
+    const L = state.live, all = L && L.threads; let h;
+    if (all) L.threads = all.filter(x => x.status !== 'open');
+    try { h = a0.apply(this, arguments); } finally { if (all) L.threads = all; }
+    if (!it || !h || !/data-act="n1(apply|offer)"|href="#inbox|n46done|n30Offered|btnSent|disabled/.test(h)) return h;
+    if (state.user && n1Owner(it) === state.user.uid) return h;
+    const ic = TECHS.includes(it) ? N48I('bag') : '';
+    let first = h.replace(/<span class="n43conn[^"]*">[^<]*<\/span>/g, '');
+    if (ic) first = first.replace(/(data-act="n1offer"[^>]*>)/, `$1${ic}`);
+    /* "✓ Đã ứng tuyển · chờ trả lời" dài quá nút → ngắn gọn, có icon */
+    first = first.replace(/(<a class="btn btn-ghost n46done"[^>]*>)[^<]*(<\/a>)/, (m, x, y) => `${x}${N48I('check')}${esc(String(t('n46Applied')).replace(/^\s*✓\s*/, ''))}${y}`);
+    /* đã kết nối (nút cũ là link vào cuộc trò chuyện) → chỉ còn 1 nút Nhắn tin */
+    if (/^\s*<a [^>]*href="#inbox-[^"]*"[^>]*>[^<]*<\/a>\s*$/.test(first) && !/n46done/.test(first)) first = '';
+    return `<div class="n48two${first ? '' : ' n48one'}">${first}<button class="btn btn-ghost n48chatb" type="button" data-act="n48chat" data-v="${esc(it.id)}">${N48I('chat')}${esc(t('n48Chat'))}</button></div>`;
+  };
+})();
+
+/* ---------- B4. thông tin riêng: 1 quy tắc ---------- */
+/* chủ thông tin = owner. Người kia xem được khi: đã nhận (accepted) HOẶC chủ thông tin là người ứng tuyển (đơn còn hiệu lực) */
+function n48PrivOk(x, owner){
+  if (!x) return false;
+  return x.status === 'accepted' || (x.kind === 'apply' && x.from === owner && x.status !== 'withdrawn' && x.status !== 'blocked');
+}
+function n48AmTech(th){
+  const u = n48Uid(); if (!u || !th) return false;
+  if (th.techId === u || th.techId === u + '-2') return true;
+  const tc = TECHS.find(x => x.id === th.techId); return !!(tc && n31TechUid(tc) === u);
+}
+function n48MyPriv(th){
+  const u = state.user;
+  if (n48AmTech(th)){ const p = u.priv || {}; return {role:'tech', portrait:p.portrait || '', licNo:u.licNo || '', pjobs:p.pjobs || '', mpics:p.mpics || [], avail:p.avail || ''}; }
+  return {role:'salon', addr:((u.addrs || {})[th.adId]) || '', pics:((u.pics || {})[th.adId]) || []};
+}
+function n48PushPriv(th){
+  const L = state.live, k = th.id + '|' + n48Uid(); if (!L || L.privSent[k]) return; L.privSent[k] = true;
+  n48Db().collection('threads').doc(th.id).collection('priv').doc(n48Uid()).set(n48MyPriv(th)).catch(e => console.warn('n48 priv', e));
+}
+function n48LoadPriv(th){
+  const L = state.live, o = n48Other(th), key = th.id + '|' + n48Uid(), c0 = L.priv[key];
+  if (c0 && Date.now() - c0.at < 60000) return c0.d;
+  L.priv[key] = {at:Date.now(), d:c0 ? c0.d : null};
+  n48Db().collection('threads').doc(th.id).collection('priv').doc(o).get()
+    .then(d => { L.priv[key] = {at:Date.now(), d:d.exists ? d.data() : {}}; if (location.hash === '#inbox-' + th.id) render(); })
+    .catch(e => { console.warn('n48 priv get', e); L.priv[key] = {at:Date.now(), d:{}}; });
+  return c0 ? c0.d : null;
+}
+function n48PrivBox(x){
+  const o = n48Other(x); if (!n48PrivOk(x, o)) return '';
+  const p = n48LoadPriv(x); if (!p) return '';
+  const rows = [];
+  if (p.role === 'tech' || (!p.role && (p.portrait || p.licNo))){
+    if (p.portrait) rows.push(`<div class="n48pvr"><img src="${esc(p.portrait)}" alt="" class="n48pvimg"><span>${esc(t('n48PrivPortrait'))}</span></div>`);
+    if (p.licNo) rows.push(`<div class="n48pvr"><span>${esc(t('n48PrivLic'))}</span><b>${esc(p.licNo)}</b></div>`);
+    if (p.pjobs) rows.push(`<div class="n48pvr"><span>${esc(t('n48PrivJobs'))}</span><b>${esc(p.pjobs)}</b></div>`);
+  } else {
+    if (p.addr) rows.push(`<div class="n48pvr"><span>${esc(t('n48PrivAddr'))}</span><b>${esc(p.addr)}</b></div>`);
+    if ((p.pics || []).length) rows.push(`<div class="n48pvpics">${p.pics.slice(0, 4).map(u => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="" loading="lazy"></a>`).join('')}</div>`);
+  }
+  if (!rows.length) return '';
+  return `<div class="n48pv"><div class="n48pvh">${N48I('lock')}<b>${esc(t('n48PrivT'))}</b></div>${rows.join('')}</div>`;
+}
+
+/* ---------- tin nhắn: đăng ký nghe + đã đọc ---------- */
+function n48SubMsgs(tid){
+  const L = state.live; if (!L) return;
+  if (L.msgSub && L.msgSub.id === tid) return;
+  if (L.msgSub){ try { L.msgSub.un(); } catch (e) {} L.msgSub = null; }
+  const un = n48Db().collection('threads').doc(tid).collection('messages').orderBy('at').limit(500).onSnapshot(s => {
+    L.msgs[tid] = s.docs.map(d => d.data({serverTimestamps:'estimate'}));
+    const r = route(); if (r.view === 'thread' && r.id === tid){ (state.n1ctx ? state.n1ctx.renderKeep : render)(); n48MarkRead(tid); }
+  }, e => console.warn('n48 msgs', e));
+  L.msgSub = {id:tid, un};
+}
+function n48MarkRead(tid){
+  const L = state.live, th = n48Ths().find(x => x.id === tid), uo = state.n1ctx && state.n1ctx.unreadOf;
+  if (!th || !uo || !uo(th)) return;
+  L.readMarked[tid] = n48Ms(th.lastAt);
+  n48Db().collection('threads').doc(tid).update({['readAt.' + n48Uid()]:n48TS()}).catch(e => console.warn('n48 read', e));
+}
+function n48ScrollEnd(tid, n){
+  const k = state.n48.seen[tid];
+  if (k === n) return;
+  const near = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 160;
+  state.n48.seen[tid] = n;
+  if (k == null || near) requestAnimationFrame(() => window.scrollTo(0, document.documentElement.scrollHeight));
+}
+
+/* ---------- danh sách cuộc trò chuyện (gộp 1 dòng / 1 cặp) ---------- */
+function n48Visible(){
+  const all = n48Ths().filter(x => x.status && !(typeof n28Hidden === 'function' && n28Hidden(x)) && !n48IsBlocked(n48Other(x)));
+  const g = {}; all.forEach(x => { const k = (x.members || []).slice().sort().join('|'); (g[k] = g[k] || []).push(x); });
+  return Object.values(g).map(l => n43Canon(l.filter(x => x.status !== 'blocked'))).filter(Boolean);
+}
+unreadCount = function(){
+  if (!state.user) return 0; const uo = state.n1ctx && state.n1ctx.unreadOf;
+  return uo ? n48Visible().filter(x => uo(x)).length : 0;
+};
+/* chữ hệ thống lưu trong lastText ("Tôi muốn làm", "✓ Đã kết nối"…) → hiện theo ngôn ngữ đang chọn */
+function n48SysTxt(s){
+  for (const k of ['btnApply', 'btnOffer', 'connectedMsg']){ const v = T.vi[k], e = T.en[k]; if (typeof v === 'string' && (s === v || s === e)) return t(k); }
+  return s;
+}
+/* tin liên quan đã bị xoá → ghi rõ */
+function n48AboutTxt(x){
+  const ab = x.about || {}, ad = x.adId && ADS.find(a => a.id === x.adId);
+  if (ad) return titleOf(ad) + (adBiz(ad) && adBiz(ad) !== n48Nm(x, n48Other(x)) ? ' · ' + adBiz(ad) : '');
+  /* bỏ tên người kia ở đầu ("707 Nail Salon – Cần thợ…") để không lặp với tên dòng trên */
+  const nm = n48Nm(x, n48Other(x)), tt = String(ab.title || '').replace(new RegExp('^' + nm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*[–-]\\s*'), '');
+  return tt + (x.adId && ab.kind === 'ad' && L_DEL_OK() ? ' ' + t('n48AdGone') : '');
+}
+const L_DEL_OK = () => !!(state.n31 && state.n31.ready !== false && ADS.some(a => a.live));
+const n48WaitOf = x => !!(x.lastFrom && x.lastFrom !== n48Uid());
+const n48ApptOf = x => !!(x.appt && x.appt.date && x.appt.date >= n44Today());
+viewInbox = function(){
+  if (!state.user) return loginGate();
+  const L = state.live, u = n48Uid(), uo = state.n1ctx && state.n1ctx.unreadOf, tab = state.n48.itab;
+  let all = n48Visible().sort((a, b) => n48Ms(b.lastAt) - n48Ms(a.lastAt));
+  /* tài khoản "Cả hai" cũ: lọc thêm theo bên Tiệm / Thợ (giữ như n139) */
+  let side = '';
+  if (typeof n39Both === 'function' && n39Both() && !(typeof n39Adm === 'function' && n39Adm()) && typeof n39Side === 'function'){
+    const f = state.n39.box || 'all', c = k => all.filter(th => k === 'all' || n39Side(th) === k).length;
+    const chip = (k, lb) => `<button type="button" class="n48tab${f === k ? ' on' : ''}" data-act="n39box" data-v="${k}" aria-pressed="${f === k}">${esc(lb)} (${c(k)})</button>`;
+    side = `<nav class="n48tabs n39box" aria-label="${esc(t('inbox'))}">${chip('all', t('n39All'))}${chip('salon', t('n39BoxSalon'))}${chip('tech', t('n39BoxTech'))}</nav>`;
+    if (f === 'salon' || f === 'tech') all = all.filter(th => n39Side(th) === f);
+  }
+  const cnt = {all:all.length, wait:all.filter(n48WaitOf).length, appt:all.filter(n48ApptOf).length};
+  const list = tab === 'wait' ? all.filter(n48WaitOf) : tab === 'appt' ? all.filter(n48ApptOf) : all;
+  const tabB = (k, lb) => `<button type="button" role="tab" class="n48tab${tab === k ? ' on' : ''}" aria-selected="${tab === k}" data-act="n48itab" data-v="${k}">${esc(t(lb))}${cnt[k] ? ` <span class="n48tc">${cnt[k]}</span>` : ''}</button>`;
+  const row = x => {
+    const o = n48Other(x), nm = n48Nm(x, o), un = uo ? uo(x) : false, inc = x.status === 'pending' && x.from !== u;
+    const tag = inc ? `<span class="n48tag">${esc(t(x.kind === 'offer' ? 'n48NewOffer' : 'n48NewApply'))}</span>` : '';
+    const last = x.lastText ? (x.lastFrom === u ? t('n48You') : '') + n48SysTxt(x.lastText) : '';
+    return `<a class="n48row thread-row${un ? ' unread' : ''}" href="#inbox-${esc(x.id)}">${n48Av(nm, 44)}
+      <span class="n48rm"><span class="n48rt"><b>${esc(nm)}</b><time>${esc(n48When(n48Ms(x.lastAt)))}</time></span>
+      <span class="n48rs biz">${tag}${esc(n48AboutTxt(x))}</span><span class="n48rl last">${esc(last)}</span></span>${un ? '<span class="dot-new n48dot" aria-label="new"></span>' : ''}</a>`;
+  };
+  const me = state.user, mail = me.email ? `<p class="n48mail">${N48I('mail')}${esc(t('n48MailOn', me.email))}</p>` : `<button type="button" class="n48mail n48mailb" data-act="n2mailopen">${N48I('mail')}${esc(t('n48MailAdd'))}</button>`;
+  return `<div class="wrap narrow page n48inbox"><i class="back" hidden></i><h1 class="pg-title">${esc(t('n48Inbox'))}</h1>
+    ${side}<div class="n48tabs" role="tablist">${tabB('all', 'n48TabAll')}${tabB('wait', 'n48TabWait')}${tabB('appt', 'n48TabAppt')}</div>
+    ${!L.threadsReady ? `<p class="empty-s">${t('loadingTxt')}</p>`
+      : list.length ? `<div class="n48list list">${list.map(row).join('')}</div>`
+      : all.length ? `<p class="n48none">${esc(t('n48EmptyTab'))}</p>`
+      : `<div class="n48empty">${N48I('chat')}<h2>${esc(t('n48Empty'))}</h2><p>${esc(t('n48EmptyD'))}</p></div>`}
+    ${mail}</div>`;
+};
+ACT.n48itab = function(el){ state.n48.itab = el.dataset.v || 'all'; render(); };
+
+/* ---------- 1 cuộc trò chuyện (02-chat) ---------- */
+function n48Events(grp){
+  const ev = [];
+  grp.forEach(x => {
+    if ((x.kind === 'apply' || x.kind === 'offer') && x.orig !== 'chat' && x.createdAt) ev.push({at:n48Ms(x.createdAt), kind:x.kind, from:x.from, adId:x.adId, techId:x.techId, note:x.note || '', th:x});
+    (Array.isArray(x.apps) ? x.apps : []).forEach(a => { if (a && (a.kind === 'apply' || a.kind === 'offer')) ev.push({at:Number(a.at) || 0, kind:a.kind, from:a.from, adId:a.adId, techId:a.techId || (a.kind === 'apply' ? x.techId : ''), note:a.note || '', th:x}); });
+  });
+  return ev;
+}
+function n48ProfLine(tc){
+  if (!tc) return '';
+  const sv = (tc.services || []).slice(0, 3).map(s => n48Short(svcName(s.id))).join(', ');
+  return [sv, tc.years ? opt('years', tc.years) : '', tc.license === 'have' ? t('n48Lic') : ''].filter(Boolean).join(' · ');
+}
+function n48EvCard(e, x, last){
+  const u = n48Uid(), mine = e.from === u, who = n48Nm(x, e.from).split(/\s+/)[0] || n48Nm(x, e.from);
+  const title = e.kind === 'apply' ? (mine ? t('n48AppliedMe') : t('n48Applied', who)) : (mine ? t('n48OfferedMe') : t('n48Offered', n48Nm(x, e.from)));
+  let sub = '', adL = '';
+  const ad = e.adId && ADS.find(a => a.id === e.adId);
+  if (e.kind === 'apply'){ sub = n48ProfLine(TECHS.find(z => z.id === e.techId)); if (ad && e.adId !== x.adId) adL = t('n48EvAd', titleOf(ad)); }
+  else sub = ad ? titleOf(ad) : '';
+  let act = '';
+  if (last && x.status === 'pending' && x.from !== u && x.kind === e.kind)
+    act = `<div class="n48evb"><button type="button" class="btn btn-primary" data-act="n1acc" data-v="${esc(x.id)}">${esc(t('n48Accept'))}</button><button type="button" class="btn btn-ghost" data-act="n1dec" data-v="${esc(x.id)}">${esc(t('n48Decline'))}</button></div>`;
+  else if (last && x.status === 'pending' && x.from === u) act = `<p class="n48evs">${esc(t('n48WaitThem', n48Nm(x, n48Other(x))))}</p>`;
+  else if (last && x.status === 'declined') act = `<p class="n48evs">${esc(t('n48StDec'))}</p>`;
+  else if (last && x.status === 'withdrawn') act = `<p class="n48evs">${esc(t('n48StWd'))}</p>`;
+  return `<div class="n48ev n43sys">${N48I('bag', 'n48evi')}<div><b>${esc(title)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}${adL ? `<span>${esc(adL)}</span>` : ''}${e.note ? `<q>${esc(e.note)}</q>` : ''}${act}</div></div>`;
+}
+const n48Loading = () => `<div class="wrap narrow page"><p class="empty-s">${t('loadingTxt')}</p></div>`;
+viewThread = function(id){
+  if (!state.user) return loginGate();
+  const L = state.live, u = n48Uid(), dr = state.n48.drafts[id];
+  let x = n48Ths().find(z => z.id === id);
+  if (!x && !dr) return L.threadsReady ? notFound() : n48Loading();
+  let grp = [];
+  if (x){
+    grp = n43Group(x);
+    const canon = n43Canon(grp.filter(z => z.status !== 'blocked'));
+    if (canon && canon.id !== id){ setTimeout(() => location.replace('#inbox-' + canon.id), 0); return n48Loading(); }
+    n48SubMsgs(id); grp.filter(z => z.id !== id).forEach(z => n43LoadSib(z.id));
+    setTimeout(() => n48MarkRead(id), 0);
+    n48PushPriv(x);
+  }
+  const th = x || Object.assign({id}, dr), o = n48Other(th), nm = n48Nm(th, o), ab = th.about || {};
+  const gone = /Tài khoản đã xoá|Deleted account/.test(nm) || !!(th.gone && th.gone[o]);
+  const blocked = th.status === 'blocked' || n48IsBlocked(o);
+  /* dòng tiêu đề phụ: "<tin> · <tiệm>" – bấm mở tin / hồ sơ */
+  const ad = ADS.find(a => a.id === th.adId), amTech = n48AmTech(th);
+  const subTxt = ad ? `${titleOf(ad)} · ${adBiz(ad) || ''}` : n48AboutTxt(th);
+  const subHref = amTech ? (th.adId ? '#ad-' + th.adId : '') : (th.techId ? '#tech-' + th.techId : '');
+  /* tin nhắn + dòng hệ thống, xếp theo giờ */
+  const own = x ? L.msgs[id] : [];
+  const items = [];
+  if (own) own.forEach(m => items.push({at:n48Ms(m.at) || Date.now(), m}));
+  grp.filter(z => z.id !== id).forEach(z => { const c = state.n43.sm[z.id]; if (c && c.msgs) c.msgs.forEach(m => items.push({at:n48Ms(m.at), m})); });
+  const evs = n48Events(grp.length ? grp : [th]); evs.forEach(e => items.push({at:e.at, e}));
+  const ap = th.appt && th.appt.date && th.appt.date >= n44Today() ? th.appt : null;
+  if (ap && ap.ok) items.push({at:Number(ap.at) || 0, ok:ap});
+  items.sort((a, b) => a.at - b.at);
+  const lastEv = evs.slice().sort((a, b) => a.at - b.at).pop();
+  const myLast = own ? own.filter(m => m.from === u).pop() : null;
+  const seen = myLast && n48Ms((th.readAt || {})[o]) >= n48Ms(myLast.at);
+  let day = '', body = '';
+  items.forEach(it => {
+    const dk = n48DayKey(it.at || Date.now());
+    if (dk !== day){ day = dk; body += `<p class="n48day">${esc(n48DayLbl(it.at || Date.now()))}</p>`; }
+    if (it.e) body += n48EvCard(it.e, th, it.e === lastEv);
+    else if (it.ok){ const k = (t('n44ApptK') || {})[it.ok.kind] || t('n48MAppt'); body += `<p class="n48sysl">${N48I('check')}${esc(t('n48ApptDone', k, n44Day(it.ok.date), n48Clock(it.ok.time)))}</p>`; }
+    else {
+      const m = it.m, me = m.from === u;
+      body += `<div class="bub ${me ? 'me' : 'them'}" title="${esc(n48Hm(it.at))}">${esc(m.text || '')}</div>`;
+      if (me && m === myLast && seen) body += `<span class="n48seen">${esc(t('n48Seen'))}</span>`;
+    }
+  });
+  if (x && !own) body += `<p class="empty-s">${t('loadingTxt')}</p>`;
+  if (!items.length && (dr || own)) body += `<p class="n48hello">${esc(t('n48Hello', nm))}</p>`;
+  const strip = ap ? `<div class="n48strip">${N48I('cal')}<span>${t('n48ApptLine', esc((t('n44ApptK') || {})[ap.kind] || t('n48MAppt')), esc(n44Day(ap.date)), esc(n48Clock(ap.time, true)))}</span>
+      ${!ap.ok && ap.by !== u ? `<button type="button" class="n48lnk" data-act="n44apok" data-v="${esc(th.id)}">${esc(t('n48ApptOk'))}</button>` : ''}<button type="button" class="n48lnk" data-act="n44appt" data-v="${esc(th.id)}">${esc(t('n48ApptChg'))}</button></div>` : '';
+  if (x) n48ScrollEnd(id, items.length);
+  const foot = blocked ? `<p class="n48note">${esc(t('n48BlockedNote'))}</p>` : gone ? `<p class="n48note">${esc(t('n48GoneNote'))}</p>`
+    : `<div class="n48send reply"><label class="sr" for="th-text">${esc(t('n48Msg'))}</label><textarea id="th-text" rows="1" maxlength="1000" placeholder="${esc(t('n48Msg'))}"></textarea>
+       <button class="n48sendb" type="button" data-act="thsend" data-v="${esc(th.id)}" aria-label="${esc(t('n48Send'))}">${N48I('send')}</button></div>`;
+  return `<div class="n48chat"><div class="n48top"><header class="n48ch"><a class="n48ib back" href="#inbox" aria-label="${esc(t('n48Back'))}">${N48I('back')}</a>${n48Av(nm, 38)}
+      <div class="n48cht"><b>${esc(nm)}</b>${subTxt ? (subHref ? `<a class="biz" href="${esc(subHref)}">${esc(subTxt)}</a>` : `<span class="biz">${esc(subTxt)}</span>`) : ''}</div>
+      ${x ? `<button type="button" class="n48ib" data-act="n48menu" data-v="${esc(th.id)}" aria-label="${esc(t('n48More'))}" aria-haspopup="dialog">${N48I('more')}</button>` : '<span class="n48ib"></span>'}</header>
+    ${strip}</div><main class="n48cm"><div class="bubbles">${body}</div>${x ? n48PrivBox(x) : ''}</main>${foot}</div>`;
+};
+/* Enter = gửi (Shift+Enter xuống dòng) + ô nhắn tự cao lên */
+document.addEventListener('keydown', e => {
+  if (e.target && e.target.id === 'th-text' && e.key === 'Enter' && !e.shiftKey && !e.isComposing){
+    const b = document.querySelector('.n48sendb[data-act="thsend"]'); if (b){ e.preventDefault(); b.click(); }
+  }
+});
+document.addEventListener('input', e => { const a = e.target; if (a && a.id === 'th-text' && a.closest('.n48send')){ a.style.height = 'auto'; a.style.height = Math.min(120, a.scrollHeight) + 'px'; } });
+
+/* ---------- nút ⋯ (11-chatmenu) ---------- */
+function n48Sheet(items){
+  const old = document.getElementById('n48sheet'); if (old) old.remove();
+  const box = document.createElement('div'); box.id = 'n48sheet'; box.className = 'n48sh';
+  box.innerHTML = `<div class="n48shc" role="dialog" aria-modal="true" aria-label="${esc(t('n48More'))}"><div class="n48shl">${items}</div>
+    <button type="button" class="n48shx" data-n48x="1">${esc(t('n48MClose'))}</button></div>`;
+  const close = () => { box.remove(); document.removeEventListener('keydown', key, true); };
+  const key = e => { if (e.key === 'Escape'){ e.preventDefault(); close(); } };
+  box.addEventListener('click', e => {
+    if (e.target === box || (e.target.closest && e.target.closest('[data-n48x]'))) return close();
+    /* để nguyên trong trang (ẩn) cho hộp xác nhận bấm lại đúng nút; xoá hẳn sau */
+    if (e.target.closest && e.target.closest('[data-act]')){ box.style.display = 'none'; document.removeEventListener('keydown', key, true); setTimeout(() => box.remove(), 8000); }
+  });
+  document.addEventListener('keydown', key, true);
+  document.body.appendChild(box);
+  const f = box.querySelector('button'); if (f) f.focus();
+}
+ACT.n48menu = function(el){
+  const id = el.dataset.v, x = n48Ths().find(z => z.id === id); if (!x) return;
+  const u = n48Uid(), o = n48Other(x), nm = n48Nm(x, o), role = n48Role();
+  const it = (ic, lb, attrs, cls) => `<button type="button" class="n48shi${cls ? ' ' + cls : ''}" ${attrs}>${N48I(ic)}<span>${esc(lb)}</span></button>`;
+  let h = '';
+  if (x.status !== 'blocked') h += it('cal', t('n48MAppt'), `data-act="n44appt" data-v="${esc(id)}"`);
+  if (x.status === 'pending' && x.from === u && x.kind === 'apply' && role !== 'salon') h += it('undo', t('n48MWd'), `data-act="n30wd" data-v="${esc(id)}"`);
+  if (x.status === 'pending' && x.from === u && x.kind === 'offer' && role !== 'tech') h += it('undo', t('n48MCancel'), `data-act="n30wd" data-v="${esc(id)}"`);
+  h += it('hide', t('n48MHide'), `data-act="n28hide" data-v="${esc(id)}"`);
+  if (x.status !== 'blocked') h += it('ban', t('n48MBlock', nm), `data-act="n2block" data-v="${esc(o)}" data-n="${esc(nm)}" data-t="${esc(id)}"`);
+  h += it('flag', t('n48MRep'), `data-act="n44rep" data-v="${esc(id)}"`, 'n48red');
+  n48Sheet(h);
+};
+
+/* ================= A2. trang Tài khoản (04-account) ================= */
+const n48Acc0 = viewAccount;
+viewAccount = function(){
+  const u = state.user; if (!u) return loginGate();
+  if (state.adm && state.adm.on) return n48Acc0.apply(this, arguments);     /* admin giữ trang cũ (có phần quản trị) */
+  const role = u.role === 'both' ? t('n48RoleBoth') : n48Role() === 'tech' ? t('n48RoleTech') : t('n48RoleSalon');
+  const hasPin = typeof n38HasPw === 'function' && n38HasPw();
+  const row = (ic, lb, val, act, btn, extra) => `<div class="n48ar">${N48I(ic, 'n48mut')}<span class="n48av2"><span class="n48al">${lb}</span><b>${val}</b></span>
+      <button type="button" class="n48lnk" data-act="${act}">${esc(btn)}</button>${extra || ''}</div>`;
+  const nameRow = state.nm && state.nm.on
+    ? `<div class="n48ar n48edit">${N48I('user', 'n48mut')}<span class="n48av2"><label class="n48al" for="nm-in">${esc(t('n48AccName'))}</label><input id="nm-in" type="text" maxlength="60" value="${esc(state.nm.v)}"></span>
+        <button type="button" class="n48lnk" data-act="nmsave"${state.nm.busy ? ' disabled' : ''}>${esc(t('n48Save'))}</button><button type="button" class="n48lnk n48mutb" data-act="nmcancel">${esc(t('n48Cancel'))}</button></div>`
+    : row('user', esc(t('n48AccName')), esc(u.name || ''), 'nmedit', t('n48AccChg'));
+  const ph = u.phone ? (typeof n47Pretty === 'function' ? n47Pretty(u.phone) : u.phone) : '';
+  const blk = (state.n2 && state.n2.blocked) || [];
+  const both = typeof n39Both === 'function' && n39Both() && !(typeof n39Adm === 'function' && n39Adm());
+  const cur = both && typeof n39Mode === 'function' ? n39Mode() : '', oth = cur === 'tech' ? 'salon' : 'tech';
+  const link = (ic, lb, href, chev) => `<a class="n48ar n48al2" href="${href}">${N48I(ic, 'n48mut')}<span class="n48grow">${esc(lb)}</span>${chev ? N48I('chev', 'n48mut n48sm') : ''}</a>`;
+  const btn = (ic, lb, attrs) => `<button type="button" class="n48ar n48al2" ${attrs}>${N48I(ic, 'n48mut')}<span class="n48grow">${esc(lb)}</span></button>`;
+  let other = link('doc', t('n48AccTerms'), '#terms', true) + link('help', t('n48AccHelp'), 'tel:+12108687686', true);
+  if (both) other += btn('swap', t('n48AccSw', t(oth === 'tech' ? 'n48RoleTech' : 'n48RoleSalon')), `data-act="n39mode" data-v="${oth}"`);
+  if (blk.length){
+    other += btn('ban', t('n48AccBlk', blk.length), 'data-act="n48blk"');
+    if (state.n48.blk) other += `<div class="n48blk">${blk.map(b => `<div class="n48bl"><span>${esc(n48BlkName(b))}</span><button type="button" class="n48lnk" data-act="n2unblock" data-v="${esc(b)}">${esc(t('n48AccUnblock'))}</button></div>`).join('')}</div>`;
+  }
+  other += btn('out', t('n48AccOut'), 'data-act="signout"');
+  return `<div class="wrap narrow page n48acc"><i class="back" hidden></i><h1 class="pg-title">${esc(t('n48Acc'))}</h1>
+    <div class="n48me">${u.avatar ? n48Av(u.name, 56, u.avatar) : `<span class="n48av" aria-hidden="true" style="width:56px;height:56px;background:#FBE4EC;color:#9B1D4F;font-size:20px">${esc(n48Ini(u.name, true))}</span>`}<div class="n48grow"><b>${esc(u.name || '')}</b><span>${esc(role)}</span></div>
+      <label class="n48lnk n48photo">${esc(t('n48AccPhoto'))}<input type="file" accept="image/*" data-n1ava="1" aria-label="${esc(t('n48AccPhoto'))}"></label></div>
+    <section class="n48sec"><h2 class="n48h">${esc(t('n48AccLogin'))}</h2><div class="n48card">
+      ${nameRow}
+      ${row('phone', esc(t('n48AccPhone')), ph ? esc(ph) : `<i>${esc(t('n48AccNone'))}</i>`, 'n47phopen', ph ? t('n48AccChg') : t('n48AccAdd'))}
+      ${row('mail', `${esc(t('n48AccMail'))}${u.email ? ` ${N48I('check', 'n48ok', ` role="img" aria-label="${esc(t('n48AccVer'))}"`).replace('aria-hidden="true"', '')}` : ''}`, u.email ? esc(u.email) : `<i>${esc(t('n48AccNone'))}</i>`, 'n2mailopen', u.email ? t('n48AccChg') : t('n48AccAdd'))}
+      ${row('lock', esc(t('n48AccPin')), hasPin ? '<span class="n48dots">••••••</span>' : `<i>${esc(t('n48AccNoPin'))}</i>`, 'n38change', hasPin ? t('n48AccChg') : t('n48AccSet'))}
+    </div></section>
+    <section class="n48sec"><h2 class="n48h">${esc(t('n48AccOther'))}</h2><div class="n48card">${other}</div></section>
+    <button type="button" class="n48del" data-act="n28delacc"${state.n47 && state.n47.delBusy ? ' disabled' : ''}>${N48I('trash')}${esc(t('n48AccDel'))}</button></div>`;
+};
+function n48BlkName(uid){ const x = n48Ths().find(z => (z.members || []).indexOf(uid) >= 0); return x ? n48Nm(x, uid) : uid.replace(/^u_(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3'); }
+ACT.n48blk = function(){ state.n48.blk = !state.n48.blk; render(); };
+
+/* ================= B2. tiệm mời nhiều thợ ================= */
+function n48TechList(){ const v = route().view; return v === 'salon' || v === 'job-seekers'; }
+function n48CanPick(tc){ return !!(tc && !tc.sample && state.user && n48Role() === 'salon' && n31TechUid(tc) !== state.user.uid); }
+(() => {
+  const c0 = n1TechCard;
+  n1TechCard = function(tc, o){
+    const h = c0.apply(this, arguments);
+    if (!n48TechList() || !n48CanPick(tc)) return h;
+    const on = state.n48.sel.indexOf(tc.id) >= 0;
+    const box = `<button type="button" class="n48pick${on ? ' on' : ''}" data-act="n48pick" data-v="${esc(tc.id)}" aria-pressed="${on}" aria-label="${esc(t('n48Pick', tc.name || ''))}">${on ? N48I('check') : ''}</button>`;
+    return h.replace(/^(\s*<div class="card)([^"]*)(")([^>]*>)/, (m, a, b, c, d) => `${a}${b}${on ? ' n48picked' : ''} n48pc${c}${d}${box}`);
+  };
+})();
+ACT.n48pick = function(el){
+  const id = el.dataset.v, S = state.n48.sel, i = S.indexOf(id);
+  if (i >= 0) S.splice(i, 1);
+  else { if (S.length >= N48.ofBatch){ toast(t('n48Max10')); return; } S.push(id); }
+  render();
+};
+function n48Bar(){
+  const main = document.getElementById('main'); if (!main) return;
+  const S = state.n48.sel = state.n48.sel.filter(id => TECHS.some(x => x.id === id));
+  if (!n48TechList() || !S.length || n48Role() !== 'salon') return;
+  main.insertAdjacentHTML('beforeend', `<div class="n48bar" role="region" aria-live="polite"><span>${t('n48Picked', S.length)}</span>
+    <button type="button" class="btn btn-primary n48inv" data-act="n48invite">${N48I('send')}${esc(t('n48InvN', S.length))}</button></div>`);
+  const tb = document.querySelector('.tabbar'), bar = main.querySelector('.n48bar');
+  const h = tb && getComputedStyle(tb).display !== 'none' ? Math.round(window.innerHeight - tb.getBoundingClientRect().top) : 0;
+  if (bar) bar.style.bottom = Math.max(0, h) + 'px';
+}
+ACT.n48invite = async function(){
+  const S = state.n48.sel.slice(), u = state.user; if (!u || !S.length) return;
+  if (S.length > N48.ofBatch){ toast(t('n48Max10')); return; }
+  const mine = n1MyAds() || [];
+  if (!mine.length){ toast(t('n48NeedAd')); location.hash = '#post-hiring'; return; }
+  if (state.n45.rlUid !== u.uid) await n45RlLoad();
+  const pre = n45Can('of', S.length); if (pre){ toast(pre); return; }
+  const sel = mine.length > 1 ? `<div class="fq"><label class="flabel" for="n48-ad">${esc(t('n48InvAd'))}</label><select id="n48-ad">${mine.map(a => `<option value="${esc(a.id)}">${esc(titleOf(a))}</option>`).join('')}</select></div>` : '';
+  const v = await n44Dlg(t('n48InvT', S.length), `${sel}<div class="fq"><label class="flabel" for="n48-in">${esc(t('n48InvNote'))}</label><textarea id="n48-in" rows="2" maxlength="300" placeholder="${esc(t('n48InvPh'))}"></textarea></div>`, t('n48InvSend'));
+  if (!v) return;
+  const adId = v['n48-ad'] || mine[0].id, note = String(v['n48-in'] || '').trim().slice(0, 300);
+  try {
+    const r = await n48InviteMany(S, adId, note);
+    state.n48.sel = [];
+    toast(t('n48InvDone', r.sent) + (r.skip ? ' ' + t('n48InvSkip', r.skip) : ''));
+    render();
+  } catch (e){ console.warn('n48 invite', e); toast(n45ErrMsg(e, state.n1ctx ? state.n1ctx.errText : String)); }
+};
+async function n48InviteMany(ids, adId, note){
+  const u = state.user, db = n48Db(), FV = firebase.firestore.FieldValue, TS = n48TS;
+  if (ids.length > N48.ofBatch) throw {code:'n45', message:t('n48Max10')};
+  const ad = ADS.find(a => a.id === adId), salon = ad ? (adBiz(ad) || u.name) : u.name;
+  const about = {id:adId, kind:'ad', title:salon + ' – ' + (ad ? titleOf(ad) : '')};
+  const ops = [], sent = []; let skip = 0;
+  ids.forEach(id => {
+    const tc = TECHS.find(z => z.id === id); if (!tc || !n48CanPick(tc)) return;
+    const techUid = n31TechUid(tc), P = n48PairOf(u.uid, techUid), ex = P.canon;
+    if (P.all.some(x => x.status === 'blocked') && !ex) return;
+    if (ex && ex.status === 'pending' && ex.from === u.uid && ex.kind === 'offer'){ skip++; return; }
+    if (ex){
+      const upd = {apps:FV.arrayUnion({adId, kind:'offer', from:u.uid, at:Date.now(), title:about.title, note}), about, lastText:note || t('btnOffer'), lastAt:TS(), lastFrom:u.uid, ['readAt.' + u.uid]:TS(), ['names.' + u.uid]:salon};
+      if (ex.status === 'pending' && ex.from !== u.uid){ upd.status = 'accepted'; upd.answeredAt = TS(); }
+      else if (ex.status !== 'accepted') Object.assign(upd, {status:'pending', from:u.uid, kind:'offer', note, urgent:false});
+      ops.push(b => b.update(db.collection('threads').doc(ex.id), upd)); sent.push({tid:ex.id, techUid, tc});
+    } else {
+      const tid = getThreadId(adId, techUid);
+      const doc = {members:[u.uid, techUid], names:{[u.uid]:salon, [techUid]:tc.name || '—'}, from:u.uid, kind:'offer', status:'pending', urgent:false,
+        adId, techId:tc.id, about, note, lastText:note || t('btnOffer'), lastAt:TS(), lastFrom:u.uid, readAt:{[u.uid]:TS()}, createdAt:TS()};
+      const op = typeof imDig === 'function' ? imDig(tc.ownerPhone || '') : '';
+      if (op.length === 10){ doc.ownerPhone = '+1' + op; doc.ownerUid = tc.ownerUid || ''; }
+      ops.push(b => b.set(db.collection('threads').doc(tid), doc)); sent.push({tid, techUid, tc});
+    }
+  });
+  if (!ops.length) return {sent:0, skip};
+  await n48CommitK('of', ops.length, b => ops.forEach(f => f(b)));
+  const priv = {role:'salon', addr:((u.addrs || {})[adId]) || '', pics:((u.pics || {})[adId]) || []};
+  for (const s of sent){
+    db.collection('threads').doc(s.tid).collection('priv').doc(u.uid).set(priv).catch(e => console.warn('n48 priv', e));
+    n48MailOffer(s.techUid, salon);
+  }
+  return {sent:sent.length, skip};
+}
+function n48MailOffer(toUid, fromName){
+  const link = location.origin + location.pathname + '#inbox', bv = `${fromName} vừa mời bạn đi làm trên Nail101.`, be = `${fromName} just invited you to work on Nail101.`;
+  n45Mail({toUids:[toUid], message:{subject:'Có tiệm mời bạn đi làm – Nail101 / A salon invited you to work', text:`${bv}\nMở Nail101 để xem: ${link}\n\n${be}\nOpen Nail101: ${link}`,
+    html:`<p>${esc(bv)}</p><p><a href="${esc(link)}">Mở Nail101 để xem</a></p><hr><p>${esc(be)}</p><p><a href="${esc(link)}">Open Nail101</a></p>`}, kind:'offer', by:state.user.uid, createdAt:n48TS()})
+    .catch(e => console.warn('n48 mail', e));
+}
+
+/* ================= B3. thợ 2 hồ sơ · tiệm 3 tin + 1 tin "1 ngày" / ngày ================= */
+function n48MyProfs(){
+  const u = n48Uid(); if (!u) return [];
+  const l = TECHS.filter(x => x.live && !x.delAt && (x.id === u || x.id === u + '-2' || x.ownerUid === u));
+  return l.sort((a, b) => (a.id === u ? -1 : b.id === u ? 1 : a.id === u + '-2' ? -1 : b.id === u + '-2' ? 1 : 0));
+}
+function n48ProfName(tc){ const s = (tc.services || []).slice(0, 2).map((x, i) => { const v = n48Short(svcName(x.id)); return i ? v.toLowerCase() : v; }); return s.length ? s.join(' / ') : (tc.name || '—'); }
+ACT.n48addprof = function(){
+  if (n48MyProfs().length >= N48.profMax){ toast(t('n48ProfMax')); return; }
+  delete state.forms.profile;
+  const fs = getForm('profile'); fs.n48slot = 2;
+  if (state.user && state.user.name) fs.data.name = state.user.name;
+  location.hash = '#post-profile';
+};
+ACT.n48ptab = function(el){ state.n48.pf = el.dataset.v || ''; render(); };
+(() => {
+  const p0 = n3MyProf;
+  n3MyProf = function(){
+    const L = n48MyProfs(); if (L.length < 1) return p0.apply(this, arguments);
+    const cur = L.find(x => x.id === state.n48.pf) || L[0], keep = state.myProfile;
+    state.myProfile = cur;
+    let inner; try { inner = p0.apply(this, arguments); } finally { state.myProfile = keep; }
+    const tabs = `<div class="n48ptabs" role="tablist">${L.map(x => `<button type="button" role="tab" class="n48ptab${x === cur ? ' on' : ''}" aria-selected="${x === cur}" data-act="n48ptab" data-v="${esc(x.id)}">${esc(n48ProfName(x))}</button>`).join('')}
+      ${L.length < N48.profMax ? `<button type="button" class="n48ptab n48padd" data-act="n48addprof">${esc(t('n48AddProf'))}</button>` : ''}<span class="n48pcnt">${L.length}/${N48.profMax}</span></div>`;
+    let i = inner.indexOf('</h1>'); i = i >= 0 ? i + 5 : inner.indexOf('>') + 1;
+    return inner.slice(0, i) + tabs + inner.slice(i) + n48PrivCard();
+  };
+})();
+/* khối "Thông tin riêng" (10-profile) */
+function n48PrivCard(){
+  const u = state.user; if (!u) return '';
+  const p = u.priv || {}, mp = n48MyProfs()[0], ed = mp ? `data-act="liveedit" data-k="techs" data-v="${esc(mp.id)}"` : 'data-act="n48addprof"';
+  const lic = String(u.licNo || ''), r = (lb, val) => `<div class="n48pr"><span>${esc(lb)}</span>${val}</div>`;
+  const add = `<button type="button" class="n48lnk" ${ed}>${esc(t('n48PrivAdd'))}</button>`;
+  return `<div class="wrap narrow"><section class="n48card n48privc"><div class="n48ph"><span class="n48pic">${N48I('lock')}</span><span><b>${esc(t('n48PrivT'))}</b><span>${esc(t('n48PrivNote'))}</span></span></div>
+    ${r(t('n48PrivPortrait'), p.portrait ? `<span class="n48okt">${N48I('check')}${esc(t('n48PrivAdded'))}</span>` : add)}
+    ${r(t('n48PrivLic'), lic ? `<span class="n48mut2">••••${esc(lic.slice(-4))}</span>` : add)}
+    ${r(t('n48PrivJobs'), p.pjobs ? `<span class="n48mut2">${esc(p.pjobs)}</span>` : add)}</section></div>`;
+}
+/* hồ sơ thứ 2: kiểm tra giới hạn đăng 5 / giờ như bài mới */
+(() => {
+  const p0 = ACT.fpublish;
+  ACT.fpublish = function(el){
+    const type = el && el.dataset && el.dataset.ft, fs = type && state.forms && state.forms[type];
+    if (type === 'profile' && fs && fs.n48slot === 2 && !fs.editId && !fs.liveId){
+      if (n48MyProfs().some(x => x.id === n48Uid() + '-2') || n48MyProfs().length >= N48.profMax){ toast(t('n48ProfMax')); return; }
+      const m = n45Can('po'); if (m){ toast(m); return; }
+    }
+    return p0.apply(this, arguments);
+  };
+  const v0 = viewForm;
+  viewForm = function(type){
+    const fs = state.forms && state.forms[type];
+    /* đã đủ 2 hồ sơ mà mở form hồ sơ mới (không phải sửa) → chặn */
+    if (type === 'profile' && fs && fs.n48slot === 2 && !fs.editId && !fs.liveId && !fs.done && n48MyProfs().length >= N48.profMax)
+      return `<div class="wrap narrow page"><div class="card n39one"><h1 class="pg-title">${esc(t('n48ProfMax'))}</h1><a class="btn btn-primary" href="#myprof">${esc(t('n48MyProf'))}</a></div></div>`;
+    return v0.apply(this, arguments);
+  };
+})();
+/* ứng tuyển 1 bước (08-apply): chọn hồ sơ + lời nhắn */
+(() => {
+  const m0 = modalAlerts;
+  modalAlerts = function(){
+    const m = state.n1m || {};
+    if (state.modal !== 'n1' || m.kind !== 'apply' || !state.myProfile) return m0.apply(this, arguments);
+    const ad = ADS.find(a => a.id === m.id); if (!ad) return m0.apply(this, arguments);
+    const L = n48MyProfs(), pick = state.n48.ap && L.some(x => x.id === state.n48.ap) ? state.n48.ap : (L[0] || {}).id;
+    const card = x => `<label class="n48ro${x.id === pick ? ' on' : ''}"><input type="radio" name="n48p" value="${esc(x.id)}"${x.id === pick ? ' checked' : ''} data-n48ap="1">
+      <span><b>${esc(n48ProfName(x))}${(x.jobType || [])[0] ? ` – ${esc(opt('jobType', x.jobType[0]))}` : ''}</b><span>${esc([x.years ? opt('years', x.years) : '', x.license === 'have' ? t('n48Lic') : ''].filter(Boolean).join(' · '))}</span></span></label>`;
+    return `<span class="n48grab" aria-hidden="true"></span><div class="modal-head n48aph"><h2 id="m-title">${esc(t('n48ApplyT', adBiz(ad) || ''))}</h2></div><p class="n48apd">${esc(t('n48ApplyD'))}</p>
+      ${L.length > 1 ? `<fieldset class="n48fs"><legend>${esc(t('n48ApplyWhich'))}</legend>${L.map(card).join('')}</fieldset>` : ''}
+      <div class="fq"><label class="flabel" for="n1-note">${esc(t('n48ApplyNote'))} <span class="n48opt">${esc(t('n48Opt'))}</span></label><textarea id="n1-note" rows="2" maxlength="300" placeholder="${esc(t('n48ApplyPh'))}"></textarea></div>
+      <button class="btn btn-primary btn-block n48apb" type="button" data-act="n1send">${esc(t('n48ApplySend'))}</button>`;
+  };
+  document.addEventListener('change', e => { const el = e.target; if (el && el.dataset && el.dataset.n48ap){ state.n48.ap = el.value; document.querySelectorAll('.n48ro').forEach(l => l.classList.toggle('on', !!l.querySelector('input:checked'))); } });
+  const s0 = ACT.n1send;
+  ACT.n1send = function(el){
+    const m = state.n1m || {}, pick = document.querySelector('input[name="n48p"]:checked');
+    const p = m.kind === 'apply' && pick ? n48MyProfs().find(x => x.id === pick.value) : null, keep = state.myProfile;
+    if (p) state.myProfile = p;
+    try { return s0.apply(this, arguments); } finally { state.myProfile = keep; }
+  };
+})();
+/* tiệm: 3 tin đang mở (chờ duyệt cũng tính; đã đóng / hết hạn / bị từ chối / tin 1 ngày không tính) */
+n47MyActive = function(){
+  try { const now = Date.now(); return (n1MyAds() || []).filter(a => a && a.type === 'hiring' && !a.quick && !a.filled && a.mod !== 'rejected' && !a.delAt && !(a.expMs && a.expMs < now)); }
+  catch (e) { return []; }
+};
+n47Full = function(){ return !(state.adm && state.adm.on) && n47MyActive().length >= (window.__n47max || N48.adMax); };
+/* tài khoản "Cả hai" cũ: cũng 3 tin (trước là 1) */
+n39MyAd = function(){ try { return n47Full() ? (n47MyActive()[0] || null) : null; } catch (e) { return null; } };
+/* 1 tin "Cần thợ 1 ngày" / ngày */
+function n48QuickToday(){
+  const u = n48Uid(); if (!u || (state.adm && state.adm.on)) return false;
+  if (n48LsGet('n48q_' + u) === String(n45Day())) return true;
+  return (n1MyAds() || []).some(a => a && a.quick && n45Day(Number(a.quick.at) || n48Ms(a.createdAt) || 0) === n45Day());
+}
+(() => {
+  const q0 = ACT.n44upost; if (typeof q0 !== 'function') return;
+  ACT.n44upost = async function(el){
+    if (n48QuickToday()){ toast(t('n48QuickMax')); return; }
+    const before = location.hash, r = await q0.apply(this, arguments);
+    if (location.hash !== before && /^#urgent-ok-/.test(location.hash)) n48LsSet('n48q_' + n48Uid(), String(n45Day()));
+    return r;
+  };
+})();
+
+/* ================= vẽ xong: thanh mời, khoá nút, màn trò chuyện toàn màn hình ================= */
+(() => {
+  const r0 = render;
+  render = function(){
+    const out = r0.apply(this, arguments);
+    try {
+      const v = route().view;
+      document.body.classList.toggle('n48chatv', v === 'thread');
+      const top = document.querySelector('.n48top'), ch = document.querySelector('.n48chat');
+      if (top && ch) ch.style.setProperty('--n48top', top.offsetHeight + 'px');
+      n48Bar(); n48BusyPaint();
+      const bg = document.querySelector('#modal-root .modal-bg');
+      if (bg) bg.classList.toggle('n48sheetbg', state.modal === 'n1' && (state.n1m || {}).kind === 'apply' && !!state.myProfile);
+    } catch (e) { console.warn('n48 after', e); }
+    return out;
+  };
+  const m0 = renderModal;
+  renderModal = function(){
+    const out = m0.apply(this, arguments);
+    const bg = document.querySelector('#modal-root .modal-bg');
+    if (bg) bg.classList.toggle('n48sheetbg', state.modal === 'n1' && (state.n1m || {}).kind === 'apply' && !!state.myProfile);
+    return out;
+  };
+  window.addEventListener('hashchange', () => { if (!/^#inbox-/.test(location.hash)) state.n48.seen = {}; });
+})();
+
+/* ================= giao diện chung n148 ================= */
+(() => { const st = document.createElement('style'); st.textContent = `
+html{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+:root{--n48p:#9B1D4F;--n48pd:#7E1640;--n48bg:#FAF6F5;--n48tx:#1F1A1C;--n48mu:#5E5458;--n48bd:#EFE6E8;--n48in:#DCCFD3;--n48pk:#FBE4EC;--n48gr:#1E6B3A;--n48grb:#E6F4EA;--n48rd:#B3261E}
+.n48i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;vertical-align:middle}
+.n48mut{color:var(--n48mu)}.n48sm{width:18px;height:18px}
+/* A3: vùng bấm ≥ 44px, phản hồi khi chạm, đang gửi */
+.btn{min-height:44px;transition:transform .08s ease,filter .08s ease,background-color .12s}
+.btn:active,.btn.is-pressed,[data-act].is-pressed,.chip.is-pressed,.n48row.is-pressed,.n48ar.is-pressed{transform:scale(.97);filter:brightness(.94)}
+button.btn-link{min-height:44px}
+.tabbar a{min-height:48px}
+.is-busy{position:relative;pointer-events:none;opacity:.78}
+.is-acting{opacity:.86}
+.n48spin{display:inline-block;width:14px;height:14px;margin-left:8px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:n48s .7s linear infinite;vertical-align:-2px}
+@keyframes n48s{to{transform:rotate(360deg)}}
+/* hai nút cạnh nhau trên thẻ */
+.n48two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}
+.n48two.n48one{grid-template-columns:1fr}
+.n1act:has(.n48two){display:flex;align-items:center;gap:4px;width:100%}.n1act .n48two{flex:1 1 auto;width:auto;min-width:0}
+.n48two>*{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.n48two>*{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;margin:0;width:100%}
+.n48two .n48i{width:17px;height:17px}
+.n48chatb{border:1px solid var(--n48in);background:#fff;color:var(--n48tx)}
+/* B2: ô chọn thợ */
+.n48pc{position:relative;padding-left:52px!important}
+.n48pick{position:absolute;left:14px;top:20px;width:24px;height:24px;border-radius:7px;border:1.5px solid #B9A9AE;background:#fff;color:#fff;display:grid;place-items:center;padding:0;cursor:pointer}
+.n48pick::before{content:'';position:absolute;inset:-10px}
+.n48pick.on{background:var(--n48p);border-color:var(--n48p)}.n48pick .n48i{width:16px;height:16px;stroke-width:2.6}
+.n48picked{border-color:var(--n48p)!important;box-shadow:0 0 0 1px var(--n48p)}
+.n48bar{position:fixed;left:0;right:0;bottom:0;z-index:60;background:#fff;border-top:1px solid var(--n48bd);box-shadow:0 -6px 18px rgba(31,26,28,.06);padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:12px}
+.n48bar>span{flex:1;font-size:14px;color:var(--n48mu)}.n48bar b{color:var(--n48tx)}
+.n48inv{display:flex;align-items:center;gap:8px;min-height:48px;padding:0 20px;border-radius:12px}
+/* tin nhắn */
+.n48inbox .pg-title{margin-bottom:10px}
+.n48tabs{display:flex;gap:8px;margin:0 0 12px;overflow-x:auto;scrollbar-width:none}
+.n48tab{flex:none;min-height:40px;border:1px solid var(--n48in);background:#fff;color:var(--n48tx);border-radius:999px;padding:6px 14px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;position:relative}
+.n48tab::before{content:'';position:absolute;inset:-3px 0}
+.n48tab.on{border-color:var(--n48p);background:var(--n48pk);color:var(--n48pd);font-weight:600}
+.n48tc{font-size:12px;color:var(--n48mu)}
+.n48list{display:flex;flex-direction:column;background:#fff;border:1px solid var(--n48bd);border-radius:14px;overflow:hidden;gap:0}
+.n48row{display:flex;align-items:center;gap:12px;padding:12px 14px;text-decoration:none;color:var(--n48tx);border-top:1px solid var(--n48bd);min-height:64px;position:relative}
+.n48row:first-child{border-top:0}
+.n48rm{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.n48rt{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.n48rt b{font-size:15.5px;font-weight:600}.n48rt time{font-size:12.5px;color:var(--n48mu);flex:none}
+.n48rs,.n48rl{font-size:13px;color:var(--n48mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.n48row.unread .n48rl{color:var(--n48tx);font-weight:600}
+.n48dot{width:8px;height:8px;border-radius:50%;background:var(--n48p);flex:none}
+.n48tag{display:inline-block;font-size:11.5px;font-weight:600;color:var(--n48pd);background:var(--n48pk);border-radius:999px;padding:1px 8px;margin-right:6px}
+.n48av{border-radius:50%;display:inline-grid;place-items:center;font-weight:700;flex:none;object-fit:cover}
+.n48empty{text-align:center;background:#fff;border:1px solid var(--n48bd);border-radius:14px;padding:28px 18px;color:var(--n48mu)}.n48empty .n48i{width:32px;height:32px;color:var(--n48p)}.n48empty h2{font-size:17px;color:var(--n48tx);margin:8px 0 4px}
+.n48none{color:var(--n48mu);text-align:center;padding:20px 0}
+.n48mail{display:flex;align-items:center;gap:8px;margin:14px 0 0;font-size:13.5px;color:var(--n48mu);background:none;border:0;padding:0;font-family:inherit}
+.n48mailb{color:var(--n48p);font-weight:600;min-height:44px;cursor:pointer}
+/* trò chuyện (02-chat) */
+.n48chat{max-width:640px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;background:var(--n48bg)}
+.n48top{z-index:20;background:#fff}
+.n48ch{display:flex;align-items:center;gap:6px;padding:10px 8px 10px 6px;background:#fff;border-bottom:1px solid var(--n48bd)}
+.n48ib{width:44px;height:44px;display:grid;place-items:center;color:var(--n48tx);border:0;background:transparent;border-radius:10px;cursor:pointer;flex:none}.n48ib .n48i{width:22px;height:22px}
+.n48cht{flex:1;min-width:0;padding-left:4px}.n48cht b{display:block;font-size:16px;font-weight:600}
+.n48cht .biz{display:block;font-size:12.5px;color:var(--n48mu);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:400}
+.n48strip{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--n48bd);font-size:14px}.n48strip>.n48i{color:var(--n48p);width:18px;height:18px}.n48strip>span{flex:1}.n48strip b{font-weight:600}
+.n48lnk{border:0;background:transparent;color:var(--n48p);font:inherit;font-size:14px;font-weight:600;min-height:44px;padding:0 4px;cursor:pointer;flex:none}
+.n48cm{flex:1;padding:16px 16px 92px}
+.n48cm .bubbles{display:flex;flex-direction:column;gap:12px;margin:0;padding:0;background:none;border:0;max-height:none;overflow:visible}
+.n48cm .bub{max-width:78%;padding:10px 13px;font-size:14.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word;margin:0;box-shadow:none}
+.n48cm .bub.them{align-self:flex-start;background:#fff;border:1px solid var(--n48bd);border-radius:16px 16px 16px 4px;color:var(--n48tx)}
+.n48cm .bub.me{align-self:flex-end;background:var(--n48p);color:#fff;border-radius:16px 16px 4px 16px;border:0}
+.n48day{margin:2px 0;text-align:center;font-size:12px;color:var(--n48mu)}
+.n48seen{align-self:flex-end;font-size:11.5px;color:var(--n48mu);margin-top:-6px}
+.n48ev{align-self:center;max-width:300px;background:#fff;border:1px solid var(--n48bd);border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.45;color:var(--n48tx);text-align:left;margin:0}
+.n48ev .n48evi{color:var(--n48p);width:18px;height:18px;margin-top:1px}.n48ev b{font-weight:600;display:block}.n48ev span{color:var(--n48mu);display:block}
+.n48ev q{display:block;margin-top:4px;color:var(--n48tx);font-style:italic;quotes:'“' '”'}
+.n48evb{display:flex;gap:8px;margin-top:10px}.n48evb .btn{min-height:40px;padding:0 16px;font-size:14px}
+.n48evs{margin:6px 0 0;color:var(--n48mu);font-size:12.5px}
+.n48sysl{align-self:center;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--n48mu);margin:0;padding:4px 0}.n48sysl .n48i{width:15px;height:15px;color:var(--n48gr)}
+.n48hello{text-align:center;color:var(--n48mu);font-size:14px;margin:30px 0}
+.n48send{position:fixed;left:0;right:0;bottom:0!important;max-width:640px;margin:0 auto!important;box-sizing:border-box;z-index:20;display:flex;align-items:flex-end;gap:8px;padding:10px 12px calc(12px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--n48bd);margin:0}
+.n48send textarea{flex:1;min-height:44px;max-height:120px;box-sizing:border-box;border:1px solid var(--n48in);border-radius:22px;padding:11px 16px;font:inherit;font-size:15px;line-height:1.35;color:var(--n48tx);background:var(--n48bg);resize:none;margin:0}
+.n48sendb{width:44px;height:44px;border:0;border-radius:50%;background:var(--n48p);color:#fff;display:grid;place-items:center;flex:none;cursor:pointer;padding:0}
+.n48note{position:fixed;left:0;right:0;bottom:0;max-width:640px;margin:0 auto!important;box-sizing:border-box;text-align:center;color:var(--n48mu);font-size:14px;padding:14px;background:#fff;border-top:1px solid var(--n48bd);margin:0}
+.n48pv{max-width:340px;margin:14px auto 0;background:#fff;border:1px solid var(--n48bd);border-radius:12px;padding:12px 14px;font-size:13.5px}
+.n48pvh{display:flex;align-items:center;gap:8px;margin-bottom:6px}.n48pvh .n48i{width:16px;height:16px;color:var(--n48p)}
+.n48pvr{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--n48bd)}.n48pvr span{color:var(--n48mu)}
+.n48pvimg{width:44px;height:44px;border-radius:50%;object-fit:cover}.n48pvpics{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding-top:6px}.n48pvpics img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px}
+body.n48chatv .site-footer,body.n48chatv .tabbar,body.n48chatv .n26bkw{display:none}
+.n48ib.back{margin:0;padding:0;font-size:0}
+@media (max-width:760px){body.n48chatv .site-header,body.n48chatv .demo-bar,body.n48chatv .n3dnav{display:none}body.n48chatv #main{padding:0}
+  .n48top{position:fixed;top:0;left:0;right:0}.n48cm{padding-top:calc(var(--n48top,64px) + 16px)}}
+/* nút ⋯ (11-chatmenu) */
+.n48sh{position:fixed;inset:0;z-index:300;background:rgba(31,26,28,.42);display:flex;align-items:flex-end;justify-content:center}
+.n48shc{width:100%;max-width:520px;margin:0 12px 24px;display:flex;flex-direction:column;gap:10px}
+.n48shl{background:#fff;border-radius:16px;overflow:hidden}
+.n48shi{width:100%;display:flex;align-items:center;gap:14px;min-height:54px;padding:0 18px;border:0;border-top:1px solid var(--n48bd);background:transparent;font:inherit;font-size:15.5px;color:var(--n48tx);text-align:left;cursor:pointer}
+.n48shi:first-child{border-top:0}.n48shi .n48i{color:var(--n48mu)}.n48shi.n48red,.n48shi.n48red .n48i{color:var(--n48rd)}
+.n48shx{min-height:54px;border:0;border-radius:16px;background:#fff;font:inherit;font-size:16px;font-weight:600;color:var(--n48tx);cursor:pointer}
+/* tài khoản (04-account) */
+.n48acc{display:flex;flex-direction:column;gap:20px;padding-bottom:96px}.n48acc .pg-title{margin:0}
+.n48me{display:flex;align-items:center;gap:14px}.n48me b{display:block;font-size:18px;font-weight:700}.n48me .n48grow>span{font-size:13.5px;color:var(--n48mu)}
+.n48grow{flex:1;min-width:0}
+.n48photo{position:relative;display:inline-flex;align-items:center;overflow:hidden}.n48photo input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.n48sec{display:flex;flex-direction:column;gap:8px}
+.n48h{margin:0 2px;font-size:13px;font-weight:600;color:var(--n48mu);text-transform:uppercase;letter-spacing:.04em}
+.n48card{background:#fff;border:1px solid var(--n48bd);border-radius:12px}
+.n48ar{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--n48bd);width:100%;box-sizing:border-box}
+.n48card>.n48ar:first-child,.n48card>:first-child{border-top:0}
+.n48av2{flex:1;min-width:0}.n48al{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--n48mu)}
+.n48av2 b{display:block;font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.n48av2 i{font-style:normal;color:var(--n48mu);font-weight:400}
+.n48dots{letter-spacing:3px}.n48ok{width:14px;height:14px;color:var(--n48gr);stroke-width:2.4}
+.n48edit input{width:100%;min-height:40px;margin-top:4px}.n48mutb{color:var(--n48mu)}
+.n48al2{padding:0 14px;min-height:50px;text-decoration:none;color:var(--n48tx);font:inherit;font-size:15px;background:transparent;border:0;border-top:1px solid var(--n48bd);text-align:left;cursor:pointer}
+.n48blk{padding:0 14px 6px 46px}.n48bl{display:flex;justify-content:space-between;align-items:center;font-size:14px;border-top:1px dashed var(--n48bd)}
+.n48del{align-self:center;display:flex;align-items:center;gap:8px;border:0;background:transparent;color:var(--n48rd);font:inherit;font-size:14px;font-weight:600;min-height:44px;cursor:pointer}.n48del .n48i{width:17px;height:17px}
+/* hồ sơ: tab + thông tin riêng */
+.n48ptabs{display:flex;gap:18px;align-items:center;border-bottom:1px solid var(--n48bd);margin:0 0 14px;font-size:14px}
+.n48ptab{border:0;background:transparent;padding:8px 0 10px;min-height:44px;font:inherit;font-size:14px;color:var(--n48mu);font-weight:500;border-bottom:2.5px solid transparent;cursor:pointer}
+.n48ptab.on{color:var(--n48p);font-weight:600;border-bottom-color:var(--n48p)}.n48padd{color:var(--n48p)}
+.n48pcnt{margin-left:auto;font-size:12.5px;color:var(--n48mu)}
+.n48privc{padding:14px;margin:14px 0}.n48ph{display:flex;gap:10px;align-items:flex-start;margin-bottom:4px}.n48ph b{display:block;font-size:14.5px}.n48ph span span{font-size:13px;color:var(--n48mu)}
+.n48pic{width:34px;height:34px;border-radius:9px;background:var(--n48pk);color:var(--n48p);display:grid;place-items:center;flex:none}.n48pic .n48i{width:18px;height:18px}
+.n48pr{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--n48bd);font-size:14.5px;min-height:44px}
+.n48okt{display:flex;align-items:center;gap:4px;color:var(--n48gr);font-size:13px;font-weight:600}.n48okt .n48i{width:15px;height:15px;stroke-width:2.4}.n48mut2{color:var(--n48mu);font-size:13.5px}
+/* ứng tuyển: bảng trượt từ dưới (08-apply) */
+.modal-bg.n48sheetbg{align-items:flex-end;background:rgba(31,26,28,.42)}
+.modal-bg.n48sheetbg .modal{border-radius:20px 20px 0 0;max-width:560px;width:100%;margin:0;padding:10px 20px calc(26px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px;max-height:92vh}
+.n48grab{align-self:center;width:40px;height:4px;border-radius:2px;background:var(--n48in)}
+.n48aph{margin:0}.n48aph h2{font-size:19px;font-weight:700;margin:0}.n48apd{margin:-10px 0 0;font-size:13.5px;color:var(--n48mu)}
+.n48fs{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}.n48fs legend{font-size:14px;font-weight:600;margin-bottom:8px;padding:0}
+.n48ro{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--n48in);border-radius:12px;cursor:pointer;min-height:44px}
+.n48ro.on{border:1.5px solid var(--n48p);background:#FDF3F6}.n48ro input{accent-color:var(--n48p);width:18px;height:18px;margin:0;flex:none}
+.n48ro b{display:block;font-size:14.5px;font-weight:600}.n48ro span span{font-size:12.5px;color:var(--n48mu)}
+.n48opt{font-weight:400;color:var(--n48mu)}
+.n48sheetbg textarea{min-height:64px;height:64px;border-radius:12px;resize:none}.n48apb{min-height:52px;font-size:16px;border-radius:12px}
+`; document.head.appendChild(st); })();
+
+/* cổng cho test tự động */
+window.__n48 = {S:() => state, render:() => render(), ACT:() => ACT, validate:(ty, fs) => validateStep(ty, fs), inviteMany:n48InviteMany, profs:n48MyProfs, visible:n48Visible, privOk:n48PrivOk, commitK:n48CommitK, st:() => state.n48, quickToday:n48QuickToday};
+
+/* ============================================================
+   n148 đợt 2 · KHUNG CHUNG (design-demo/README.md "Chuẩn chung" + ảnh 01/05)
+   - icon nét 1.8 dùng chung: N48I(tên)  (đường vẽ lấy từ design-demo/project/*.dc.html)
+   - thanh trên trắng: logo vuông đỏ chữ N + "Nail101", nút ngôn ngữ (VI/EN) bên phải
+   - menu dưới 4 mục theo vai, mục đang chọn màu đỏ, Tin nhắn có số đếm đỏ
+   - thay emoji trong giao diện bằng icon (ảnh 05-icons); emoji không có icon tương ứng thì bỏ
+   Các màn riêng nằm ở n148home / n148lists / n148form / n148prof; phần bỏ / gộp ở n148cut.
+   ============================================================ */
+Object.assign(N48I.P, {
+  home:'<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  bolt:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>', pencil:'<path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5z"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>', down:'<path d="m6 9 6 6 6-6"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>', star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z"/>',
+  eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a5 5 0 0 1 3.5 6"/>',
+  bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0"/>', info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>',
+  img:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 9"/>', link:'<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4L11.5 6M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.5-1.5"/>',
+  share:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>',
+  warn:'<path d="M12 3 2 20h20zM12 9v5M12 17h.01"/>', copy:'<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>'
+});
+
+/* ---------- vai đang dùng ---------- */
+function n48Side(){ const r = typeof n43Role === 'function' ? n43Role() : ''; return r === 'tech' || r === 'salon' || r === 'admin' ? r : ''; }
+
+/* ---------- thanh trên ---------- */
+(() => {
+  const h0 = header;
+  header = function(r){
+    if (state.adm && state.adm.on) return h0.apply(this, arguments);         /* trang quản trị giữ thanh cũ */
+    const other = lang === 'vi' ? 'en' : 'vi';
+    let sw = '';
+    if (typeof n39Both === 'function' && n39Both() && typeof n39Mode === 'function'){
+      const nm = t(n39Mode() === 'tech' ? 'n3RoleTech' : 'n3RoleSalon');
+      sw = `<button type="button" class="n39sw n48sw" data-act="n39mode" aria-label="${esc(t('n39SwTo', nm))}" title="${esc(t('n39SwTo', nm))}">${N48I('swap')}<span>${esc(nm)}</span></button>`;
+    }
+    return `<header class="site-header n48hd"><div class="n48hdi">
+      <a class="n48brand" href="#home" aria-label="Nail101 – ${esc(t('nav_home'))}"><span class="n48logo" aria-hidden="true">N</span><span>Nail101</span></a>
+      <div class="n48hdr">${sw}<button type="button" class="n48lang" data-act="lang" data-v="${other}" aria-label="${other === 'en' ? 'English' : 'Tiếng Việt'}">${lang === 'vi' ? 'VI' : 'EN'}</button></div>
+    </div></header>`;
+  };
+})();
+
+/* ---------- menu dưới 4 mục ---------- */
+function n48Tabs(){
+  const role = n48Side();
+  /* tiệm: 5 mục – thêm "Tìm thợ" (danh sách hồ sơ thợ) */
+  if (role === 'salon') return [['#home', 'home', 'n48TbHome'], ['#job-seekers', 'users', 'n48TbFind'], ['#myads', 'doc', 'n48TbMyAds'], ['#inbox', 'chat', 'n48Inbox'], ['#account', 'user', 'n48Acc']];
+  if (role === 'tech') return [['#home', 'bag', 'n48TbJobs'], ['#myprof', 'doc', 'n48TbMyProf'], ['#inbox', 'chat', 'n48Inbox'], ['#account', 'user', 'n48Acc']];
+  return [['#ads', 'bag', 'n48TbJobs'], ['#job-seekers', 'users', 'n48TbTechs'], ['#inbox', 'chat', 'n48Inbox'], ['#login', 'user', 'n48TbLogin']];
+}
+function n48TabOn(href, r){
+  const v = r.view, h = href.slice(1);
+  if (h === 'home') return v === 'home' || (v === 'salon' && n48Side() !== 'salon') || v === 'jobs' || (n48Side() === 'tech' && (v === 'ads' || v === 'ad'));
+  if (h === 'myads') return v === 'myads' || (v === 'form' && r.type === 'hiring') || (v === 'ad' && !!state.user && ADS.some(a => a.id === r.id && n1Owner(a) === state.user.uid));
+  if (h === 'myprof') return v === 'myprof' || (v === 'form' && r.type === 'profile');
+  if (h === 'inbox') return v === 'inbox' || v === 'thread';
+  if (h === 'ads') return v === 'ads' || v === 'ad' || v === 'jobs';
+  if (h === 'job-seekers') return v === 'job-seekers' || v === 'salon' || v === 'tech' || v === 'portfolio';
+  return v === h;
+}
+(() => {
+  const tb0 = tabBar;
+  tabBar = function(r){
+    if (state.adm && state.adm.on) return tb0.apply(this, arguments);
+    const n = state.user && typeof unreadCount === 'function' ? unreadCount() : 0;
+    const tabs = n48Tabs();
+    return `<nav class="tabbar n48tb${tabs.length > 4 ? ' n48tb5' : ''}" aria-label="${esc(t('n48TbMain'))}">${tabs.map(([href, ic, k]) => {
+      const on = n48TabOn(href, r);
+      return `<a href="${href}"${on ? ' class="on" aria-current="page"' : ''}>${N48I(ic, 'n48tbi')}<span>${esc(t(k))}</span>${href === '#inbox' && n ? `<b class="badge n48bdg" aria-label="${n}">${n}</b>` : ''}</a>`;
+    }).join('')}</nav>`;
+  };
+})();
+Object.assign(T.vi, {n48TbHome:'Trang chủ', n48TbMyAds:'Tin của tôi', n48TbJobs:'Việc làm', n48TbMyProf:'Hồ sơ của tôi', n48TbTechs:'Thợ', n48TbFind:'Tìm thợ', n48TbLogin:'Đăng nhập', n48TbMain:'Menu chính'});
+Object.assign(T.en, {n48TbHome:'Home', n48TbMyAds:'My posts', n48TbJobs:'Jobs', n48TbMyProf:'My profile', n48TbTechs:'Techs', n48TbFind:'Find techs', n48TbLogin:'Sign in', n48TbMain:'Main menu'});
+
+/* ---------- emoji → icon (05-icons). Không đụng trang quản trị ---------- */
+const N48_EMO = {'🏠':'home', '🏡':'home', '💬':'chat', '👤':'user', '⚡':'bolt', '📅':'cal', '🗓':'cal', '📱':'phone', '📧':'mail', '✉':'mail', '📨':'mail', '📩':'mail',
+  '🔐':'lock', '🔒':'lock', '✏':'pencil', '📝':'pencil', '💼':'bag', '📍':'pin', '⚑':'flag', '🚩':'flag', '🗑':'trash', '⏳':'clock', '⏰':'clock', '🕒':'clock',
+  '🔔':'bell', '👁':'eye', '👥':'users', '⭐':'star', '★':'star', '📷':'img', '🖼':'img', '🔗':'link', '⚠':'warn', 'ℹ':'info', '✅':'check', '✔':'check', '📋':'copy', '📤':'share'};
+const N48_EMO_RE = /(?:[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B50}\u{2139}\u{231A}-\u{23FF}\u{2190}-\u{21FF}](?:\u{FE0F}|\u{200D}[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]\u{FE0F}?)*|\u{FE0F})/gu;
+const N48_KEEP = /^[✓✕×→←⇄↔↑↓·]$/;
+function n48DeEmoji(root){
+  if (!root) return;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {acceptNode:n => {
+    const p = n.parentNode; if (!p || /^(SCRIPT|STYLE|TEXTAREA|OPTION)$/.test(p.nodeName) || (p.closest && p.closest('[data-n48raw],.n48i'))) return NodeFilter.FILTER_REJECT;
+    N48_EMO_RE.lastIndex = 0; return N48_EMO_RE.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT; }});
+  const list = []; while (w.nextNode()) list.push(w.currentNode);
+  list.forEach(n => {
+    const s = n.nodeValue, frag = document.createDocumentFragment(); let last = 0, m; N48_EMO_RE.lastIndex = 0;
+    while ((m = N48_EMO_RE.exec(s))){
+      const raw = m[0], base = raw.replace(/[\u{FE0F}\u{200D}]/gu, '').slice(0, 2);
+      if (N48_KEEP.test(raw)) continue;
+      const ic = N48_EMO[raw] || N48_EMO[base] || N48_EMO[[...base][0]];
+      frag.appendChild(document.createTextNode(s.slice(last, m.index)));
+      if (ic){ const sp = document.createElement('span'); sp.className = 'n48ei'; sp.innerHTML = N48I(ic); frag.appendChild(sp); }
+      last = m.index + raw.length;
+      /* bỏ khoảng trắng thừa sau emoji đã xoá */
+      if (!ic && s[last] === ' ' && (m.index === 0 || s[m.index - 1] === ' ' || s[m.index - 1] === '\n')) last++;
+    }
+    if (!last) return;
+    frag.appendChild(document.createTextNode(s.slice(last)));
+    n.parentNode.replaceChild(frag, n);
+  });
+}
+function n48EmojiOk(){ const v = route().view; return !(state.adm && state.adm.on) && !/^admin/.test(v); }
+(() => {
+  const r0 = render;
+  render = function(){
+    const o = r0.apply(this, arguments);
+    try { if (n48EmojiOk()){ n48DeEmoji(document.getElementById('app')); n48DeEmoji(document.getElementById('modal-root')); } } catch (e) { console.warn('n48 emoji', e); }
+    return o;
+  };
+  const m0 = renderModal;
+  renderModal = function(){ const o = m0.apply(this, arguments); try { if (n48EmojiOk()) n48DeEmoji(document.getElementById('modal-root')); } catch (e) {} return o; };
+  /* hộp thoại n43 / n44 / bảng ⋯ thêm thẳng vào body */
+  new MutationObserver(ms => { if (!n48EmojiOk()) return; ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1 && (n.id === 'n43m' || n.id === 'n48sheet')) n48DeEmoji(n); })); })
+    .observe(document.body, {childList:true});
+  /* chữ trên thông báo nhanh (toast) */
+  const tst = document.getElementById('toast');
+  if (tst) new MutationObserver(() => { const s = tst.textContent, c = s.replace(N48_EMO_RE, m => (N48_KEEP.test(m) ? m : '')).replace(/^\s+/, ''); if (c !== s) tst.textContent = c; }).observe(tst, {childList:true, characterData:true, subtree:true});
+})();
+
+/* ---------- giao diện chung ---------- */
+(() => { const st = document.createElement('style'); st.textContent = `
+body{background:#FAF6F5;font-family:'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#1F1A1C}
+.demo-bar,.n3dnav,.n3chiprole{display:none!important}
+.n48hd{position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid #EFE6E8;box-shadow:none}
+.n48hdi{max-width:640px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:12px 18px;min-height:60px;box-sizing:border-box}
+.n48brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:#1F1A1C;font-weight:700;font-size:17px;min-height:44px}
+.n48logo{width:32px;height:32px;border-radius:9px;background:#9B1D4F;color:#fff;display:grid;place-items:center;font-weight:700;font-size:15px}
+.n48hdr{display:flex;align-items:center;gap:8px}
+.n48lang{border:1px solid #EFE6E8;background:#fff;border-radius:8px;min-width:44px;min-height:36px;padding:6px 10px;font:inherit;font-size:13px;font-weight:600;color:#1F1A1C;cursor:pointer;position:relative}
+.n48lang::before{content:'';position:absolute;inset:-4px 0}
+.n48sw{display:flex;align-items:center;gap:6px;border:1px solid #EFE6E8;background:#fff;border-radius:8px;min-height:36px;padding:6px 10px;font:inherit;font-size:13px;font-weight:600;color:#9B1D4F;cursor:pointer}.n48sw .n48i{width:16px;height:16px}
+.tabbar.n48tb{position:fixed;left:0;right:0;bottom:0;z-index:45;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:#fff;border-top:1px solid #EFE6E8;padding:8px 6px calc(10px + env(safe-area-inset-bottom));box-shadow:none;height:auto}
+.tabbar.n48tb a{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11.5px;font-weight:500;color:#5E5458;text-decoration:none;min-height:48px;background:none;border:0;padding:0}
+.tabbar.n48tb.n48tb5{grid-template-columns:repeat(5,minmax(0,1fr));padding-left:2px;padding-right:2px}.tabbar.n48tb.n48tb5 a{font-size:11px;white-space:nowrap}
+.tabbar.n48tb a.on{color:#9B1D4F;font-weight:600}
+.tabbar.n48tb a::after{display:none}
+.n48tbi{width:23px;height:23px}
+.n48bdg{position:absolute;top:0;left:calc(50% + 6px);min-width:17px;height:17px;border-radius:9px;background:#9B1D4F;color:#fff;font-size:10.5px;font-weight:700;display:grid;place-items:center;padding:0 4px;box-sizing:border-box;border:0}
+@media (min-width:700px){.tabbar.n48tb{padding-left:calc(50% - 320px);padding-right:calc(50% - 320px)}}
+body.has-mbar{padding-bottom:84px}
+#main{padding-bottom:96px}
+.n48ei{display:inline-flex;vertical-align:-3px;margin:0 2px}.n48ei .n48i{width:1.05em;height:1.05em;stroke-width:2}
+.site-footer{background:transparent;border-top:1px solid #EFE6E8;font-size:12.5px;color:#5E5458;padding-bottom:96px}
+.page,.wrap.narrow{max-width:640px}
+`; document.head.appendChild(st); })();
+
+/* trang gốc của menu dưới không cần nút "Quay lại" (n126) */
+(() => {
+  const nb0 = n26NeedBack;
+  n26NeedBack = function(r){
+    if (r && ['home', 'ads', 'job-seekers', 'salon', 'jobs', 'myads', 'myprof', 'inbox', 'account', 'login', 'thread'].indexOf(r.view) >= 0) return false;
+    return nb0.apply(this, arguments);
+  };
+})();
+
+/* ============================================================
+   n148 đợt 2 · tác tử A
+   1) Đăng nhập (06-login, Login.dc.html) + C6 (bỏ đăng nhập bằng link email) + C4 (đăng ký mới chỉ Tiệm / Thợ)
+      Giữ nguyên các luồng: Google (augoogle), PIN n38 (n38login / n38forgot / n38signup), SMS (ausend / auverify),
+      tạo tài khoản (aurole / audone, #au-name, #n38-new, #n45-agree), xác minh email n147, khoá số n35 (claim).
+   2) Trang chủ tiệm (01-main, Main.dc.html) + C17 + C1 (phần trang chủ).
+   Trang chủ thợ / khách chưa đăng nhập: giữ như cũ (lớp trước).
+   ============================================================ */
+Object.assign(T.vi, {
+  n48LgLead:'Nơi tiệm nail và thợ nail ở Texas kết nối với nhau.', n48LgOr:'hoặc dùng số điện thoại', n48LgPin:'Mã PIN 6 số',
+  n48LgFirst:'Lần đầu? Nhận mã SMS', n48LgBack:'Quay lại đăng nhập',
+  n48LgTerms:'Khi tiếp tục, bạn đồng ý với <a href="#terms">Điều khoản sử dụng</a> và <a href="#privacy">Chính sách quyền riêng tư</a>.',
+  n48LgCodeT:'Nhập mã SMS', n48LgWelcome:'Chào bạn mới!', n48LgPinNew:'Tạo mã PIN 6 số',
+  n48HmRole:'Chủ tiệm', n48HmHi:n => `Chào, ${n}`, n48HmPost:'Đăng tin tuyển', n48HmQuick:'Cần thợ 1 ngày',
+  n48HmAppt:'Lịch thử việc', n48HmAds:'Tin của tôi', n48HmCnt:(a, b) => `${a} / ${b} tin`, n48HmMsgs:'Tin nhắn mới',
+  n48HmOpen:'Đang tuyển', n48HmPend:'Chờ duyệt', n48HmEdit:'Sửa', n48HmClose:'Đóng tin',
+  n48HmNoAds:'Chưa có tin tuyển nào đang mở.', n48HmNoMsg:'Chưa có tin nhắn.', n48HmAll:'Xem tất cả'
+});
+Object.assign(T.en, {
+  n48LgLead:'Where nail salons and nail techs in Texas connect.', n48LgOr:'or use your phone number', n48LgPin:'6-digit PIN',
+  n48LgFirst:'First time? Get a text code', n48LgBack:'Back to sign in',
+  n48LgTerms:'By continuing, you agree to our <a href="#terms">Terms of Use</a> and <a href="#privacy">Privacy Policy</a>.',
+  n48LgCodeT:'Enter the text code', n48LgWelcome:'Welcome!', n48LgPinNew:'Create a 6-digit PIN',
+  n48HmRole:'Salon owner', n48HmHi:n => `Hi, ${n}`, n48HmPost:'Post a job', n48HmQuick:'1-day tech',
+  n48HmAppt:'Trial appointments', n48HmAds:'My posts', n48HmCnt:(a, b) => `${a} / ${b} posts`, n48HmMsgs:'New messages',
+  n48HmOpen:'Hiring', n48HmPend:'In review', n48HmEdit:'Edit', n48HmClose:'Close post',
+  n48HmNoAds:'No open job posts yet.', n48HmNoMsg:'No messages yet.', n48HmAll:'See all'
+});
+
+/* ================= 1. ĐĂNG NHẬP ================= */
+/* ô mã PIN: 1 ô mật khẩu, chữ cách rộng (class n38in để n138 vẫn lọc chỉ nhận số + Enter = Đăng nhập) */
+function n48PinIn(id, ac, val){
+  return `<input id="${id}" class="n38in n48pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="${ac}" value="${esc(String(val || '').replace(/\D/g, '').slice(0, 6))}">`;
+}
+function n48Tel(val, ro){
+  return `<div class="tel-row n48tel"><span class="cc">+1</span><input id="au-phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(210) 555-0123" value="${esc(val || '')}"${ro ? ' readonly' : ''}></div>`;
+}
+function n48LgWrap(inner, top){
+  const other = lang === 'vi' ? 'en' : 'vi';
+  return `<div class="wrap auth-wrap page n48lg"><button type="button" class="n48lang n48lglang" data-act="lang" data-v="${other}" aria-label="${other === 'en' ? 'English' : 'Tiếng Việt'}">${lang === 'vi' ? 'VI' : 'EN'}</button>
+    <div class="card auth-card n48au">${top || ''}${inner}</div></div>`;
+}
+const n48LgLogo = () => `<span class="n48lgo" aria-hidden="true">N</span>`;
+const n48LgBackB = () => `<button type="button" class="n48lgbk" data-act="n38back">${N48I('back')}<span>${esc(t('n48LgBack'))}</span></button>`;
+const n48LgMsg = a => a.msg ? `<p class="auth-msg" role="alert">${esc(a.msg)}</p>` : '';
+
+(() => {
+  const v0 = viewLogin;
+  viewLogin = function(){
+    const a = state.auth || (state.auth = {step:'start', method:'phone'});
+    if (state.user && a.step !== 'profile') return v0.apply(this, arguments);
+    /* C6: không còn đăng nhập bằng link email */
+    if (a.method === 'email' && (!a.step || a.step === 'start' || a.step === 'emailsent')){ a.method = 'phone'; if (a.step === 'emailsent') a.step = 'start'; }
+    const dis = a.busy ? ' disabled' : '', step = a.step || 'start';
+    if (step === 'start'){
+      const claim = state.n35 && state.n35.claimPh;
+      /* khoá số (nhận tin admin tạo sẵn): chỉ gửi mã SMS về số đó */
+      if (claim){
+        return n48LgWrap(`<p class="n35ver">${esc(t('n35LockPh', admPretty(claim)))}</p>
+          <div class="n48fq"><label class="flabel" for="au-phone">${t('phoneLbl')}</label>${n48Tel(admPretty(claim), true)}</div>
+          ${n48LgMsg(a)}<button class="btn btn-primary btn-block n48lgb" type="button" data-act="ausend"${dis}>${a.busy ? t('sending') : t('n38Send')}</button>
+          <p class="agree-note n48tm">${t('agreeNote')}</p>`,
+          `<div class="n48lgh">${n48LgLogo()}<h1 class="pg-title">${t('authTitle')}</h1></div>`);
+      }
+      /* "Quên mã PIN?" / "Lần đầu? Nhận mã SMS": nhập số → gửi mã SMS */
+      if (state.n38 && state.n38.mode){
+        const rs = state.n38.mode === 'reset';
+        return n48LgWrap(`<div class="n48lgh n48lgl"><h1 class="pg-title">${t(rs ? 'n38ResetT' : 'n38SignT')}</h1><p class="n48lead">${t(rs ? 'n38ResetL' : 'n38SignL')}</p></div>
+          <div class="n48fq"><label class="flabel" for="au-phone">${t('phoneLbl')}</label>${n48Tel(a.phone)}</div>
+          ${n48LgMsg(a)}<button class="btn btn-primary btn-block n48lgb" type="button" data-act="ausend"${dis}>${a.busy ? t('sending') : t('n38Send')}</button>
+          ${rs ? '' : `<p class="agree-note n48tm">${t('agreeNote')}</p>`}`, n48LgBackB());
+      }
+      return n48LgWrap(`<button class="gbtn n48gb" type="button" data-act="augoogle"${dis}><span class="n48g" aria-hidden="true">G</span><span>${t('withGoogle')}</span></button>
+        <div class="n48or"><span></span>${esc(t('n48LgOr'))}<span></span></div>
+        <div class="n48fl">
+          <div class="n48fq"><label class="flabel" for="au-phone">${t('phoneLbl')}</label>${n48Tel(a.phone)}</div>
+          <div class="n48fq"><label class="flabel" for="n38-pw">${esc(t('n48LgPin'))}</label>${n48PinIn('n38-pw', 'current-password', '')}</div>
+          ${n48LgMsg(a)}<button class="btn btn-primary btn-block n48lgb" type="button" data-act="n38login"${dis}>${a.busy ? t('sending') : t('n38Login')}</button>
+          <div class="n48lk"><button type="button" class="n48lnk" data-act="n38forgot">${esc(t('n38Forgot'))}</button><button type="button" class="n48lnk" data-act="n38signup">${esc(t('n48LgFirst'))}</button></div>
+        </div>
+        <p class="agree-note n48tm">${t('n48LgTerms')}</p>`,
+        `<div class="n48lgh">${n48LgLogo()}<h1 class="pg-title">${t('authTitle')}</h1><p class="n48lead">${esc(t('n48LgLead'))}</p></div>`);
+    }
+    if (step === 'code'){
+      return n48LgWrap(`<div class="n48lgh n48lgl"><h1 class="pg-title">${esc(t('n48LgCodeT'))}</h1><p class="n48lead">${t('codeSentTo', fmtPhone(a.phone))}</p></div>
+        <div class="n48fq"><label class="flabel" for="au-code">${t('codeLbl')}</label><input id="au-code" class="code-in n48code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">
+          <p class="hint">${t('codeHintLive')}</p></div>
+        ${n48LgMsg(a)}<button class="btn btn-primary btn-block n48lgb" type="button" data-act="auverify"${dis}>${a.busy ? t('sending') : t('verify')}</button>
+        <div class="n48lk n48lkc"><button type="button" class="n48lnk" data-act="auback">${esc(t('changeNum'))}</button></div>`);
+    }
+    /* tạo tài khoản (và bước xác nhận email cũ): giữ nội dung các lớp trước, chỉ đổi phong cách */
+    const lock = state.n34 && state.n34.lock;
+    if (step === 'profile' && lock !== 'both' && a.role === 'both') a.role = 'tech';
+    let h = v0.apply(this, arguments);
+    if (step === 'profile'){
+      /* C4: đăng ký mới chỉ chọn Tiệm hoặc Thợ */
+      if (lock !== 'both'){
+        h = h.replace(/<button[^>]*data-act="aurole" data-v="both"[^>]*>[\s\S]*?<\/button>/, '').replace(/class="seg three n39seg"/, 'class="seg n39seg n48seg2"');
+      }
+      /* ô tạo PIN: 1 ô mật khẩu như màn đăng nhập */
+      h = h.replace(/<div class="n38pin[^"]*"><div class="n38bx"><input id="n38-new"[\s\S]*?<\/button><\/div>/, n48PinIn('n38-new', 'new-password', (state.n38 && state.n38.pw) || ''))
+           .replace(/(<label class="flabel" for="n38-new">)[^<]*/, `$1${esc(t('n48LgPinNew'))} `);
+    }
+    h = h.replace(/🇺🇸\s*/g, '').replace(/<h1 class="pg-title">[^<]*👋\s*<\/h1>/, `<h1 class="pg-title">${esc(t('n48LgWelcome'))}</h1>`);
+    const m = h.match(/^\s*<div class="wrap auth-wrap page"><div class="card auth-card">([\s\S]*)<\/div><\/div>\s*$/);
+    return m ? n48LgWrap(m[1], step === 'profile' ? '' : `<div class="n48lgh">${n48LgLogo()}</div>`) : h;
+  };
+  /* C6: nút chọn "Email" không còn; mọi lần gửi đều là SMS */
+  ACT.aumethod = function(){ if (state.auth){ state.auth.method = 'phone'; state.auth.msg = ''; } render(); };
+  const s0 = ACT.ausend;
+  ACT.ausend = function(el){ if (state.auth) state.auth.method = 'phone'; return s0.apply(this, arguments); };
+  /* PIN sai → xoá ô PIN để gõ lại (vẽ lại kiểu morph giữ nguyên chữ trong ô) */
+  const l0 = ACT.n38login;
+  ACT.n38login = async function(){
+    const r = await l0.apply(this, arguments);
+    const a = state.auth || {}, el = document.getElementById('n38-pw');
+    if (el && a.msg && !state.user && el.value.length === 6) el.value = '';
+    return r;
+  };
+  /* C4: chọn vai "Cả hai" khi đăng ký mới bị bỏ (khoá vai n34 thì giữ) */
+  const r0 = ACT.aurole;
+  ACT.aurole = function(el){
+    if (el && el.dataset && el.dataset.v === 'both' && !(state.n34 && state.n34.lock === 'both')) return;
+    return r0.apply(this, arguments);
+  };
+})();
+
+/* ================= 2. TRANG CHỦ TIỆM (01-main) ================= */
+function n48HmJobs(a){
+  const j = (a.hiring && a.hiring.jobType) || a.jobType || [];
+  return (Array.isArray(j) ? j : [j]).filter(Boolean).map(x => String(opt('jobType', x) || '').replace(/^Chỉ\s+(\S)/, (m, c) => c.toUpperCase()).replace(/\s+only$/i, ''))
+    .filter(Boolean).join(' · ');
+}
+/* tiêu đề tự ghép "Cần thợ … – <loại việc>": loại việc đã có ở dòng dưới → bỏ phần sau dấu – */
+function n48HmTitle(a){
+  const s = String(titleOf(a) || ''), i = s.lastIndexOf(' – '); if (i <= 0) return s;
+  const tail = s.slice(i + 3), j = (a.hiring && a.hiring.jobType) || [];
+  return (Array.isArray(j) ? j : [j]).some(x => { const l = opt('jobType', x); return l && tail.indexOf(l) >= 0; }) ? s.slice(0, i) : s;
+}
+function n48HmDate(ap){
+  const [y, m, d] = String(ap.date || '').split('-').map(Number); if (!y) return '';
+  const dow = (t('n44Dow') || [])[new Date(y, m - 1, d).getDay()] || '';
+  return `${dow} ${lang === 'vi' ? `${d}/${m}` : `${m}/${d}`} · ${n48Clock(ap.time, true)}`;
+}
+function n48SalonHome(){
+  const u = state.user, mine = n1MyAds() || [], city = ((mine.find(a => a.city) || {}).city) || '';
+  const sec = (title, body, right) => `<section class="n48sec n48hs"><div class="n48hsh"><h2 class="n48h">${esc(title)}</h2>${right ? `<span>${esc(right)}</span>` : ''}</div>${body}</section>`;
+  /* lịch thử việc sắp tới */
+  const appts = n48Visible().filter(n48ApptOf).sort((a, b) => (a.appt.date + (a.appt.time || '')).localeCompare(b.appt.date + (b.appt.time || '')));
+  const apptH = appts.length ? sec(t('n48HmAppt'), appts.map(x => `<a class="n48hap" href="#inbox-${esc(x.id)}"><span class="n48hapi">${N48I('cal')}</span>
+      <span class="n48grow"><b>${esc(n48Nm(x, n48Other(x)))}</b><span>${esc(n48HmDate(x.appt))}</span></span>${N48I('chev', 'n48mut')}</a>`).join('')) : '';
+  /* tin của tôi (3 tin đang mở) */
+  const act = n47MyActive().slice().sort((a, b) => ((a.mod === 'pending') - (b.mod === 'pending')) || (n48Ms(b.createdAt) - n48Ms(a.createdAt))), max = window.__n47max || N48.adMax;
+  const adRow = a => {
+    const pend = a.mod === 'pending';
+    return `<div class="n48had"><a class="n48hadm" href="#ad-${esc(a.id)}"><b>${esc(n48HmTitle(a))}</b><span>${esc(n48HmJobs(a))}</span></a>
+      <span class="n48hst${pend ? ' pend' : ''}">${esc(t(pend ? 'n48HmPend' : 'n48HmOpen'))}</span></div>
+      ${pend ? '' : `<div class="n48hab"><button type="button" data-act="liveedit" data-k="ads" data-v="${esc(a.id)}">${N48I('pencil')}${esc(t('n48HmEdit'))}</button><span></span>
+        <button type="button" class="n48hcl" data-act="n2close" data-k="ads" data-v="${esc(a.id)}" data-on="1">${esc(t('n48HmClose'))}</button></div>`}`;
+  };
+  const adsH = sec(t('n48HmAds'), act.length ? `<div class="n48card n48hads">${act.map(adRow).join('')}</div>` : `<p class="n48hno">${esc(t('n48HmNoAds'))}</p>`, t('n48HmCnt', act.length, max));
+  /* tin nhắn mới: 3 cuộc gần nhất */
+  const L = state.live || {}, uo = state.n1ctx && state.n1ctx.unreadOf;
+  const ths = n48Visible().sort((a, b) => n48Ms(b.lastAt) - n48Ms(a.lastAt)).slice(0, 3);
+  const msgRow = x => {
+    const o = n48Other(x), nm = n48Nm(x, o), un = uo ? uo(x) : false;
+    const last = x.lastText ? (x.lastFrom === u.uid ? t('n48You') : '') + n48SysTxt(x.lastText) : n48AboutTxt(x);
+    return `<a class="n48hm${un ? ' unread' : ''}" href="#inbox-${esc(x.id)}">${n48Av(nm, 38)}<span class="n48grow"><b>${esc(nm)}</b><span>${esc(last)}</span></span>
+      <span class="n48hmt"><time>${esc(n48When(n48Ms(x.lastAt)))}</time>${un ? '<i class="n48dot" aria-label="new"></i>' : ''}</span></a>`;
+  };
+  const msgH = sec(t('n48HmMsgs'), !L.threadsReady ? `<p class="n48hno">${t('loadingTxt')}</p>` : ths.length ? `<div class="n48card n48hms">${ths.map(msgRow).join('')}</div>` : `<p class="n48hno">${esc(t('n48HmNoMsg'))}</p>`);
+  return `<div class="wrap narrow page n48home">
+    <div class="n48hhi"><p>${esc(t('n48HmRole'))}${city ? ' · ' + esc(city) : ''}</p><h1>${esc(t('n48HmHi', n48MyName() || u.name || ''))}</h1></div>
+    <div class="n48hbt"><a class="n48hb1" href="#post-hiring">${N48I('plus')}<span>${esc(t('n48HmPost'))}</span></a><a class="n48hb2" href="#urgent">${N48I('bolt')}<span>${esc(t('n48HmQuick'))}</span></a></div>
+    ${apptH}${adsH}${msgH}</div>`;
+}
+(() => {
+  const h0 = viewHome;
+  viewHome = function(){
+    if (!state.user || (state.adm && state.adm.on) || n48Side() !== 'salon') return h0.apply(this, arguments);
+    return n48SalonHome();
+  };
+})();
+
+/* ================= giao diện ================= */
+(() => { const st = document.createElement('style'); st.textContent = `
+/* --- đăng nhập (06-login) --- */
+body:has(.n48lg) .n48hd,body:has(.n48lg) .site-footer,body:has(.n48lg) .n26bkw{display:none}
+.n48lg{position:relative;max-width:440px;margin:0 auto;padding:0 6px;box-sizing:border-box}
+.n48lglang{position:absolute;top:12px;right:12px;z-index:2}
+.card.auth-card.n48au{background:transparent;border:0;box-shadow:none;padding:56px 18px 28px;margin:0;display:flex;flex-direction:column;gap:28px;min-height:calc(100vh - 84px);min-height:calc(100dvh - 84px);box-sizing:border-box;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#1F1A1C}
+.n48lgh{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.n48lgh.n48lgl{align-items:flex-start;text-align:left;gap:8px}
+.n48lgo{width:56px;height:56px;border-radius:16px;background:#9B1D4F;color:#fff;display:grid;place-items:center;font-weight:700;font-size:24px}
+.n48au .pg-title{margin:0;font-size:24px;font-weight:700;line-height:1.25}
+.n48lead{margin:0;font-size:14.5px;color:#5E5458;line-height:1.5}
+.n48au .gbtn.n48gb{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:52px;border:1px solid #DCCFD3;border-radius:12px;background:#fff;color:#1F1A1C;font:inherit;font-size:15.5px;font-weight:600;margin:0;box-shadow:none;cursor:pointer}
+.n48g{width:22px;height:22px;border-radius:50%;border:1.5px solid #1F1A1C;display:grid;place-items:center;font-size:12px;font-weight:700;box-sizing:border-box}
+.n48or{display:flex;align-items:center;gap:12px;color:#5E5458;font-size:13px}.n48or span{flex:1;height:1px;background:#EFE6E8}
+.n48fl{display:flex;flex-direction:column;gap:16px}
+.n48fq{display:flex;flex-direction:column;gap:6px;margin:0}
+.n48au .flabel{font-size:14px;font-weight:600;color:#1F1A1C;margin:0}
+.n48au .tel-row.n48tel{display:flex;align-items:center;min-height:52px;box-sizing:border-box;border:1px solid #DCCFD3;border-radius:12px;background:#fff;overflow:hidden;gap:0;padding:0}
+.n48au .tel-row.n48tel .cc{padding:0 12px;font-size:15px;font-weight:400;color:#5E5458;border:0;border-right:1px solid #EFE6E8;border-radius:0;background:transparent;align-self:stretch;display:flex;align-items:center;min-height:0;margin:0}
+.n48au .tel-row.n48tel input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:16px;padding:0 12px;color:#1F1A1C;outline:none;min-height:50px;box-shadow:none;margin:0}
+.n48au .tel-row.n48tel:focus-within,.n48au input.n48pin:focus,.n48au input.n48code:focus{border-color:#9B1D4F;box-shadow:0 0 0 3px rgba(155,29,79,.14)}
+.n48au input.n48pin,.n48au input.n48code{position:static;inset:auto;opacity:1;height:auto;caret-color:auto;z-index:auto;cursor:text;width:100%;min-height:52px;box-sizing:border-box;border:1px solid #DCCFD3;border-radius:12px;background:#fff;font:inherit;font-size:20px;letter-spacing:8px;padding:0 14px;color:#1F1A1C;outline:none;margin:0}
+.n48au input.n48code{text-align:left}
+.n48au .btn.n48lgb,.n48au .btn[data-act=audone]{min-height:52px;border-radius:12px;font-size:16px;font-weight:600;margin:0}
+.n48lk{display:flex;justify-content:space-between;gap:8px;margin-top:-6px}.n48lk .n48lnk{padding:0;font-size:14px}
+.n48lkc{justify-content:center}
+.n48au .agree-note.n48tm{margin:auto 0 0;font-size:12.5px;color:#5E5458;text-align:center;line-height:1.5}
+.n48au .agree-note a{color:#9B1D4F;font-weight:400;text-decoration:underline}
+.n48au .auth-msg{margin:0;color:#B3261E;font-size:14px;font-weight:500}
+.n48au .hint{margin:4px 0 0;font-size:13px;color:#5E5458}
+.n48lgbk{align-self:flex-start;display:flex;align-items:center;gap:4px;border:0;background:transparent;color:#1F1A1C;font:inherit;font-size:14.5px;font-weight:600;min-height:44px;padding:0 8px 0 0;margin:-36px 0 -12px;cursor:pointer}
+.n48au .n35ver{margin:0;font-size:14px;color:#5E5458}
+/* bước tạo tài khoản / xác nhận email: cùng phong cách */
+.n48au .fq{margin:0;display:flex;flex-direction:column;gap:6px}
+.n48au .fq input[type=text],.n48au .fq input[type=email],.n48au .fq input[type=tel]{min-height:52px;box-sizing:border-box;border:1px solid #DCCFD3;border-radius:12px;font-size:16px;padding:0 14px}
+.n48au .seg{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px;background:transparent;padding:0;border:0}
+.n48au .seg button{min-height:48px;border:1px solid #DCCFD3;border-radius:12px;background:#fff;color:#1F1A1C;font:inherit;font-size:15px;font-weight:600;box-shadow:none}
+.n48au .seg button.on{border:1.5px solid #9B1D4F;background:#FBE4EC;color:#7E1640}
+.n48au .n45agree{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.45}
+.n48au .n45agree input{width:20px;height:20px;margin:1px 0 0;accent-color:#9B1D4F;flex:none}
+.n48au .btn-link{color:#9B1D4F;font-weight:600;min-height:44px}
+.n48au p[style*="text-align:center"]{margin:0!important}
+/* --- trang chủ tiệm (01-main) --- */
+.n48home{line-height:1.35;display:flex;flex-direction:column;gap:22px;padding-top:4px;padding-bottom:110px}
+.n48hhi p{margin:0;font-size:13px;color:#5E5458}.n48hhi h1{margin:2px 0 0;font-size:22px;font-weight:700;line-height:1.3;color:#1F1A1C}
+.n48hbt{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.n48hbt a{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border-radius:12px;font-size:15px;font-weight:600;text-decoration:none;box-sizing:border-box;padding:0 8px;white-space:nowrap}
+.n48hbt a span{overflow:hidden;text-overflow:ellipsis}
+.n48hb1{background:#9B1D4F;color:#fff;border:0}.n48hb1:hover{background:#7E1640;color:#fff}
+.n48hb2{background:#fff;color:#1F1A1C;border:1px solid #DCCFD3}.n48hb2 .n48i{color:#9B1D4F}
+.n48hs{gap:8px}
+.n48hsh{display:flex;justify-content:space-between;align-items:baseline}.n48hsh>span{font-size:13px;color:#5E5458}.n48hsh .n48h{margin:0}
+.n48hap{display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;background:#fff;border:1px solid #EFE6E8;text-decoration:none;color:#1F1A1C}
+.n48hapi{width:38px;height:38px;border-radius:10px;background:#FBE4EC;color:#9B1D4F;display:grid;place-items:center;flex:none}
+.n48hap b,.n48hm b{display:block;font-size:15px;font-weight:600}.n48hap .n48grow>span{font-size:13px;color:#5E5458}
+.n48had{display:flex;align-items:center;gap:10px;padding:14px;border-top:1px solid #EFE6E8}.n48hads>.n48had:first-child{border-top:0}
+.n48hadm{flex:1;min-width:0;text-decoration:none;color:#1F1A1C}.n48hadm b{display:block;font-size:15px;font-weight:600}.n48hadm span{font-size:13px;color:#5E5458}
+.n48hst{flex:none;font-size:12px;font-weight:600;color:#1E6B3A;background:#E6F4EA;padding:4px 9px;border-radius:999px}.n48hst.pend{color:#5E5458;background:#F1ECEE}
+.n48hab{display:flex;border-top:1px solid #EFE6E8}.n48hab>span{width:1px;background:#EFE6E8}
+.n48hab button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;border:0;background:transparent;font:inherit;font-size:14px;font-weight:600;color:#1F1A1C;cursor:pointer;margin:0}
+.n48hab button .n48i{width:17px;height:17px}.n48hab .n48hcl{color:#5E5458}
+.n48hm{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #EFE6E8;text-decoration:none;color:#1F1A1C;min-height:44px}.n48hms>.n48hm:first-child{border-top:0}
+.n48hm .n48grow>span{display:block;font-size:13px;color:#5E5458;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.n48hmt{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}.n48hmt time{font-size:12px;color:#5E5458}
+.n48hm .n48dot{width:9px;height:9px;display:block}
+.n48hno{margin:0;font-size:14px;color:#5E5458;background:#fff;border:1px solid #EFE6E8;border-radius:12px;padding:14px}
+`; document.head.appendChild(st); })();
+
+/* ============================================================
+   n148lists – n148 đợt 2 · DANH SÁCH (design-demo: Jobs.dc.html = 07-jobs, Techs.dc.html = 03-techs)
+   - "Việc gần bạn": trang chủ của thợ (#home vai thợ) + #ads / #jobs. 3 ô lọc Dịch vụ · Loại việc · Khoảng cách (C15),
+     thứ tự mặc định "Phù hợp nhất", nhãn "Cần gấp · <ngày>" / "Phù hợp" (C5), nút Ứng tuyển | Nhắn tin.
+   - "Thợ gần bạn": #job-seekers / #salon. Ô tìm + chip dịch vụ, thẻ thợ có ô chọn (B2 đợt 1), nút Mời làm | Nhắn tin.
+   - C8 bỏ "Việc đã lưu" (chỉ bỏ giao diện, dữ liệu `saved` giữ nguyên) · C9 bỏ "Xem hồ sơ như tiệm thấy".
+   Lớp này THAY HẲN viewTechHub / viewSalonHub (và viewHome khi vai thợ), dùng lại n1Action / n2Jobs / n2TechList / ACT có sẵn.
+   ============================================================ */
+Object.assign(T.vi, {
+  n48lJobsT:'Việc gần bạn', n48lJobsAll:'Việc làm', n48lTechsT:'Thợ gần bạn', n48lBest:'Phù hợp nhất',
+  n48lSvc:'Dịch vụ', n48lType:'Loại việc', n48lDist:'Khoảng cách', n48lMi:n => `≤${n} mi`,
+  n48lFull:'Full-time', n48lPart:'Part-time', n48lWknd:'Cuối tuần',
+  n48lUrg:'Cần gấp', n48lFit:'Phù hợp', n48lReady:'Sẵn sàng', n48lApply:'Ứng tuyển', n48lToday:'Hôm nay', n48lTmr:'Ngày mai',
+  n48lNTechs:n => `${n} thợ`, n48lQ:'Tìm theo tên, dịch vụ…', n48lQL:'Tìm thợ', n48lChips:'Lọc theo dịch vụ',
+  n48lNone:'Không có việc nào khớp bộ lọc.', n48lNoneT:'Không có thợ nào khớp.', n48lNoJobs:'Chưa có tin tuyển nào.', n48lNoTechs:'Chưa có thợ nào.',
+  n48lClear:'Bỏ lọc', n48lNoHome:'Thêm ZIP vào hồ sơ để lọc theo khoảng cách', n48lMake:'Tạo hồ sơ để ứng tuyển nhanh',
+  n48lYrs:'năm'
+});
+Object.assign(T.en, {
+  n48lJobsT:'Jobs near you', n48lJobsAll:'Jobs', n48lTechsT:'Techs near you', n48lBest:'Best match',
+  n48lSvc:'Service', n48lType:'Job type', n48lDist:'Distance', n48lMi:n => `≤${n} mi`,
+  n48lFull:'Full-time', n48lPart:'Part-time', n48lWknd:'Weekends',
+  n48lUrg:'Urgent', n48lFit:'Good match', n48lReady:'Ready', n48lApply:'Apply', n48lToday:'Today', n48lTmr:'Tomorrow',
+  n48lNTechs:n => `${n} tech${n === 1 ? '' : 's'}`, n48lQ:'Search by name, service…', n48lQL:'Search techs', n48lChips:'Filter by service',
+  n48lNone:'No jobs match these filters.', n48lNoneT:'No techs match.', n48lNoJobs:'No job posts yet.', n48lNoTechs:'No techs yet.',
+  n48lClear:'Clear filters', n48lNoHome:'Add a ZIP to your profile to filter by distance', n48lMake:'Create a profile to apply faster',
+  n48lYrs:'yrs'
+});
+state.n48l = {svc:'', jt:'', mi:'', q:'', chip:''};
+const N48L_MI = [5, 10, 25, 50];
+const N48L_JT = [['full_time', 'n48lFull'], ['part_time', 'n48lPart'], ['weekends', 'n48lWknd']];
+
+/* ---------- tiện ích ---------- */
+function n48lRole(){ return n48Role(); }
+function n48lArr(v){ return typeof n27A === 'function' ? n27A(v) : (Array.isArray(v) ? v : v ? [v] : []); }
+function n48lIds(list){ return typeof n32Ids === 'function' ? n32Ids(list || []) : (list || []).map(x => x && x.id).filter(Boolean); }
+/* chạy hàm danh sách cũ với bộ lọc / sắp xếp cũ tắt (lọc mới làm ở đây) */
+function n48lBase(fn, sortK){
+  const f = state.n1f || (state.n1f = {}), a = state.n26 || (state.n26 = {}), s2 = state.n2 || {}, s28 = state.n28 || (state.n28 = {});
+  const keep = [f.svc, a.area, s2.savedOnly, s28[sortK]];
+  f.svc = ''; a.area = ''; s2.savedOnly = false; s28[sortK] = 'fit';
+  try { return fn(); } finally { f.svc = keep[0]; a.area = keep[1]; s2.savedOnly = false; s28[sortK] = keep[3]; }
+}
+/* khoảng cách chỉ khi cả hai bên có ZIP (giống n30Miles) – không đoán theo tâm thành phố */
+function n48lHome(){
+  const role = n48lRole();
+  const z = role === 'salon' ? ((typeof n30MyAd === 'function' && n30MyAd()) || {}).zip : role === 'tech' ? (state.myProfile || {}).zip : '';
+  return z && ZIPS[z] ? {zip:z, p:ZIPS[z]} : null;
+}
+function n48lDist(o, home){
+  if (!home || !o || (typeof n2Mine === 'function' && n2Mine(o))) return null;
+  const r = n1Ready(o), oz = (r && r.zip) || o.zip, p = oz && ZIPS[oz];
+  return p ? hav(home.p[0], home.p[1], p[0], p[1]) : null;
+}
+function n48lMiTxt(d){ return d == null ? '' : d < 1 ? '< 1 mi' : (d < 10 ? (Math.round(d * 10) / 10).toFixed(1) : String(Math.round(d))) + ' mi'; }
+function n48lQuick(ad){ return !!(ad && ad.quick && ad.quick.date); }
+function n48lUrgent(ad){ return n48lQuick(ad) || (typeof n28Urgent === 'function' && n28Urgent(ad)); }
+function n48lDay(iso){
+  const [y, m, d] = String(iso || '').split('-').map(Number); if (!d) return '';
+  const today = n44Today(), tmr = n44Today(1);
+  if (iso === today) return t('n48lToday'); if (iso === tmr) return t('n48lTmr');
+  const dt = new Date(y, m - 1, d), dow = lang === 'vi' ? ['CN', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][dt.getDay()] : t('n44Dow')[dt.getDay()];
+  return lang === 'vi' ? `${dow} ${d}/${m}` : `${dow} ${m}/${d}`;
+}
+function n48lFitJob(ad, mp){ return !!(mp && ad && ad.hiring && typeof n46Score === 'function' && n46Score(ad, mp) >= 3); }
+function n48lFitTech(ad, tc){ return !!(ad && tc && typeof n46Score === 'function' && n46Score(ad, tc) >= 3); }
+function n48lMyProf(){ const mp = state.myProfile; return mp && mp.live !== false ? mp : null; }
+function n48lFold(s){ return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd'); }
+function n48lSvcLbl(id){ return n48Short(svcShort(id)); }
+function n48lTag(cls, ic, txt){ return `<span class="n48ltag ${cls}">${ic ? N48I(ic) : ''}${esc(txt)}</span>`; }
+const n48lChev = () => N48I('down', 'n48lchev');
+function n48lSel(id, k, label, opts, cur, off){
+  return `<label class="n48ldd${cur ? ' on' : ''}${off ? ' off' : ''}"><span class="n48lsr">${esc(label)}</span><select id="${id}" data-n48l="${k}" aria-label="${esc(label)}"${off ? ` disabled title="${esc(t('n48lNoHome'))}"` : ''}>
+    <option value="">${esc(label)}</option>${opts.map(([v, l]) => `<option value="${esc(v)}"${String(cur) === String(v) ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>${n48lChev()}</label>`;
+}
+document.addEventListener('change', e => {
+  const el = e.target; if (!el || !el.dataset || !el.dataset.n48l) return;
+  state.n48l[el.dataset.n48l] = el.value; render();
+});
+document.addEventListener('input', e => {
+  const el = e.target; if (!el || el.id !== 'n48l-q') return;
+  state.n48l.q = el.value; render();
+});
+ACT.n48lchip = function(el){ const v = el.dataset.v || ''; state.n48l.chip = state.n48l.chip === v ? '' : v; render(); };
+ACT.n48lclr = function(){ Object.assign(state.n48l, {svc:'', jt:'', mi:'', q:'', chip:''}); render(); };
+
+/* ================= Việc gần bạn (07-jobs) ================= */
+function n48lJobsAll(){
+  const today = n44Today();
+  let l = n48lBase(() => n2Jobs(), 'sortJ');
+  l = l.filter(a => !(n48lQuick(a) && a.quick.date < today));
+  const mp = n48lMyProf(), home = n48lHome();
+  const sc = new Map(l.map(a => [a, mp && typeof n46Score === 'function' ? n46Score(a, mp) : 0]));
+  const dist = new Map(l.map(a => [a, n48lDist(a, home)]));
+  return l.map((a, i) => [a, i]).sort(([a, i], [b, j]) => (sc.get(b) - sc.get(a)) || ((n48lUrgent(b) ? 1 : 0) - (n48lUrgent(a) ? 1 : 0))
+    || ((dist.get(a) == null ? 9999 : dist.get(a)) - (dist.get(b) == null ? 9999 : dist.get(b))) || i - j).map(x => x[0]);
+}
+function n48lJobsFlt(all){
+  const S = state.n48l, home = n48lHome();
+  return all.filter(a => {
+    const h = a.hiring || {};
+    if (S.svc && n48lIds(h.services).indexOf(S.svc) < 0 && !(h.services || []).some(x => x && x.id === S.svc)) return false;
+    if (S.jt && n48lArr(h.jobType).indexOf(S.jt) < 0) return false;
+    if (S.mi && home){ const d = n48lDist(a, home); if (d == null || d > Number(S.mi)) return false; }
+    return true;
+  });
+}
+function n48lSvcOpts(list, getSvc){
+  const ids = new Set(); list.forEach(o => n48lIds(getSvc(o)).forEach(x => ids.add(x)));
+  const order = (typeof SERVICES !== 'undefined' ? SERVICES : []).map(s => s.v);
+  return [...ids].sort((a, b) => ((order.indexOf(a) + 1) || 999) - ((order.indexOf(b) + 1) || 999)).map(v => [v, n48lSvcLbl(v)]);
+}
+function n48lApplyBtn(h){
+  /* chữ "Tôi muốn làm" cũ → "Ứng tuyển" (07-jobs) */
+  return h.replace(/(<button[^>]*data-act="n1apply"[^>]*>)([\s\S]*?)(<\/button>)/, (m, a, b, c) => `${a}${esc(t('n48lApply'))}${c}`);
+}
+function n48lJobCard(ad, home, mp){
+  const h = ad.hiring || {}, tags = [];
+  if (n48lQuick(ad)) tags.push(n48lTag('n48lurg', 'bolt', `${t('n48lUrg')} · ${n48lDay(ad.quick.date)}`));
+  else if (n48lUrgent(ad)) tags.push(n48lTag('n48lurg', 'bolt', t('n48lUrg')));
+  if (n48lFitJob(ad, mp)) tags.push(n48lTag('n48lfit', '', t('n48lFit')));
+  const place = placeName(ad.zip, ad.city) || '', biz = adBiz(ad) || '', d = n48lDist(ad, home);
+  let pay = ''; try { pay = payText(h) || ''; } catch (e) {}
+  const act = n48lApplyBtn(n1Action(ad) || '');
+  return `<div class="n48lc" data-id="${esc(ad.id)}">
+    <a class="n48lm" href="#ad-${esc(ad.id)}">${tags.length ? `<span class="n48ltags">${tags.join('')}</span>` : ''}
+      <b class="n48ln">${esc(titleOf(ad))}</b><span class="n48ls">${esc([biz, place].filter(Boolean).join(' · '))}</span>
+      <span class="n48lp">${pay ? `<b>${esc(pay)}</b>` : ''}${d != null ? `<span class="n48ld">${N48I('pin')}${esc(n48lMiTxt(d))}</span>` : ''}</span></a>
+    ${act ? `<div class="n48lact">${act}</div>` : ''}</div>`;
+}
+function n48lJobsView(){
+  const S = state.n48l, role = n48lRole(), home = n48lHome(), mp = n48lMyProf();
+  if (!home && S.mi) S.mi = '';
+  const all = n48lJobsAll(), list = n48lJobsFlt(all);
+  const ttl = role === 'salon' ? t('n26OtherSalons') : role === 'tech' ? t('n48lJobsT') : t('n48lJobsAll');
+  const svcO = n48lSvcOpts(all, a => (a.hiring || {}).services);
+  if (S.svc && !svcO.some(o => o[0] === S.svc)) svcO.unshift([S.svc, n48lSvcLbl(S.svc)]);
+  const flt = S.svc || S.jt || S.mi;
+  const make = role === 'tech' && !n48MyProfs().length && !state.myProfile ? `<a class="n48lmake" href="#post-profile">${N48I('doc')}<span>${esc(t('n48lMake'))}</span>${N48I('chev')}</a>` : '';
+  return `<section class="n48lv"><header class="n48lhd"><div class="n48lin">
+      <div class="n48lh1"><h1>${esc(ttl)}</h1>${role === 'salon' ? '' : `<span>${esc(t('n48lBest'))}</span>`}</div>
+      <div class="n48lflt">${n48lSel('n48l-svc', 'svc', t('n48lSvc'), svcO, S.svc)}${n48lSel('n48l-jt', 'jt', t('n48lType'), N48L_JT.map(([v, k]) => [v, t(k)]), S.jt)}${n48lSel('n48l-mi', 'mi', t('n48lDist'), N48L_MI.map(n => [String(n), t('n48lMi', n)]), S.mi, !home)}</div>
+    </div></header>
+    <div class="n48lin n48lls">${make}${list.length ? list.map(a => n48lJobCard(a, home, mp)).join('')
+      : `<div class="n48empty"><p>${esc(t(flt ? 'n48lNone' : 'n48lNoJobs'))}</p>${flt ? `<button type="button" class="btn btn-ghost" data-act="n48lclr">${esc(t('n48lClear'))}</button>` : ''}</div>`}</div></section>`;
+}
+
+/* ================= Thợ gần bạn (03-techs) ================= */
+function n48lTechsAll(){
+  const l = n48lBase(() => n2TechList(), 'sortT');
+  const ad = n48lRole() === 'salon' && typeof n30MyAd === 'function' ? n30MyAd() : null, home = n48lHome();
+  const sc = new Map(l.map(x => [x, ad && typeof n46Score === 'function' ? n46Score(ad, x) : 0]));
+  const dist = new Map(l.map(x => [x, n48lDist(x, home)]));
+  const rd = x => (n1Ready(x) ? 1 : 0);
+  return l.map((x, i) => [x, i]).sort(([a, i], [b, j]) => (rd(b) - rd(a)) || (sc.get(b) - sc.get(a))
+    || ((dist.get(a) == null ? 9999 : dist.get(a)) - (dist.get(b) == null ? 9999 : dist.get(b))) || i - j).map(x => x[0]);
+}
+function n48lTechsFlt(all){
+  const S = state.n48l, q = n48lFold(S.q).trim();
+  return all.filter(tc => {
+    const ids = n48lIds(tc.services);
+    if (S.chip && ids.indexOf(S.chip) < 0 && !(tc.services || []).some(x => x && x.id === S.chip)) return false;
+    if (q){
+      const hay = n48lFold([tc.name, ...(tc.services || []).map(x => x && x.id ? svcName(x.id) + ' ' + svcShort(x.id) : '')].join(' '));
+      if (q.split(/\s+/).some(w => hay.indexOf(w) < 0)) return false;
+    }
+    return true;
+  });
+}
+function n48lTechCard(tc, home, ad){
+  const on = state.n48.sel.indexOf(tc.id) >= 0, pick = n48CanPick(tc), r = n1Ready(tc);
+  const svc = (tc.services || []).slice(0, 3).map((x, i) => { const v = n48lSvcLbl(x.id); return i ? v.toLowerCase().replace(/^gel-x$/, 'gel-X') : v; });
+  const sub = [svc.join(', ') + ((tc.services || []).length > 3 ? '…' : ''), tc.years ? opt('years', tc.years) : '', tc.license === 'have' ? t('n48Lic') : ''].filter(Boolean).join(' · ');
+  const d = n48lDist(tc, home), jt = n48lArr(tc.jobType).map(v => { const k = N48L_JT.find(z => z[0] === v); return k ? t(k[1]) : ''; }).filter(Boolean);
+  const where = [d != null ? n48lMiTxt(d) : placeName(n1RLoc(tc).zip, n1RLoc(tc).city), jt.join(' / ')].filter(Boolean).join(' · ');
+  const tags = (r ? n48lTag('n48lurg', 'bolt', `${t('n48lReady')} · ${n1ReadyDay(r)}`) : '') + (n48lFitTech(ad, tc) ? n48lTag('n48lfit', '', t('n48lFit')) : '');
+  const box = pick ? `<button type="button" class="n48pick n48lpk${on ? ' on' : ''}" data-act="n48pick" data-v="${esc(tc.id)}" aria-pressed="${on}" aria-label="${esc(t('n48Pick', tc.name || ''))}">${on ? N48I('check') : ''}</button>` : '';
+  const act = n1Action(tc) || '';
+  return `<div class="n48lc n48ltc${on ? ' n48picked' : ''}" data-id="${esc(tc.id)}">
+    <div class="n48ltr">${box}<a class="n48lm n48ltm" href="#tech-${esc(tc.id)}">${n48Av(tc.name, 40, tc.avatar)}<span class="n48lti">
+      <span class="n48ltn"><b>${esc(tc.name || '—')}</b>${tags}</span>
+      ${sub ? `<span class="n48ls">${esc(sub)}</span>` : ''}${where ? `<span class="n48lw">${N48I('pin')}${esc(where)}</span>` : ''}</span></a></div>
+    ${act ? `<div class="n48lact">${act}</div>` : ''}</div>`;
+}
+function n48lTechsView(){
+  const S = state.n48l, role = n48lRole(), home = n48lHome();
+  const ad = role === 'salon' && typeof n30MyAd === 'function' ? n30MyAd() : null;
+  const all = n48lTechsAll(), list = n48lTechsFlt(all);
+  const zip = home ? home.zip : '';
+  const chips = n48lSvcOpts(all, x => x.services);
+  if (S.chip && !chips.some(o => o[0] === S.chip)) chips.unshift([S.chip, n48lSvcLbl(S.chip)]);
+  const ttl = role === 'tech' ? t('n26OtherTechs') : t('n48lTechsT');
+  const flt = S.chip || S.q;
+  return `<section class="n48lv n48lvt${state.n48.sel.length ? ' n48lsel' : ''}"><header class="n48lhd"><div class="n48lin">
+      <div class="n48lh1"><h1>${esc(ttl)}</h1><span>${esc([t('n48lNTechs', list.length), zip].filter(Boolean).join(' · '))}</span></div>
+      <label class="n48lq">${N48I('search')}<span class="n48lsr">${esc(t('n48lQL'))}</span><input id="n48l-q" type="search" placeholder="${esc(t('n48lQ'))}" value="${esc(S.q)}" autocomplete="off" enterkeyhint="search"></label>
+      ${chips.length ? `<div class="n48lchips" role="group" aria-label="${esc(t('n48lChips'))}">${chips.map(([v, l]) => `<button type="button" class="n48lchip${S.chip === v ? ' on' : ''}" data-act="n48lchip" data-v="${esc(v)}" aria-pressed="${S.chip === v}">${esc(l)}</button>`).join('')}</div>` : ''}
+    </div></header>
+    <div class="n48lin n48lls">${list.length ? list.map(tc => n48lTechCard(tc, home, ad)).join('')
+      : `<div class="n48empty"><p>${esc(t(flt ? 'n48lNoneT' : 'n48lNoTechs'))}</p>${flt ? `<button type="button" class="btn btn-ghost" data-act="n48lclr">${esc(t('n48lClear'))}</button>` : ''}</div>`}</div></section>`;
+}
+
+/* ---------- gắn vào các màn ---------- */
+viewTechHub = function(){ return n48lJobsView(); };
+viewSalonHub = function(){ return n48lTechsView(); };
+viewAds = viewTechHub; viewSeekers = viewSalonHub;
+(() => {
+  const h0 = viewHome;
+  viewHome = function(){
+    if (state.user && n48lRole() === 'tech' && !(state.adm && state.adm.on)) return n48lJobsView();
+    return h0.apply(this, arguments);
+  };
+  /* đổi trang thì bỏ lọc tìm (giữ 3 ô lọc việc) */
+  let last = '';
+  window.addEventListener('hashchange', () => {
+    const v = (location.hash || '').replace(/^#/, ''), grp = /^(salon|job-seekers)$/.test(v) ? 'T' : 'O';
+    if (grp !== last && grp !== 'T'){ state.n48l.q = ''; state.n48l.chip = ''; }
+    last = grp;
+  });
+})();
+
+/* ================= C8: bỏ "Việc đã lưu" (giữ dữ liệu `saved`) ================= */
+if (state.n2) state.n2.savedOnly = false;
+ACT.n2only = function(){ if (state.n2) state.n2.savedOnly = false; render(); };
+(() => {
+  const strip = h => (typeof h === 'string' ? h.replace(/<button type="button" class="n2star[^"]*"[^>]*>[\s\S]*?<\/button>/g, '').replace(/<button type="button" class="choice n2so[^"]*"[^>]*>[\s\S]*?<\/button>/g, '') : h);
+  const j0 = n1JobCard; n1JobCard = function(){ return strip(j0.apply(this, arguments)); };
+  const a0 = viewAd; viewAd = function(){ return strip(a0.apply(this, arguments)); };
+})();
+
+/* ================= C9: bỏ "Xem hồ sơ như tiệm thấy" ================= */
+(() => {
+  const strip = h => (typeof h === 'string' ? h.replace(/<a class="btn btn-ghost btn-block n41as"[^>]*>[\s\S]*?<\/a>/g, '') : h);
+  const p0 = n3MyProf; n3MyProf = function(){ return strip(p0.apply(this, arguments)); };
+  ACT.n43as = function(el){ if (state.n43) state.n43.as = ''; const v = el && el.dataset && el.dataset.v; if (v) location.hash = '#tech-' + v; };
+  if (state.n43) state.n43.as = '';
+})();
+
+/* ================= trang chi tiết tin / hồ sơ thợ: nút Ứng tuyển cùng chữ, nhãn "Cần gấp" ================= */
+(() => {
+  const lbl = h => (typeof h === 'string' ? h.replace(/(<button[^>]*data-act="n1apply"[^>]*>)([^<]*)(<\/button>)/g, (m, a, b, c) => (/n46done|disabled/.test(a) ? m : `${a}${esc(t('n48lApply'))}${c}`)) : h);
+  const a0 = viewAd;
+  viewAd = function(id){
+    let h = lbl(a0.apply(this, arguments));
+    const ad = ADS.find(a => a.id === id);
+    if (typeof h === 'string' && ad && n48lQuick(ad) && h.indexOf('n48lurg') < 0)
+      h = h.replace(/(<h1[^>]*>)/, `<span class="n48ltags n48ladt">${n48lTag('n48lurg', 'bolt', `${t('n48lUrg')} · ${n48lDay(ad.quick.date)}`)}</span>$1`);
+    return h;
+  };
+  const m0 = mobileBar;
+  mobileBar = function(){ return lbl(m0.apply(this, arguments)); };
+})();
+
+/* ---------- giao diện (Jobs.dc.html / Techs.dc.html) ---------- */
+(() => { const st = document.createElement('style'); st.textContent = `
+.n48lv{margin:0 0 8px}
+.n48lin{max-width:640px;margin:0 auto;box-sizing:border-box}
+.n48lhd{background:#fff;border-bottom:1px solid #EFE6E8;padding:14px 16px 12px}
+.n48lhd .n48lin{display:flex;flex-direction:column;gap:12px}
+.n48lh1{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.n48lh1 h1{margin:0;font-size:20px;font-weight:700;line-height:1.25;color:#1F1A1C}
+.n48lh1>span{font-size:13px;color:#5E5458;white-space:nowrap}
+.n48lsr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.n48lflt{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.n48ldd{position:relative;display:flex;align-items:center;min-width:0;min-height:44px;border:1px solid #DCCFD3;background:#fff;color:#1F1A1C;border-radius:10px;box-sizing:border-box}
+.n48ldd select{appearance:none;-webkit-appearance:none;border:0;background:transparent;font:inherit;font-size:13px;font-weight:500;color:inherit;width:100%;min-width:0;height:42px!important;min-height:0!important;max-height:42px;line-height:normal;padding:0 21px 0 9px!important;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;border-radius:10px;box-shadow:none;outline-offset:2px}
+.n48ldd .n48lchev{position:absolute;right:6px;top:50%;width:14px;height:14px;margin-top:-7px;pointer-events:none}
+.n48ldd.on{border-color:#9B1D4F;background:#FBE4EC;color:#7E1640}.n48ldd.on select{font-weight:600}
+.n48ldd.off{opacity:.55}.n48ldd.off select{cursor:not-allowed}
+.n48lls{padding:12px 16px 24px;display:flex;flex-direction:column;gap:10px}
+.n48lsel .n48lls{padding-bottom:110px}
+.n48lc{background:#fff;border:1px solid #EFE6E8;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;position:relative}
+.n48lm{display:flex;flex-direction:column;gap:4px;text-decoration:none;color:#1F1A1C;min-width:0}
+.n48lm:hover .n48ln,.n48lm:hover .n48ltn b{color:#7E1640}
+.n48ltags{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.n48ltag{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;line-height:1.45;white-space:nowrap}
+.n48ltag .n48i{width:12px;height:12px}
+.n48lurg{color:#9A3412;background:#FFF1E6}.n48lfit{color:#1E6B3A;background:#E6F4EA}
+.n48ln{font-size:15.5px;font-weight:600;line-height:1.35}
+.n48ls{font-size:13px;color:#5E5458;line-height:1.4}
+.n48lp{display:flex;gap:14px;font-size:13px;color:#1F1A1C;margin-top:2px;flex-wrap:wrap}
+.n48lp b{font-weight:600}
+.n48ld,.n48lw{display:inline-flex;align-items:center;gap:4px;color:#5E5458}.n48ld .n48i,.n48lw .n48i{width:14px;height:14px}
+.n48lact .n48two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0;width:100%}
+.n48lact .n48two.n48one{grid-template-columns:1fr}
+.n48lact .n48two>.btn{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;height:auto;margin:0;padding:0 8px;border-radius:10px;font-size:14px;font-weight:600;width:auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:none;text-decoration:none;box-sizing:border-box}
+.n48lact .n48two>.btn .n48i{width:17px;height:17px;flex:none}
+.n48lact .n48two>.btn-primary{background:#9B1D4F;border:1px solid #9B1D4F;color:#fff}
+.n48lact .n48two>.btn-ghost{background:#fff;border:1px solid #DCCFD3;color:#1F1A1C}
+.n48lact .n48two>[data-act=n1offer]{background:#fff;border:1px solid #9B1D4F;color:#9B1D4F}
+.n48lact .n48two>.n46done{color:#1E6B3A;border-color:#BFDCC8;background:#F3FAF5}
+.n48lact .n48two>.btn[disabled]{opacity:.6}
+.n48ltr{display:flex;gap:12px;align-items:flex-start}
+.n48ltm{flex-direction:row;gap:12px;flex:1;align-items:flex-start}
+.n48ltm .n48av{flex:none;border-radius:50%;display:grid;place-items:center;font-weight:700;object-fit:cover}
+.n48lti{display:flex;flex-direction:column;flex:1;min-width:0}
+.n48ltn{display:flex;align-items:center;gap:6px 8px;flex-wrap:wrap}.n48ltn b{font-size:15.5px;font-weight:600}
+.n48lti .n48ls{margin-top:2px}
+.n48lw{font-size:12.5px;margin-top:3px}
+.n48ltc .n48pick.n48lpk{position:relative;left:auto;top:auto;flex:none;margin-top:8px}
+.n48ltc.n48picked{border:1.5px solid #9B1D4F;box-shadow:none!important;padding:13.5px}
+.n48lq{display:flex;align-items:center;gap:8px;min-height:44px;box-sizing:border-box;border:1px solid #DCCFD3;border-radius:12px;padding:0 12px;background:#FAF6F5;color:#5E5458}
+.n48lq .n48i{width:18px;height:18px;flex:none}
+.n48lq input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:15px;color:#1F1A1C;outline:none;box-shadow:none;padding:10px 0;margin:0;height:auto;-webkit-appearance:none;appearance:none}
+.n48lq:focus-within{border-color:#9B1D4F}
+.n48lchips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 2px}
+.n48lchips::-webkit-scrollbar{display:none}
+.n48lchip{flex:none;border:1px solid #DCCFD3;background:#fff;color:#1F1A1C;border-radius:999px;padding:7px 13px;font:inherit;font-size:13.5px;font-weight:500;min-height:36px;cursor:pointer;position:relative;white-space:nowrap}
+.n48lchip::before{content:'';position:absolute;inset:-4px 0}
+.n48lchip.on{border-color:#9B1D4F;background:#FBE4EC;color:#7E1640;font-weight:600}
+.n48lmake{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #EFE6E8;border-radius:14px;padding:12px 14px;min-height:48px;box-sizing:border-box;color:#9B1D4F;font-weight:600;font-size:14.5px;text-decoration:none}
+.n48lmake span{flex:1}.n48lmake .n48i{width:20px;height:20px}
+.n48lls .n48empty .btn{margin-top:6px}
+.n48ladt{margin:0 0 6px}
+`; document.head.appendChild(st); })();
+
+/* ============================================================
+   n148form – n148 đợt 2 · ĐĂNG TIN TUYỂN 1 TRANG (design-demo 09-postform / PostForm.dc.html)
+   C12: form tuyển nhiều mục → 1 trang: Dịch vụ · Loại việc · Trả lương · ZIP (bắt buộc),
+        "Tiêu đề tự tạo" (chỉ xem), phần còn lại gập trong "Thêm chi tiết", nút "Đăng tin" cố định dưới.
+   C13: bỏ "Viết giúp mô tả" + tiêu đề tự gõ → tiêu đề tự ghép (titleOf như danh sách tin).
+   Cách làm: viewForm('hiring') vẫn chạy cả chuỗi cũ (chặn 3 tin, đăng nhập, sửa tin, xoá tin…);
+   khi chuỗi cũ trả về form thường thì thay bằng màn mới. LƯU dùng lại ACT.n1pub → ACT.fpublish (giữ khoá dữ liệu cũ).
+   ============================================================ */
+Object.assign(T.vi, {
+  n48fT:'Đăng tin tuyển thợ', n48fCnt:(n, m) => `Tin ${n}/${m}`, n48fSvc:'Cần thợ làm gì?', n48fJob:'Loại việc', n48fPay:'Trả lương',
+  n48fPH:'Theo giờ', n48fPD:'Theo ngày', n48fPC:'Ăn chia', n48fPayG:'Cách trả lương', n48fPct:'Thợ được (%)', n48fHr:'Lương giờ ($)', n48fDy:'Lương ngày ($)',
+  n48fAmt:'Số tiền', n48fAmtPh:'Chọn ở trên', n48fZip:'ZIP của tiệm', n48fWk:'Cuối tuần',
+  n48fOther:'+ Khác', n48fOtherPh:'Dịch vụ khác, VD: Sơn mắt mèo', n48fAdd:'Thêm', n48fCusMax:'Tự thêm tối đa 3 dịch vụ.', n48fRm:'Bỏ',
+  n48fTitle:'Tiêu đề tự tạo', n48fTitleNone:'Chọn dịch vụ và loại việc để tạo tiêu đề',
+  n48fMore:'Thêm chi tiết', n48fMoreD:'Kinh nghiệm, giờ làm, mô tả, ảnh tiệm · không bắt buộc',
+  n48fLife:'Tin hiện 30 ngày. Trước khi hết hạn 3 ngày, Nail101 gửi email để bạn gia hạn.',
+  n48fErrSvc:'Chọn ít nhất 1 dịch vụ.', n48fErrJob:'Chọn loại việc.', n48fErrPay:'Chọn cách trả lương.', n48fErrAmt:'Nhập số tiền / phần trăm.', n48fErrZip:'Nhập ZIP 5 số của tiệm.',
+  n48fFix:'Còn thiếu:', n48fBack:'Quay lại'
+});
+Object.assign(T.en, {
+  n48fT:'Post a job', n48fCnt:(n, m) => `Post ${n}/${m}`, n48fSvc:'What do you need?', n48fJob:'Job type', n48fPay:'Pay',
+  n48fPH:'Hourly', n48fPD:'Daily', n48fPC:'Commission', n48fPayG:'How you pay', n48fPct:'Tech gets (%)', n48fHr:'Pay per hour ($)', n48fDy:'Pay per day ($)',
+  n48fAmt:'Amount', n48fAmtPh:'Pick above', n48fZip:'Salon ZIP', n48fWk:'Weekends',
+  n48fOther:'+ Other', n48fOtherPh:'Other service, e.g. Cat-eye gel', n48fAdd:'Add', n48fCusMax:'You can add up to 3 of your own.', n48fRm:'Remove',
+  n48fTitle:'Auto title', n48fTitleNone:'Pick services and job type to make the title',
+  n48fMore:'More details', n48fMoreD:'Experience, hours, description, salon photos · optional',
+  n48fLife:'Posts stay up 30 days. 3 days before they expire, Nail101 emails you to renew.',
+  n48fErrSvc:'Pick at least 1 service.', n48fErrJob:'Pick a job type.', n48fErrPay:'Pick how you pay.', n48fErrAmt:'Enter the amount / percent.', n48fErrZip:'Enter the salon’s 5-digit ZIP.',
+  n48fFix:'Still missing:', n48fBack:'Back'
+});
+
+/* dịch vụ hiện sẵn (như demo); "+ Khác" mở thêm phần còn lại + ô tự ghi */
+const N48F_SV = ['acrylic_full', 'dip', 'gelx', 'gel_polish', 'pedicure', 'waxing'];
+const N48F_JOB = [['full_time', ''], ['part_time', ''], ['weekends', 'n48fWk']];
+const N48F_PAY = [['per_hour', 'n48fPH'], ['per_day', 'n48fPD'], ['commission', 'n48fPC']];
+const N48F_AMT = ['commissionPct', 'amtDay', 'amtHour', 'amtWeek'];
+/* các ô vẽ ở trên hoặc tự điền từ tài khoản – còn lại vào "Thêm chi tiết" */
+const N48F_TOP = ['businessName', 'city', 'phone', 'zip', 'services', 'jobType', 'payType', '_n33pv'].concat(N48F_AMT);
+const N48F_MORE = ['experience', 'schedule', 'extras', 'spics', '_h1', 'address', 'license', 'techsNeeded', 'perks', 'reqs', 'cover', 'urgent'];
+const N48F_CUSMAX = 3;
+
+function n48fArr(v){ return Array.isArray(v) ? v : (v && typeof v === 'object') ? Object.keys(v).filter(k => v[k]) : (v ? [v] : []); }
+function n48fStd(v){ return SERVICES.some(s => s.v === v); }
+function n48fField(k){ return ((FORMS.hiring.steps[0] || {}).fields || []).find(f => f.k === k); }
+function n48fLbl(v){ const o = (OPTS.svc || []).find(x => x.v === v); return o ? L(o) : (n48fStd(v) ? svcName(v) : String(v)); }
+function n48fOn(){ const fs = state.forms && state.forms.hiring; return !!(fs && fs.n48f); }
+/* tiêu đề tự ghép: giống tiêu đề hiện trên danh sách tin (titleOf), đổi theo ngôn ngữ */
+function n48fTitle(d){
+  const sv = n48fArr(d.services);
+  if (!sv.length) return '';
+  try { return titleOf({type:'hiring', title:'', hiring:{services:sv.map(id => ({id, need:'must'})), jobType:n48fArr(d.jobType), techsNeeded:d.techsNeeded}}) || ''; }
+  catch (e) { return ''; }
+}
+function n48fPayOn(d, v){ const p = n48fArr(d.payType); return v === 'commission' ? p.some(x => /^commission/.test(x)) : p.indexOf(v) >= 0; }
+
+function n48fView(fs, h0){
+  const d = fs.data, e = fs.errors || {}, edit = !!fs.editId;
+  fs.n48f = true;
+  if (edit && fs.n48z0 === undefined) fs.n48z0 = d.zip || '';
+  const er = (...ks) => { const m = ks.map(k => e[k]).find(Boolean); return m ? `<p class="err" role="alert">${esc(m)}</p>` : ''; };
+  const hasErr = (...ks) => ks.some(k => e[k]);
+  const ck = N48I('check', 'n48fck');
+  /* 1. dịch vụ */
+  const sel = n48fArr(d.services), open = !!fs.n48x;
+  const std = SERVICES.map(s => s.v), show = N48F_SV.concat(std.filter(v => N48F_SV.indexOf(v) < 0 && (open || sel.indexOf(v) >= 0)));
+  const cus = sel.filter(v => !n48fStd(v));
+  const chip = (v, lb, on) => `<button type="button" class="n48fc${on ? ' on' : ''}" aria-pressed="${on}" data-act="fmulti" data-ft="hiring" data-fk="services" data-v="${esc(v)}"${!n48fStd(v) ? ` aria-label="${esc(t('n48fRm'))} ${esc(lb)}"` : ''}>${on ? ck : ''}${esc(lb)}</button>`;
+  const svc = show.map(v => chip(v, n48fLbl(v), sel.indexOf(v) >= 0)).join('') + cus.map(v => chip(v, v, true)).join('')
+    + `<button type="button" class="n48fc n48fadd${open ? ' open' : ''}" data-act="n48fmore" aria-expanded="${open}">${esc(t('n48fOther'))}</button>`;
+  const cusRow = open ? `<div class="n48fcus"><input id="n48f-cus" type="text" maxlength="30" value="${esc(fs.n48cus || '')}" placeholder="${esc(t('n48fOtherPh'))}" aria-label="${esc(t('n48fOtherPh'))}"><button type="button" class="n48fcusb" data-act="n48fcus">${esc(t('n48fAdd'))}</button></div>` : '';
+  /* 2. loại việc (chọn nhiều) */
+  const jt = n48fArr(d.jobType);
+  const job = N48F_JOB.map(([v, k]) => { const on = jt.indexOf(v) >= 0; return `<button type="button" class="n48fj${on ? ' on' : ''}" aria-pressed="${on}" data-act="fmulti" data-ft="hiring" data-fk="jobType" data-v="${v}">${esc(k ? t(k) : opt('jobType', v))}</button>`; }).join('')
+    + jt.filter(v => !N48F_JOB.some(x => x[0] === v)).map(v => `<button type="button" class="n48fj on" aria-pressed="true" data-act="fmulti" data-ft="hiring" data-fk="jobType" data-v="${esc(v)}">${esc(opt('jobType', v))}</button>`).join('');
+  /* 3. trả lương: thanh 3 phần + ô số; ô ZIP cạnh bên */
+  const pay = N48F_PAY.map(([v, k]) => { const on = n48fPayOn(d, v); return `<button type="button" class="${on ? 'on' : ''}" aria-pressed="${on}" data-act="n48fpay" data-v="${v}">${esc(t(k))}</button>`; }).join('');
+  const num = (k, lb, req) => `<div class="n48fn${e[k] ? ' has-err' : ''}"><label for="f-hiring-${k}">${esc(lb)}${req ? ' *' : ''}</label><input id="f-hiring-${k}" type="${k === 'zip' ? 'text' : 'number'}" inputmode="${k === 'zip' ? 'numeric' : 'decimal'}"${k === 'zip' ? ' maxlength="5" placeholder="78209"' : ' min="0"'} data-ft="hiring" data-fk="${k}" value="${esc(d[k] == null ? '' : d[k])}"></div>`;
+  const amts = N48F_AMT.filter(k => { const f = n48fField(k); return f && (!f.show || f.show(d)); }).map(k => {
+    const f = n48fField(k), lb = k === 'commissionPct' ? t('n48fPct') : k === 'amtHour' ? t('n48fHr') : (fieldLabel(f, d) || t('n48fDy'));
+    return num(k, lb);
+  });
+  if (!amts.length) amts.push(`<div class="n48fn n48fdis"><label for="n48f-amt0">${esc(t('n48fAmt'))}</label><input id="n48f-amt0" type="text" disabled placeholder="${esc(t('n48fAmtPh'))}"></div>`);
+  const nums = amts.join('') + num('zip', t('n48fZip'), true);
+  /* tiêu đề tự tạo */
+  const ttl = n48fTitle(d);
+  /* thêm chi tiết: giữ các ô cũ */
+  const F = (FORMS.hiring.steps[0] || {}).fields || [];
+  const moreF = N48F_MORE.map(k => F.find(f => f.k === k)).concat(F.filter(f => N48F_TOP.indexOf(f.k) < 0 && N48F_MORE.indexOf(f.k) < 0)).filter(Boolean).filter(f => !f.show || f.show(d));
+  if (fs.n48open === undefined){
+    const has = v => Array.isArray(v) ? v.length > 0 : (v && typeof v === 'object') ? Object.keys(v).length > 0 : (v !== undefined && v !== null && String(v).trim() !== '' && v !== false);
+    fs.n48open = edit && moreF.some(f => ['techsNeeded', '_h1'].indexOf(f.k) < 0 && has(d[f.k]));
+  }
+  const moreErr = moreF.some(f => e[f.k]);
+  let moreBody = '';
+  try { moreBody = moreF.map(f => renderField('hiring', f.k === 'experience' ? Object.assign({}, f, {req:0}) : f, fs)).join(''); } catch (x) { console.warn('n48f more', x); }
+  /* lỗi ở ô không hiện trên màn (VD tên tiệm / số điện thoại) */
+  const shown = ['services', 'jobType', 'payType', 'zip'].concat(N48F_AMT).concat(moreF.map(f => f.k));
+  const rest = Object.keys(e).filter(k => e[k] && shown.indexOf(k) < 0).map(k => { const f = n48fField(k); return (f ? fieldLabel(f, d) + ': ' : '') + e[k]; });
+  const del = (h0.match(/<div class="n43delrow">[\s\S]*?<\/div>/) || [''])[0];
+  const max = (typeof N48 === 'object' && N48.adMax) || 3, cnt = edit ? '' : `<span class="n48fcnt">${esc(t('n48fCnt', Math.min(max, n47MyActive().length + 1), max))}</span>`;
+  const label = edit ? t('saveChanges') : t('publish2');
+  return `<div class="form-wrap narrow n48form">
+  <div class="n48fh"><a class="n48fbk" href="#myads" aria-label="${esc(t('n48fBack'))}">${N48I('back')}</a><h1>${esc(edit ? t('n30EditAd') : t('n48fT'))}</h1>${cnt}</div>
+  <div class="form-card n48fcard">
+    <fieldset class="fq n48fs${hasErr('services') ? ' has-err' : ''}" data-q="services"><legend>${esc(t('n48fSvc'))} <span class="n48freq">*</span></legend>
+      <div class="n48fchips">${svc}</div>${cusRow}${er('services')}</fieldset>
+    <fieldset class="fq n48fs${hasErr('jobType') ? ' has-err' : ''}" data-q="jobType"><legend>${esc(t('n48fJob'))} <span class="n48freq">*</span></legend>
+      <div class="n48fjob">${job}</div>${er('jobType')}</fieldset>
+    <div class="fq n48fs${hasErr('payType', 'zip', ...N48F_AMT) ? ' has-err' : ''}" data-q="payType"><span class="n48flg">${esc(t('n48fPay'))} <span class="n48freq">*</span></span>
+      <div class="n48fseg" role="group" aria-label="${esc(t('n48fPayG'))}">${pay}</div>
+      <div class="n48fnums">${nums}</div>${er('payType', ...N48F_AMT)}${er('zip')}</div>
+    <div class="n48ftitle"><span>${esc(t('n48fTitle'))}</span><b${ttl ? '' : ' class="n48fnone"'}>${esc(ttl || t('n48fTitleNone'))}</b></div>
+    <details class="more n48fmore"${fs.n48open || moreErr ? ' open' : ''}><summary><span><b>${esc(t('n48fMore'))}</b><span>${esc(t('n48fMoreD'))}</span></span>${N48I('down', 'n48fchev')}</summary>
+      <div class="more-body n48fmb">${moreBody}</div></details>
+    <p class="n48flife">${N48I('clock')}<span>${esc(t('n48fLife'))}</span></p>
+    ${del}
+  </div>
+  <div class="n48fbar">${rest.length ? `<p class="err" role="alert">${esc(t('n48fFix'))} ${esc(rest.join(' · '))}</p>` : ''}
+    <button class="btn btn-primary n48fgo" type="button" data-act="n1pub" data-ft="hiring">${esc(label)}</button></div>
+</div>`;
+}
+
+/* màn mới thay form cũ (chỉ khi chuỗi cũ trả về form thường; trang quản trị giữ nguyên) */
+(() => {
+  const v0 = viewForm;
+  viewForm = function(type){
+    const h = v0.apply(this, arguments);
+    if (type !== 'hiring' || !state.user || (state.adm && state.adm.on)) return h;
+    const fs = state.forms && state.forms.hiring;
+    if (!fs || fs.done || fs.step || fs.n44quick || typeof h !== 'string') return h;
+    if (h.indexOf('n48form') >= 0) return h;
+    if (h.indexOf('data-act="n1pub"') < 0) return h;          /* màn chặn (đủ 3 tin…), đăng nhập… */
+    try { return n48fView(fs, h); } catch (e) { console.warn('n48 form', e); return h; }
+  };
+})();
+
+/* ---------- nút ---------- */
+function n48fRe(){ const y = window.scrollY; render(); try { window.scrollTo(0, y); } catch (e) {} }
+ACT.n48fmore = function(){ const fs = getForm('hiring'); fs.n48x = !fs.n48x; n48fRe(); if (fs.n48x) setTimeout(() => { const i = document.getElementById('n48f-cus'); if (i) try { i.focus({preventScroll:true}); } catch (e) {} }, 30); };
+ACT.n48fcus = function(){
+  const fs = getForm('hiring'), i = document.getElementById('n48f-cus'), raw = i ? i.value : (fs.n48cus || '');
+  const arr = n48fArr(fs.data.services).slice();
+  const add = String(raw).split(/[,;]/).map(x => x.trim().replace(/\s+/g, ' ').slice(0, 30)).filter(Boolean);
+  for (const x of add){
+    if (arr.filter(v => !n48fStd(v)).length >= N48F_CUSMAX){ toast(t('n48fCusMax')); break; }
+    const std = SERVICES.find(s => [s.v, s.vi, s.en].concat(L((OPTS.svc || []).find(o => o.v === s.v) || {}) || []).some(n => String(n || '').toLowerCase() === x.toLowerCase()));
+    const v = std ? std.v : x;
+    if (!arr.some(y => String(y).toLowerCase() === String(v).toLowerCase())) arr.push(v);
+  }
+  fs.data.services = arr; fs.n48cus = ''; delete fs.errors.services;
+  n48fRe();
+};
+ACT.n48fpay = function(el){
+  const fs = getForm('hiring'), d = fs.data, v = el.dataset.v;
+  if (n48fPayOn(d, v) && n48fArr(d.payType).length === 1) return;
+  d.payType = [v];
+  const keep = v === 'commission' ? ['commissionPct'] : v === 'per_day' ? ['amtDay'] : ['amtHour'];
+  N48F_AMT.forEach(k => { if (keep.indexOf(k) < 0){ d[k] = ''; delete fs.errors[k]; } });
+  delete fs.errors.payType;
+  n48fRe();
+  setTimeout(() => { const i = document.getElementById('f-hiring-' + keep[0]); if (i && !i.value) try { i.focus({preventScroll:true}); } catch (e) {} }, 30);
+};
+document.addEventListener('input', e => { const el = e.target; if (el && el.id === 'n48f-cus'){ const fs = state.forms && state.forms.hiring; if (fs) fs.n48cus = el.value; } });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target && e.target.id === 'n48f-cus'){ e.preventDefault(); ACT.n48fcus(); } });
+/* giữ trạng thái đóng / mở "Thêm chi tiết" khi vẽ lại */
+document.addEventListener('toggle', e => { const el = e.target; if (el && el.classList && el.classList.contains('n48fmore')){ const fs = state.forms && state.forms.hiring; if (fs) fs.n48open = el.open; } }, true);
+
+/* ---------- lưu: tự điền tên tiệm / số điện thoại / thành phố (theo ZIP) rồi dùng đường lưu cũ ---------- */
+(() => {
+  const p0 = ACT.n1pub;
+  ACT.n1pub = function(el){
+    const type = el && el.dataset && el.dataset.ft, fs = type === 'hiring' && state.forms && state.forms.hiring;
+    if (fs && fs.n48f && !(state.adm && state.adm.on)){
+      const d = fs.data, u = state.user || {};
+      if (!String(d.businessName || '').trim()){
+        const last = (typeof n1MyAds === 'function' ? n1MyAds() : []).find(a => a && adBiz(a));
+        d.businessName = (last && adBiz(last)) || u.name || '';
+      }
+      if (!String(d.phone || '').trim() && u.phone) d.phone = u.phone;
+      const z = String(d.zip || '').trim(), zc = /^\d{5}$/.test(z) && ZIPS[z] && ZIPS[z][2];
+      /* thành phố lấy theo ZIP (kể cả thành phố ngoài danh sách, vd Tyler) – form không còn ô Thành phố */
+      if (zc && (!fs.editId || z !== fs.n48z0 || !d.city)) d.city = zc;
+      if (!d.city) d.city = 'San Antonio';
+    }
+    return p0.apply(this, arguments);
+  };
+  /* kinh nghiệm không còn bắt buộc (nằm trong "Thêm chi tiết"); thông báo lỗi ngắn cho 4 mục bắt buộc */
+  const v0 = validateStep;
+  validateStep = function(type, fs){
+    const ok = v0.apply(this, arguments);
+    if (type !== 'hiring' || !fs || !fs.n48f || (state.adm && state.adm.on)) return ok;
+    const e = fs.errors || {}, d = fs.data;
+    if (e.experience && !n48fArr(d.experience).length) delete e.experience;
+    if (e.services && !n48fArr(d.services).length) e.services = t('n48fErrSvc');
+    if (e.jobType && !n48fArr(d.jobType).length) e.jobType = t('n48fErrJob');
+    if (e.payType && !n48fArr(d.payType).length) e.payType = t('n48fErrPay');
+    N48F_AMT.forEach(k => { if (e[k] && String(d[k] == null ? '' : d[k]).trim() === '') e[k] = t('n48fErrAmt'); });
+    if (e.zip && !String(d.zip || '').trim()) e.zip = t('n48fErrZip');
+    fs.errors = e;
+    return Object.keys(e).length === 0;
+  };
+})();
+
+/* ---------- toàn màn hình như demo (thanh trên riêng, nút dưới cố định) ---------- */
+(() => {
+  const r0 = render;
+  render = function(){
+    const out = r0.apply(this, arguments);
+    try { document.body.classList.toggle('n48formv', !!document.querySelector('#main .n48form')); } catch (e) {}
+    return out;
+  };
+})();
+
+(() => { const st = document.createElement('style'); st.textContent = `
+body.n48formv .site-footer,body.n48formv .tabbar,body.n48formv .n26bkw,body.n48formv .mbar{display:none!important}
+@media (max-width:760px){body.n48formv .site-header,body.n48formv .demo-bar{display:none!important}body.n48formv #main{padding-top:0}}
+body.n48formv{padding-bottom:0}
+.n48form{max-width:640px;margin:0 auto;padding:0 0 120px;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#1F1A1C}
+.n48fh{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:6px;padding:10px 16px 10px 6px;background:#fff;border-bottom:1px solid #EFE6E8}
+.n48fbk{width:44px;height:44px;display:grid;place-items:center;color:#1F1A1C;flex:none;border-radius:10px}.n48fbk .n48i{width:22px;height:22px}
+.n48fh h1{flex:1;margin:0;font-size:17px;font-weight:600;line-height:1.3}
+.n48fcnt{font-size:13px;color:#5E5458;white-space:nowrap}
+.n48fcard{background:transparent;border:0;box-shadow:none;padding:16px;margin:0;display:flex;flex-direction:column;gap:18px;border-radius:0}
+.n48fs{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;min-width:0}
+.n48fs legend,.n48flg{font-size:14.5px;font-weight:600;margin-bottom:8px;padding:0}.n48flg{margin-bottom:0}
+.n48freq{color:#B3261E}
+.n48fchips{display:flex;flex-wrap:wrap;gap:8px}
+.n48fc{display:flex;align-items:center;gap:6px;min-height:44px;border:1px solid #DCCFD3;background:#fff;color:#1F1A1C;border-radius:999px;padding:0 13px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;position:relative}
+.n48fc.on{border:1.5px solid #9B1D4F;background:#FBE4EC;color:#7E1640}
+.n48fck{width:15px;height:15px;stroke-width:2.4}
+.n48fadd{border:1px dashed #B9A9AE;color:#9B1D4F}.n48fadd.open{border-style:solid;border-color:#9B1D4F}
+.n48fcus{display:flex;gap:8px;margin-top:2px}
+.n48fcus input{flex:1;min-width:0;min-height:44px;box-sizing:border-box;border:1px solid #DCCFD3;border-radius:10px;padding:0 12px;font:inherit;font-size:15px;background:#fff}
+.n48fcusb{min-height:44px;border:0;border-radius:10px;background:#9B1D4F;color:#fff;font:inherit;font-size:14px;font-weight:600;padding:0 16px;cursor:pointer}
+.n48fjob{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.n48fj{min-height:44px;border:1px solid #DCCFD3;background:#fff;color:#1F1A1C;border-radius:10px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;padding:0 6px}
+.n48fj.on{border:1.5px solid #9B1D4F;background:#FBE4EC;color:#7E1640;font-weight:600}
+.n48fseg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid #DCCFD3;border-radius:10px;overflow:hidden;background:#fff}
+.n48fseg button{min-height:44px;border:0;border-left:1px solid #DCCFD3;background:transparent;font:inherit;font-size:13.5px;font-weight:500;color:#1F1A1C;cursor:pointer;padding:0 4px}
+.n48fseg button:first-child{border-left:0}.n48fseg button.on{background:#9B1D4F;color:#fff;font-weight:600;border-left-color:#9B1D4F}
+.n48fseg button.on+button{border-left-color:#9B1D4F}
+.n48fnums{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.n48fn{display:flex;flex-direction:column;gap:4px;min-width:0}
+.n48fn label{font-size:12.5px;color:#5E5458}
+.n48fn input{min-height:44px;width:100%;box-sizing:border-box;border:1px solid #DCCFD3;border-radius:10px;padding:0 12px;font:inherit;font-size:15px;background:#fff;color:#1F1A1C;-moz-appearance:textfield}
+.n48fn input::-webkit-outer-spin-button,.n48fn input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.n48fn.has-err input{border-color:#B3261E}.n48fdis input{background:#F6F1F2}
+.n48fs .err{margin:0;color:#B3261E;font-size:13px}
+.n48ftitle{background:#fff;border:1px solid #EFE6E8;border-radius:12px;padding:12px 14px}
+.n48ftitle>span{display:block;font-size:12.5px;color:#5E5458}.n48ftitle b{font-size:15px;font-weight:600}.n48ftitle b.n48fnone{font-weight:500;color:#5E5458}
+.n48fmore{background:#fff;border:1px solid #EFE6E8!important;border-radius:12px;margin:0!important;padding:0!important}
+.n48fmore>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px!important;margin:0!important;cursor:pointer;list-style:none;min-height:44px;color:#1F1A1C!important;font-weight:400;line-height:1.45}
+.n48fmore>summary::-webkit-details-marker{display:none}.n48fmore>summary::before,.n48fmore>summary::after{display:none!important;content:none!important}
+.n48fmore>summary b{display:block;font-size:14.5px;font-weight:600}.n48fmore>summary span span{font-size:12.5px;color:#5E5458;font-weight:400;line-height:1.45}
+.n48fchev{color:#5E5458;transition:transform .15s}.n48fmore[open] .n48fchev{transform:rotate(180deg)}
+.n48fmb{padding:0 14px 14px;border-top:1px solid #EFE6E8}
+.n48flife{margin:0;display:flex;gap:8px;font-size:13px;color:#5E5458;line-height:1.45}.n48flife .n48i{width:16px;height:16px;margin-top:1px}
+.n48fbar{position:fixed;left:0;right:0;bottom:0;z-index:60;background:#fff;border-top:1px solid #EFE6E8;padding:12px 16px calc(22px + env(safe-area-inset-bottom))}
+.n48fbar .err{margin:0 auto 8px;max-width:608px;color:#B3261E;font-size:13px}
+.n48fgo{display:block;width:100%;max-width:608px;margin:0 auto;min-height:52px;border:0;border-radius:12px;background:#9B1D4F;color:#fff;font-size:16px;font-weight:600}
+.n48form .n43delrow{text-align:center}
+`; document.head.appendChild(st); })();
+
+/* ============================================================
+   n148prof – n148 đợt 2 · HỒ SƠ CỦA TÔI (design-demo 10-profile / Profile.dc.html) + C14
+   - n3MyProf vẽ lại đúng demo: tab hồ sơ (gạch chân đỏ) + "x/2", thẻ 3 dòng có nút Sửa,
+     "Ảnh tay nghề" lưới 4 ô, khối "Thông tin riêng" (n48PrivCard), thanh dưới Ẩn hồ sơ | Lưu hồ sơ.
+   - "Lưu hồ sơ" = mở form sửa hồ sơ (trang này chỉ xem, không có gì để lưu tại chỗ).
+   - C14: bỏ "Người tham chiếu" (refs) khỏi form; khi lưu hồ sơ giữ nguyên refContacts cũ trong users/{uid}.
+   ============================================================ */
+Object.assign(T.vi, {
+  n48pT:'Hồ sơ của tôi', n48pSvc:'Dịch vụ', n48pExp:'Kinh nghiệm · Loại việc', n48pPay:'Lương mong muốn · Khu vực', n48pEdit:'Sửa',
+  n48pPics:'Ảnh tay nghề', n48pAddPic:'Thêm ảnh', n48pPic:n => `Ảnh ${n}`, n48pHide:'Ẩn hồ sơ', n48pShow:'Hiện hồ sơ', n48pSave:'Lưu hồ sơ',
+  n48pHidden:'Hồ sơ đang ẩn – tiệm không thấy. Bấm "Hiện hồ sơ" để hiện lại.', n48pNone:'Chưa ghi', n48pView:'Xem hồ sơ'
+});
+Object.assign(T.en, {
+  n48pT:'My profile', n48pSvc:'Services', n48pExp:'Experience · Job type', n48pPay:'Pay wanted · Area', n48pEdit:'Edit',
+  n48pPics:'Work photos', n48pAddPic:'Add photos', n48pPic:n => `Photo ${n}`, n48pHide:'Hide profile', n48pShow:'Show profile', n48pSave:'Save profile',
+  n48pHidden:'Your profile is hidden – salons can’t see it. Tap "Show profile" to show it again.', n48pNone:'Not set', n48pView:'View profile'
+});
+
+function n48pSvcs(tc){
+  const s = (tc.services || []).map((x, i) => { const v = n48Short(svcName(x && x.id || x)); return i ? v.charAt(0).toLowerCase() + v.slice(1) : v; });
+  return s.join(', ');
+}
+function n48pPay(tc){
+  const pw = tc.payWanted; let p = '';
+  try { p = pw ? payText({payType:pw.type, commissionPct:pw.pct, amount:pw.amount, amtDay:pw.amtDay, amtHour:pw.amtHour, amtWeek:pw.amtWeek}) || '' : ''; } catch (e) {}
+  if (!p) try { p = techPay(pw) || ''; } catch (e) {}
+  return lang === 'vi' ? p.replace(/ cho thợ/g, '') : p;
+}
+function n48pPics(tc){ return (tc.portfolio || []).filter(p => p && p.url && !p.video).map(p => p.url); }
+
+(() => {
+  const p0 = n3MyProf;   /* bản n148 đợt 1 (tab + Thông tin riêng) – dùng khi chưa có hồ sơ */
+  n3MyProf = function(){
+    const L = n48MyProfs(); if (L.length < 1) return p0.apply(this, arguments);
+    const cur = L.find(x => x.id === state.n48.pf) || L[0], id = esc(cur.id), max = N48.profMax;
+    const tabs = `<div class="n48ptabs n48pft" role="tablist">${L.map(x => `<button type="button" role="tab" class="n48ptab${x === cur ? ' on' : ''}" aria-selected="${x === cur}" data-act="n48ptab" data-v="${esc(x.id)}">${esc(n48ProfName(x))}</button>`).join('')}
+      ${L.length < max ? `<button type="button" class="n48ptab n48padd" data-act="n48addprof">${esc(t('n48AddProf'))}</button>` : ''}<span class="n48pcnt">${L.length}/${max}</span></div>`;
+    const ed = f => `data-act="liveedit" data-k="techs" data-v="${id}" data-n48f="${f}"`;
+    const row = (lb, val, f) => `<div class="n48pfr"><span><span>${esc(lb)}</span><b${val ? '' : ' class="n48pfnone"'}>${esc(val || t('n48pNone'))}</b></span><button type="button" class="n48lnk" ${ed(f)} aria-label="${esc(t('n48pEdit'))} – ${esc(lb)}">${esc(t('n48pEdit'))}</button></div>`;
+    const jt = (cur.jobType || []).map(v => opt('jobType', v)).filter(Boolean).join(' / ');
+    const exp = [cur.years ? opt('years', cur.years) : '', jt].filter(Boolean).join(' · ');
+    const area = cur.zip || cur.city || '';
+    const pay = [n48pPay(cur), area].filter(Boolean).join(' · ');
+    const pics = n48pPics(cur), tiles = pics.slice(0, 3).map((u, i) => `<a class="n48pft-img" href="#tech-${id}" aria-label="${esc(t('n48pPic', i + 1))}"><img src="${esc(u)}" alt="" loading="lazy"></a>`).join('');
+    const keep = state.myProfile; let ready = '';
+    state.myProfile = cur; try { ready = n1ReadyBox() || ''; } catch (e) {} finally { state.myProfile = keep; }
+    const priv = (n48PrivCard() || '').replace(/^\s*<div class="wrap narrow">/, '').replace(/<\/div>\s*$/, '');
+    const note = cur.hired ? `<p class="n48pfnote">${esc(t('n48pHidden'))}</p>` : cur.mod === 'pending' ? `<p class="n48pfnote">${esc(t('modPending'))}</p>` : cur.mod === 'rejected' ? `<p class="n48pfnote n48pfbad">${esc(t('modRejected'))}</p>` : '';
+    return `<div class="n48pf">
+  <div class="n48pfh"><h1 class="pg-title">${esc(t('n48pT'))}</h1>${tabs}</div>
+  <div class="n48pfm">
+    ${note}
+    <div class="n48card n48pfc">${row(t('n48pSvc'), n48pSvcs(cur), 'services')}${row(t('n48pExp'), exp, 'years')}${row(t('n48pPay'), pay, 'payType')}</div>
+    ${ready ? `<div class="n48pfready">${ready}</div>` : ''}
+    <section class="n48pfs"><h2>${esc(t('n48pPics'))}</h2><div class="n48pfg">${tiles}<button type="button" class="n48pfadd" ${ed('photos')} aria-label="${esc(t('n48pAddPic'))}">${N48I('plus')}</button></div></section>
+    ${priv}
+  </div>
+  <div class="n48pfbar"><button type="button" class="n48pfhide" data-act="n2close" data-k="techs" data-v="${id}" data-on="${cur.hired ? '0' : '1'}">${esc(t(cur.hired ? 'n48pShow' : 'n48pHide'))}</button>
+    <button type="button" class="n48pfsave" data-act="liveedit" data-k="techs" data-v="${id}">${esc(t('n48pSave'))}</button></div>
+</div>`;
+  };
+})();
+
+/* nút Sửa từng dòng: mở form rồi cuộn tới ô tương ứng MỘT lần
+   (không dùng data-n40f của n140/n143 – vòng giữ cuộn ~3 giây của nó kéo trang lại khi người dùng bấm Lưu / cuộn) */
+(() => {
+  const e0 = ACT.liveedit;
+  ACT.liveedit = function(el){
+    const r = e0.apply(this, arguments), k = el && el.dataset && el.dataset.n48f;
+    if (k){
+      let n = 0;
+      const go = () => {
+        const box = document.querySelector(`.form-card [data-fk="${k}"]`) || document.getElementById('f-profile-' + k);
+        const fq = box && (box.closest('.fq') || box);
+        if (!fq){ if (++n < 20) setTimeout(go, 100); return; }
+        const det = fq.closest('details'); if (det) det.open = true;
+        fq.scrollIntoView({block:'center'});
+      };
+      setTimeout(go, 150);
+    }
+    return r;
+  };
+})();
+
+/* thanh dưới nằm ngay trên menu 4 mục */
+(() => {
+  const r0 = render;
+  render = function(){
+    const out = r0.apply(this, arguments);
+    try {
+      const on = !!document.querySelector('#main .n48pf');
+      document.body.classList.toggle('n48pfv', on);
+      if (on){ const tb = document.querySelector('.tabbar'), h = tb && getComputedStyle(tb).display !== 'none' ? Math.round(tb.getBoundingClientRect().height) : 0; document.body.style.setProperty('--n48tbh', h + 'px'); }
+      const r = route();
+      document.body.classList.toggle('n48pformv', r.view === 'form' && r.type === 'profile');
+    } catch (e) {}
+    return out;
+  };
+})();
+
+/* C14: người tham chiếu – không còn ô nhập; lưu hồ sơ không xoá liên hệ cũ (users/{uid}.refContacts) */
+(() => {
+  const p0 = ACT.fpublish;
+  ACT.fpublish = function(el){
+    const type = el && el.dataset && el.dataset.ft, fs = type === 'profile' && state.forms && state.forms.profile, u = state.user;
+    if (fs && fs.data && u && !(state.adm && state.adm.creating)){
+      const old = u.refContacts || [], refs = Array.isArray(fs.data.refs) ? fs.data.refs : [];
+      if (old.some(Boolean) && !refs.some(r => r && r.contact))
+        fs.data.refs = old.map((c, i) => Object.assign({salon:'', city:'', period:''}, refs[i] || {}, {contact:c || ''}));
+    }
+    return p0.apply(this, arguments);
+  };
+  FORMS.profile.steps.forEach(s => { s.fields = s.fields.filter(f => f.k !== 'refs' && f.type !== 'refs'); });
+})();
+
+(() => { const st = document.createElement('style'); st.textContent = `
+.n48pf{max-width:640px;margin:0 auto;padding-bottom:96px;color:#1F1A1C}
+.n48pfh{background:#fff;border-bottom:1px solid #EFE6E8;padding:14px 16px 0;display:flex;flex-direction:column;gap:10px}
+.n48pfh .pg-title{margin:0;font-size:20px;font-weight:700;line-height:1.3}
+.n48pfh .n48ptabs{border-bottom:0;margin:0}
+.n48pfh .n48ptab{padding:8px 0 10px}
+.n48pfm{padding:16px;display:flex;flex-direction:column;gap:16px}
+.n48pfr{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid #EFE6E8}
+.n48pfr:first-child{border-top:0}
+.n48pfr>span{min-width:0}.n48pfr>span>span{display:block;font-size:12.5px;color:#5E5458}.n48pfr b{font-size:15px;font-weight:500}.n48pfr b.n48pfnone{color:#5E5458}
+.n48pfs{display:flex;flex-direction:column;gap:8px}.n48pfs h2{margin:0;font-size:14.5px;font-weight:600}
+.n48pfg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.n48pft-img{aspect-ratio:1;border-radius:10px;overflow:hidden;background:#F3D6E0;display:block}.n48pft-img img{width:100%;height:100%;object-fit:cover;display:block}
+.n48pfadd{aspect-ratio:1;border-radius:10px;border:1.5px dashed #B9A9AE;background:#fff;color:#9B1D4F;display:grid;place-items:center;cursor:pointer;padding:0;min-height:44px}
+.n48pf .n48privc{margin:0}.n48pf .n48pr{min-height:44px;padding:0}
+.n48pfnote{margin:0;background:#FBE4EC;color:#7E1640;border-radius:12px;padding:10px 14px;font-size:13.5px}.n48pfbad{background:#FDECEA;color:#B3261E}
+.n48pfbar{position:fixed;left:0;right:0;bottom:var(--n48tbh,0px);z-index:44;background:#fff;border-top:1px solid #EFE6E8;padding:12px 16px;display:grid;grid-template-columns:1fr 2fr;gap:10px}
+@media (min-width:700px){.n48pfbar{padding-left:calc(50% - 304px);padding-right:calc(50% - 304px)}}
+.n48pfhide{min-height:52px;border:1px solid #DCCFD3;border-radius:12px;background:#fff;color:#5E5458;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+.n48pfsave{min-height:52px;border:0;border-radius:12px;background:#9B1D4F;color:#fff;font:inherit;font-size:16px;font-weight:600;cursor:pointer}
+body.n48pfv #main{padding-bottom:calc(var(--n48tbh,0px) + 90px)}
+body.n48pfv .site-footer{display:none}
+@media (max-width:760px){body.n48pfv #main{padding-top:0}}
+/* "Sẵn sàng đi làm ngay" gọn lại: thẻ trắng viền mảnh thay khung vàng to */
+.n48pfready>*{margin:0!important}
+.n48pfready .n1ready,.n48pfready .card,.n48pfready section{background:#fff!important;border:1px solid #EFE6E8!important;border-radius:12px!important;box-shadow:none!important;padding:12px 14px!important}
+.n48pfready h2,.n48pfready h3,.n48pfready b{font-size:14.5px}
+.n48pfready .hint,.n48pfready p{font-size:13px}
+.n48pfready .n1rbox.on>p:not(.n1rnow){display:none}
+.n48pfready .n1rhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.n48pfready .n1sw{min-height:36px!important;height:auto!important;padding:4px 12px 4px 44px!important;font-size:13px!important;font-weight:600!important;border-radius:999px!important;background:#fff!important;border:1px solid #DCCFD3!important;color:#5E5458!important;box-shadow:none!important}
+.n48pfready .n1sw.on{background:#E6F4EA!important;border-color:#E6F4EA!important;color:#1E6B3A!important}
+.n48pfready .n1sw.on::before{background:#1E6B3A!important}
+.n48pfready .n1rnow{color:#1E6B3A!important;font-weight:600;margin:8px 0 0!important}
+/* form hồ sơ thợ: chip cùng phong cách demo */
+body.n48pformv .form-card .choice{border-radius:999px;min-height:44px;font-weight:600}
+body.n48pformv .form-card .choice.on{background:#FBE4EC;color:#7E1640;border:1.5px solid #9B1D4F}
+body.n48pformv .form-card input,body.n48pformv .form-card select,body.n48pformv .form-card textarea{border-color:#DCCFD3;border-radius:10px}
+`; document.head.appendChild(st); })();
+
+/* ============================================================
+   n148cut – n148 đợt 2 · phần BỎ / GỘP (SPEC-n148.md mục 2C). Không xoá dữ liệu Firestore cũ.
+   C2  bỏ "Bảng theo dõi" (#tracker) → về Tin nhắn (3 tab Tất cả · Chưa trả lời · Đã hẹn có từ đợt 1)
+   C1/C3 phần còn sót: bỏ nhắc "X báo đã chốt làm việc", nhắc "đã chốt → ẩn hồ sơ" (n146), khung chốt việc / ghi chú / Đóng tin trong chat
+   C7  ứng tuyển 1 bước: mọi lối vào bảng ứng tuyển cũ (modalApply, CK, tier) chuyển sang n1apply (bảng trượt 08-apply)
+   C11 tin tự hết hạn 30 ngày: tin hết hạn không tính vào 3 tin (kể cả tin cũ chưa có expMs); email nhắc gia hạn do Cloud Function renewRemind gửi
+   C16 email chỉ 3 loại: tin nhắn mới (msg) · ứng tuyển / lời mời (apply, offer) · lịch thử việc (appt)
+       → tắt: accept (đã kết nối), deal (chốt làm việc), urgent (báo thợ sẵn sàng ở gần khi đăng tin gấp), loại khác
+   Trang quản trị giữ nguyên.
+   ============================================================ */
+
+/* ---------- C2: #tracker → #inbox ---------- */
+(() => {
+  const r0 = route;
+  route = function(){
+    if ((location.hash || '').replace(/^#/, '') === 'tracker'){
+      try { history.replaceState(history.state, '', location.href.replace(/#.*$/, '') + '#inbox'); } catch (e) {}
+      if (location.hash !== '#inbox'){ try { location.replace('#inbox'); } catch (e) {} }
+      if ((location.hash || '').replace(/^#/, '') === 'tracker') return {view:'inbox'};
+    }
+    return r0.apply(this, arguments);
+  };
+  /* avatar ở thanh trên cũ (trang quản trị) từng trỏ tới #tracker → về lại Tài khoản */
+  const hd0 = header;
+  header = function(){ const h = hd0.apply(this, arguments); return h ? h.split('href="#tracker"').join('href="#account"') : h; };
+  n44Tracker = function(){ return viewInbox(); };
+  ACT.n44trk = function(){ location.hash = '#inbox'; };
+})();
+
+/* ---------- C1 / C3: không còn chốt làm việc, ghi chú riêng, Đóng tin trong chat ---------- */
+n44Panel = function(){ return ''; };
+n44LoadNote = function(){};
+ACT.n44deal = function(){};
+ACT.n44note = function(){};
+/* thẻ nhắc: chỉ còn lịch hẹn (bỏ "X báo đã chốt làm việc" + "đã chốt → ẩn hồ sơ" của n146) */
+n44Remind = function(all){
+  const u = n44Me(); if (!u) return '';
+  const items = [];
+  n44Canons().forEach(x => {
+    if (x.status === 'blocked' || x.status === 'declined' || x.status === 'withdrawn') return;
+    const a = x.appt, n = n44OtherName(x);
+    if (!a || !a.date || a.date < n44Today()) return;
+    const ic = N48I('cal', 'n48remi');
+    if (!a.ok && a.by !== u) items.push({k:1, d:a.date + a.time, h:`<a class="n44rem warn" href="#inbox-${esc(x.id)}">${ic}<span>${esc(t('n44RemAppt', n))}</span></a>`});
+    else if (a.ok || all) items.push({k:2, d:a.date + a.time, h:`<a class="n44rem" href="#inbox-${esc(x.id)}">${ic}<span><b>${esc(t('n44RemLine', t('n44ApptK')[a.kind] || '', n, n44Day(a.date), n44Hm(a.time)))}</b>${a.addr ? `<small>${esc(a.addr)}</small>` : ''}</span></a>`});
+  });
+  if (!items.length) return '';
+  items.sort((p, q) => p.k - q.k || String(p.d || '').localeCompare(String(q.d || '')));
+  return `<div class="n44rems">${items.slice(0, all ? 20 : 4).map(i => i.h).join('')}</div>`;
+};
+
+/* ---------- C7: ứng tuyển 1 bước ---------- */
+(() => {
+  const toApply = id => { if (id && ADS.find(a => a.id === id)) ACT.n1apply({dataset:{v:id}}); };
+  const toChat = id => { if (id && (ADS.find(a => a.id === id) || TECHS.find(x => x.id === id))) ACT.n48chat({dataset:{v:id}}); };
+  const o0 = openModal;
+  openModal = function(name){
+    if (name === 'apply'){ const id = state.applyTo; state.applyTo = null; return toApply(id); }   /* bảng tự đánh dấu cũ (CK / tier) */
+    if (name === 'msg'){ const id = state.msgTo; state.msgTo = null; return toChat(id); }         /* hộp nhắn tin cũ → nhắn trực tiếp */
+    return o0.apply(this, arguments);
+  };
+  ACT.applysend = function(){ const id = state.applyTo; state.modal = null; renderModal(); toApply(id); };
+  ACT.applysample = function(){ state.modal = null; renderModal(); location.hash = '#post-profile'; };
+})();
+
+/* ---------- C11: tin hết hạn (30 ngày) không tính vào 3 tin – kể cả tin cũ chưa có expMs ---------- */
+n47MyActive = function(){
+  try {
+    return (n1MyAds() || []).filter(a => a && a.type === 'hiring' && !a.quick && !a.filled && a.mod !== 'rejected' && !a.delAt
+      && !(typeof n2Expired === 'function' ? n2Expired(a) : (a.expMs && a.expMs < Date.now())));
+  } catch (e) { return []; }
+};
+
+/* ---------- C16: email thông báo chỉ 3 loại ---------- */
+const N48_MAIL_OK = ['msg', 'apply', 'offer', 'appt'];
+state.n48.mailOff = [];
+(() => {
+  const m0 = n45Mail;
+  n45Mail = function(data){
+    const k = (data && data.kind) || '';
+    if (N48_MAIL_OK.indexOf(k) < 0){ state.n48.mailOff.push(k); return Promise.resolve(null); }
+    return m0.apply(this, arguments);
+  };
+})();
+/* tin "Cần thợ 1 ngày": không còn gửi email cho thợ đang sẵn sàng ở gần (vẫn hiện gợi ý thợ + nút Mời làm) */
+n44NotifyReady = function(){ return 0; };
+
+(() => { const st = document.createElement('style'); st.textContent = `
+.n44rem{grid-template-columns:auto 1fr;align-items:center;column-gap:10px}.n44rem>span{display:grid;gap:2px}
+.n48remi{width:20px;height:20px;color:#9B1D4F}
+.n45cool>.n48i:first-child{width:17px;height:17px;margin-inline-end:2px}`; document.head.appendChild(st); })();
+
+/* hook cho test */
+window.__n48cut = {open:n => openModal(n), myActive:() => n47MyActive(), mailOff:() => state.n48.mailOff.slice(), remind:a => n44Remind(a), mail:d => n45Mail(d)};
+
+/* ---------- gộp (điều phối): trang chủ THỢ cũng có nhóm LỊCH THỬ VIỆC (giống 01-main bên tiệm) ---------- */
+Object.assign(T.vi, {n48TApptWait:'Chờ bạn xác nhận', n48TApptWith:n => `Thử việc với ${n}`});
+Object.assign(T.en, {n48TApptWait:'Needs your confirmation', n48TApptWith:n => `Trial with ${n}`});
+(() => {
+  const h0 = viewHome;
+  viewHome = function(){
+    const out = h0.apply(this, arguments);
+    if (!state.user || n48Role() !== 'tech' || (state.adm && state.adm.on)) return out;
+    const u = state.user.uid, ap = n48Visible().filter(n48ApptOf).sort((a, b) => (a.appt.date + (a.appt.time || '')).localeCompare(b.appt.date + (b.appt.time || '')));
+    if (!ap.length) return out;
+    const row = x => `<a class="n48hap" href="#inbox-${esc(x.id)}"><span class="n48hapi">${N48I('cal')}</span><span class="n48grow"><b>${esc(t('n48TApptWith', n48Nm(x, n48Other(x))))}</b>
+      <span>${esc(n48HmDate(x.appt))}${!x.appt.ok && x.appt.by !== u ? ' · ' + esc(t('n48TApptWait')) : ''}</span></span>${N48I('chev', 'n48mut')}</a>`;
+    const blk = `<section class="n48sec n48hs n48tap"><div class="n48hsh"><h2 class="n48h">${esc(t('n48HmAppt'))}</h2></div>${ap.map(row).join('')}</section>`;
+    const k = '<div class="n48lin n48lls">', i = out.indexOf(k);   /* đặt trên danh sách việc, cùng lề với thẻ việc */
+    return i < 0 ? out : out.slice(0, i + k.length) + blk + out.slice(i + k.length);
+  };
+})();
+(() => { const st = document.createElement('style'); st.textContent = `.n48tap{margin:2px 0 18px}.n48tap .n48hsh{margin-bottom:8px}`; document.head.appendChild(st); })();
 
 render();
 })();
