@@ -12669,7 +12669,7 @@ function n33Hint(h, many){
     return a + (i < 0 ? c + ' ' + tag : c.slice(0, i) + tag + ' ' + c.slice(i)) + d;
   });
 }
-function n33OwnBtn(b){ return b.replace(/>\s*\+\s*[^<]*<\/button>$/, `>✏️ ${esc(t('n33Own'))}</button>`); }
+function n33OwnBtn(b){ return b.replace(/>\s*\+\s*[^<]*<\/button>$/, `>+ ${esc(t('n33Own'))}</button>`); }   /* n152: bỏ emoji ✏️ còn sót (không nằm trong T nên bộ quét n149d không thấy) */
 function n33PvText(type, fs){
   try {
     const o = previewObject(type, fs);
@@ -16456,7 +16456,8 @@ ACT.n44upost = async function(el){
   if (!S.svc.length) err.svc = t('n44UrgErr').svc;
   if (!date || date < n44Today()) err.day = t('n44UrgErr').day;
   if (!S.from || !S.to || S.to <= S.from) err.hrs = t('n44UrgErr').hrs;
-  if (!(amt > 0)) err.amt = t('n44UrgErr').amt;
+  /* n152: "Trao đổi" và cách trả lương tự ghi thì không cần số tiền */
+  if (!n52Free(S.pt) && !(amt > 0)) err.amt = t('n44UrgErr').amt;
   const zip = last && /^\d{5}$/.test(last.zip || '') ? last.zip : String(S.zip || '').trim();
   if (!/^(7[5-9]\d{3}|885\d{2}|733\d{2})$/.test(zip)) err.zip = t('n44UrgErr').zip;
   S.err = err; if (Object.keys(err).length){ render(); return; }
@@ -16468,7 +16469,7 @@ ACT.n44upost = async function(el){
   const dk = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][new Date(date + 'T12:00:00').getDay()];
   const data = Object.assign({city:'San Antonio'}, JSON.parse(JSON.stringify(DEFAULTS.hiring)), JSON.parse(JSON.stringify(base)), {
     zip, services:S.svc.slice(), jobType:['part_time'], experience:base.experience || 'new_ok',
-    payType:S.pt, amtHour:S.pt === 'per_hour' ? String(amt) : '', amtDay:S.pt === 'per_day' ? String(amt) : '',
+    payType:S.pt, amtHour:S.pt === 'per_hour' ? String(amt) : '', amtDay:S.pt === 'per_day' ? String(amt) : '', commissionPct:S.pt === 'commission' ? String(amt) : '',
     schedule:{[dk]:[S.from, S.to]}, urgent:true, urgentUntil:new Date(date + 'T23:59:00').getTime(),
     extras:S.note || base.extras || '', title:'', businessName:base.businessName || (last ? adBiz(last) : '') || u.name || ''});
   if (!data.city || !CITIES[data.city]){ const z = ZIPS[zip]; if (z && z[2]) data.city = z[2]; }
@@ -17675,6 +17676,7 @@ Object.assign(T.vi, {
   n47Other:'+ Khác', n47OtherPh:'VD: vẽ 3D, đắp gel, nối mi…', n47Add:'Thêm', n47Rm:'Bỏ', n47CusMax:'Tối đa 3 dịch vụ tự nhập.',
   n47HrFull:'Cả ngày', n47HrAm:'Buổi sáng', n47HrPm:'Buổi chiều', n47HrOther:'+ Giờ khác', n47From:'Từ', n47To:'Đến',
   n47PerH:'Theo giờ', n47PerD:'Theo ngày', n47AmtOther:'+ Số khác', n47AmtPh:'Nhập số tiền', n47Hr:'/giờ', n47Dy:'/ngày',
+  n47PerC:'Ăn chia', n47PerN:'Trao đổi', n52Other:'+ Tự ghi', n52OtherPh:'VD: bao lương tuần', n52PctPh:'Thợ được bao nhiêu %',
   n47Sum:'Tóm tắt', n47SumNone:'Chưa chọn đủ thông tin',
   n47PhT:'Số điện thoại', n47PhNone:'Chưa có số', n47PhAdd:'Thêm số', n47PhChg:'Đổi số',
   n47PhModT:'Đổi số điện thoại', n47PhModAddT:'Thêm số điện thoại', n47PhD:'Mình sẽ gửi mã 6 số qua tin nhắn SMS để xác minh số này là của bạn.',
@@ -17703,6 +17705,7 @@ Object.assign(T.en, {
   n47Other:'+ Other', n47OtherPh:'e.g. 3D art, gel extensions, lashes…', n47Add:'Add', n47Rm:'Remove', n47CusMax:'Up to 3 custom services.',
   n47HrFull:'All day', n47HrAm:'Morning', n47HrPm:'Afternoon', n47HrOther:'+ Other hours', n47From:'From', n47To:'To',
   n47PerH:'Per hour', n47PerD:'Per day', n47AmtOther:'+ Other amount', n47AmtPh:'Enter amount', n47Hr:'/hr', n47Dy:'/day',
+  n47PerC:'Commission', n47PerN:'Negotiable', n52Other:'+ Write your own', n52OtherPh:'e.g. weekly guarantee', n52PctPh:'Tech gets (%)',
   n47Sum:'Summary', n47SumNone:'Not complete yet',
   n47PhT:'Phone number', n47PhNone:'No number yet', n47PhAdd:'Add number', n47PhChg:'Change number',
   n47PhModT:'Change phone number', n47PhModAddT:'Add phone number', n47PhD:'We will text you a 6-digit code to confirm this number is yours.',
@@ -17736,6 +17739,9 @@ function n47Pretty(d){ d = n47Ph10(d); return d.length === 10 ? `(${d.slice(0, 3
 const N47_SV = ['acrylic_full', 'acrylic_fill', 'dip', 'gel_polish', 'gelx', 'manicure', 'pedicure', 'ombre_french', 'art_basic', 'waxing', 'lashes'];
 const N47_HRS = [['full', '09:30', '19:00'], ['am', '09:00', '14:00'], ['pm', '14:00', '19:00']];
 const N47_AMT = {per_hour:[18, 20, 22, 25], per_day:[150, 180, 200, 250]};
+const N52_PT = [['per_hour', 'n47PerH'], ['per_day', 'n47PerD'], ['commission', 'n47PerC'], ['negotiable', 'n47PerN']];
+function n52Free(pt){ return pt === 'negotiable' || /^x:/.test(String(pt || '')); }
+function n52PayLbl(pt){ return pt === 'negotiable' ? t('n47PerN') : /^x:/.test(String(pt || '')) ? String(pt).slice(2) : ''; }
 function n47Hm(v){ const [h, m] = String(v || '').split(':').map(Number); if (isNaN(h)) return v || ''; const ap = h >= 12 ? 'pm' : 'am', hh = ((h + 11) % 12) + 1; return `${hh}${m ? ':' + String(m).padStart(2, '0') : ''}${ap}`; }
 function n47Date(d){ try { const x = new Date(d + 'T12:00:00'); return lang === 'vi' ? `${x.getDate()}/${x.getMonth() + 1}` : x.toLocaleDateString('en-US', {month:'short', day:'numeric'}); } catch (e) { return d; } }
 function n47U(){
@@ -17749,8 +17755,10 @@ function n47Chip(on, act, v, label, extra){
 function n47Sum(S){
   const date = S.day === 'today' ? n44Today() : S.day === 'tmr' ? n44Today(1) : S.date;
   const amt = Number(S.amt), sv = S.svc.map(v => (N47_SV.indexOf(v) >= 0 ? svcName(v) : v));
-  if (!sv.length || !date || !(amt > 0) || !S.from || !S.to) return t('n47SumNone');
-  return `${n47Date(date)} · ${n47Hm(S.from)}–${n47Hm(S.to)} · $${amt}${t(S.pt === 'per_day' ? 'n47Dy' : 'n47Hr')} · ${sv.join(', ')}`;
+  const free = n52Free(S.pt);
+  if (!sv.length || !date || (!free && !(amt > 0)) || !S.from || !S.to) return t('n47SumNone');
+  const pay = free ? n52PayLbl(S.pt) : S.pt === 'commission' ? `${t('n47PerC')} ${amt}%` : `$${amt}${t(S.pt === 'per_day' ? 'n47Dy' : 'n47Hr')}`;
+  return `${n47Date(date)} · ${n47Hm(S.from)}–${n47Hm(S.to)} · ${pay} · ${sv.join(', ')}`;
 }
 n44UrgForm = function(){
   if (!state.user) return loginGate();
@@ -17765,16 +17773,27 @@ n44UrgForm = function(){
     + n47Chip(S.day === 'pick', 'n47day', 'pick', esc(t('n44Pick')));
   const hrs = N47_HRS.map(([k, f, to]) => n47Chip(S.hp === k, 'n47hr', k, `${esc(t({full:'n47HrFull', am:'n47HrAm', pm:'n47HrPm'}[k]))} <small>${esc(n47Hm(f))}–${esc(n47Hm(to))}</small>`)).join('')
     + n47Chip(S.hp === 'c', 'n47hr', 'c', esc(t('n47HrOther')));
-  /* n151: bỏ các mức tiền gợi ý sẵn – tiệm tự ghi số, giống form đăng tin thường */
-  const pay = '';
+  /* n152: 4 cách trả lương (giờ · ngày · ăn chia · trao đổi) + nút "+" tự ghi */
+  const ptCus = /^x:/.test(String(S.pt || ''));
+  const ptB = (v, l, on) => `<button type="button" class="${on ? 'on' : ''}" data-act="n47pt" data-v="${esc(v)}" aria-pressed="${on}">${esc(l)}</button>`;
+  const payBtn = N52_PT.map(([v, k]) => ptB(v, t(k), S.pt === v)).join('')
+    + (ptCus ? ptB(S.pt, String(S.pt).slice(2), true) : '')
+    + `<button type="button" class="n52po${S.ptOpen ? ' on' : ''}" data-act="n52po" aria-expanded="${S.ptOpen ? 'true' : 'false'}">${esc(t('n52Other'))}</button>`;
+  const payAmt = (S.pt === 'per_hour' || S.pt === 'per_day')
+    ? `<div class="n47money"><span>$</span><input id="n44-ua" class="n47in" type="number" inputmode="decimal" min="1" placeholder="${esc(t('n47AmtPh'))}" value="${esc(S.amt)}" aria-label="${esc(t('n47AmtPh'))}"><span>${esc(t(S.pt === 'per_day' ? 'n47Dy' : 'n47Hr'))}</span></div>`
+    : S.pt === 'commission'
+    ? `<div class="n47money"><input id="n44-ua" class="n47in" type="number" inputmode="decimal" min="1" max="100" placeholder="${esc(t('n52PctPh'))}" value="${esc(S.amt)}" aria-label="${esc(t('n52PctPh'))}"><span>%</span></div>`
+    : '';
+  const payCus = S.ptOpen
+    ? `<div class="n47row"><input id="n52-pt" type="text" maxlength="40" placeholder="${esc(t('n52OtherPh'))}" aria-label="${esc(t('n52OtherPh'))}"><button class="btn btn-primary" type="button" data-act="n52padd">${esc(t('n47Add'))}</button></div>`
+    : '';
   const sec = (n, title, body, hint) => `<section class="card n47s"><h2><span class="n47n" aria-hidden="true">${n}</span>${esc(title)}</h2>${hint ? `<p class="hint">${esc(hint)}</p>` : ''}${body}</section>`;
   return `<div class="wrap narrow page n47u"><a class="back" href="#home">${ICON.back}${t('back')}</a>
     <h1 class="pg-title">${esc(t('n44UrgT'))}</h1><p class="hint">${esc(t('n44UrgD'))}</p>
     ${sec(1, t('n47S1'), `<div class="n47cs">${svc}</div>${S.cusOpen ? `<div class="n47row"><input id="n47-cus" type="text" maxlength="30" placeholder="${esc(t('n47OtherPh'))}" aria-label="${esc(t('n47OtherPh'))}"><button class="btn btn-primary" type="button" data-act="n47cusadd">${esc(t('n47Add'))}</button></div>` : ''}${er('svc')}`, t('n47S1h'))}
     ${sec(2, t('n47S2'), `<div class="n47cs">${day}</div>${S.day === 'pick' ? `<input id="n44-ud" class="n47in" type="date" min="${n44Today()}" value="${esc(S.date)}" aria-label="${esc(t('n44Pick'))}">` : ''}${er('day')}`)}
     ${sec(3, t('n47S3'), `<div class="n47cs">${hrs}</div>${S.hp === 'c' ? `<div class="n47two"><label>${esc(t('n47From'))}<input id="n44-uf" class="n47in" type="time" value="${esc(S.from)}"></label><label>${esc(t('n47To'))}<input id="n44-ut" class="n47in" type="time" value="${esc(S.to)}"></label></div>` : ''}${er('hrs')}`)}
-    ${sec(4, t('n47S4'), `<div class="n47seg" role="group">${[['per_hour', t('n47PerH')], ['per_day', t('n47PerD')]].map(([v, l]) => `<button type="button" class="${S.pt === v ? 'on' : ''}" data-act="n47pt" data-v="${v}" aria-pressed="${S.pt === v}">${esc(l)}</button>`).join('')}</div>
-      ${pay}<div class="n47money"><span>$</span><input id="n44-ua" class="n47in" type="number" inputmode="decimal" min="1" placeholder="${esc(t('n47AmtPh'))}" value="${esc(S.amt)}" aria-label="${esc(t('n47AmtPh'))}"><span>${esc(t(S.pt === 'per_day' ? 'n47Dy' : 'n47Hr'))}</span></div>${er('amt')}`)}
+    ${sec(4, t('n47S4'), `<div class="n47seg n52seg" role="group">${payBtn}</div>${payCus}${payAmt}${er('amt')}`)}
     ${sec(5, t('n47S5'), `${needZip ? `<div class="fq"><label class="flabel" for="n44-uz">${esc(t('n44UrgZip'))}</label><input id="n44-uz" class="n47in" type="text" inputmode="numeric" maxlength="5" value="${esc(S.zip)}">${er('zip')}</div>` : ''}
       <div class="fq"><label class="flabel" for="n44-un">${esc(t('n44UrgNote'))}</label><textarea id="n44-un" rows="2" maxlength="300">${esc(S.note)}</textarea></div>`)}
     <div class="n47bar"><p class="n47sum"><b>${esc(t('n47Sum'))}:</b> <span id="n47-sum">${esc(n47Sum(S))}</span></p>
@@ -17796,10 +17815,18 @@ ACT.n47cusadd = function(){
 ACT.n47cusx = function(el){ const S = n47U(), i = S.svc.indexOf(el.dataset.v); if (i >= 0) S.svc.splice(i, 1); n47Re(); };
 ACT.n47day = function(el){ const S = n47U(); S.day = el.dataset.v; if (S.err) delete S.err.day; n47Re(); };
 ACT.n47hr = function(el){ const S = n47U(), h = N47_HRS.find(x => x[0] === el.dataset.v); S.hp = el.dataset.v; if (h){ S.from = h[1]; S.to = h[2]; } if (S.err) delete S.err.hrs; n47Re(); };
-ACT.n47pt = function(el){ const S = n47U(); if (S.pt !== el.dataset.v){ S.pt = el.dataset.v; S.amt = ''; S.amtC = false; } n47Re(); };
+ACT.n47pt = function(el){ const S = n47U(); if (S.pt !== el.dataset.v){ S.pt = el.dataset.v; S.amt = ''; S.amtC = false; } S.ptOpen = false; if (S.err) delete S.err.amt; n47Re(); };
+ACT.n52po = function(){ const S = n47U(); S.ptOpen = !S.ptOpen; n47Re(); setTimeout(() => { const i = document.getElementById('n52-pt'); if (i) i.focus(); }, 30); };
+ACT.n52padd = function(){
+  const S = n47U(), i = document.getElementById('n52-pt');
+  const v = String(i ? i.value : '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  if (!v){ S.ptOpen = false; n47Re(); return; }
+  S.pt = 'x:' + v; S.amt = ''; S.amtC = false; S.ptOpen = false; if (S.err) delete S.err.amt; n47Re();
+};
 ACT.n47amt = function(el){ const S = n47U(); if (el.dataset.v === 'c'){ S.amtC = true; if ((N47_AMT[S.pt] || []).indexOf(Number(S.amt)) >= 0) S.amt = ''; } else { S.amtC = false; S.amt = el.dataset.v; } if (S.err) delete S.err.amt; n47Re();
   if (S.amtC) setTimeout(() => { const i = document.getElementById('n44-ua'); if (i) i.focus(); }, 30); };
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target && e.target.id === 'n47-cus'){ e.preventDefault(); ACT.n47cusadd(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target && e.target.id === 'n52-pt'){ e.preventDefault(); ACT.n52padd(); } });
 document.addEventListener('input', e => { if (e.target && /^n44-u[dftaz]$/.test(e.target.id) && state.n44.urg){ setTimeout(() => { const s = document.getElementById('n47-sum'); if (s) s.textContent = n47Sum(state.n44.urg); }, 0); } });
 
 /* ================= 5. tiệm đăng tối đa 2 tin ================= */
@@ -18115,8 +18142,16 @@ ACT.n47out = function(){ try { firebase.auth().signOut(); } catch (e) {} locatio
 .n47c.on{background:#FDE7EF;border-color:var(--primary);color:var(--primary-d,#9E2A54)}.n47c.on small{color:inherit}
 .n47ck{font-weight:900}.n47add{border-style:dashed;color:var(--primary)}
 .n47cus{padding-right:6px}.n47x{border:0;background:transparent;font-size:20px;line-height:1;padding:2px 8px;cursor:pointer;color:inherit}
-.n47row{display:flex;gap:8px;margin-top:10px}.n47row input{flex:1;min-width:0}
-.n47in{min-height:46px;font-size:16px}.n47two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.n47two label{display:grid;gap:4px;font-weight:600;font-size:14px}
+.n47row{display:flex;gap:8px;margin-top:10px}
+/* n152: hàng chọn cách trả lương – dạng thẻ bấm, giống mục Dịch vụ / Mấy giờ */
+.n47seg.n52seg{display:flex;flex-wrap:wrap;gap:8px;border:0;border-radius:0;overflow:visible;margin-bottom:0}
+.n47seg.n52seg button{min-height:46px;padding:9px 15px;border:1.5px solid var(--line);border-radius:14px;background:#fff;color:var(--ink,#1F1A1C);font:inherit;font-size:15px;font-weight:600;line-height:1.2;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.n47seg.n52seg button.on{background:#FDE7EF;border-color:var(--primary);color:var(--primary-d,#9E2A54)}
+.n47seg.n52seg .n52po{border-style:dashed;color:var(--primary);font-weight:700}
+.n47seg.n52seg .n52po.on{background:#FDE7EF;border-style:dashed}
+.n47u .n47money{margin-top:12px}
+.n47row input{flex:1;min-width:0}
+.n47in{min-height:46px;font-size:16px;max-width:100%;box-sizing:border-box}.n47two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.n47two label{display:grid;gap:4px;font-weight:600;font-size:14px;min-width:0}.n47two input{width:100%;min-width:0;box-sizing:border-box}
 .n47seg{display:inline-grid;grid-template-columns:1fr 1fr;border:1.5px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:10px}
 .n47seg button{border:0;background:#fff;padding:11px 18px;font:inherit;font-weight:700;cursor:pointer;min-height:44px}.n47seg button.on{background:var(--primary);color:#fff}
 .n47money{display:flex;align-items:center;gap:8px;margin-top:10px;font-weight:700}.n47money input{max-width:160px}
@@ -20711,6 +20746,21 @@ ACT.n51ans = async function(el){
 .n51left b{color:var(--ink,#1F1A1C)}
 .n51left.n51full{background:#FFF6E2;border:1px solid #E8B43A;border-radius:12px;padding:10px 12px}
 `; document.head.appendChild(st); })();
+
+/* ================================================================
+   n152 — 28/11/2026
+   1. Thêm cách trả lương "Trao đổi" dùng chung cho mọi nơi (form, bộ lọc, tin đăng).
+   2. Form đăng tin thường đã có sẵn cơ chế "+ tự viết" (n114 + n127 đưa payType
+      vào N14_FREE) nên chỉ cần thêm lựa chọn là hai form đồng bộ.
+   3. Form tuyển gấp: phần nút và ô nhập nằm trong n147.js, xử lý lưu ở n144.js.
+   ================================================================ */
+(() => {
+  /* lựa chọn mới — xếp cuối danh sách */
+  if (typeof OPTS === 'object' && Array.isArray(OPTS.payType) && !OPTS.payType.some(x => x.v === 'negotiable'))
+    OPTS.payType.push({v:'negotiable', vi:'Trao đổi', en:'Negotiable'});
+  /* cùng nhóm "chỉ hiện chữ, không kèm số tiền" → payText() và payLines() tự hiểu */
+  if (typeof N27_PRIV !== 'undefined' && N27_PRIV.indexOf('negotiable') < 0) N27_PRIV.push('negotiable');
+})();
 
 render();
 })();
