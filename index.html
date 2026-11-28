@@ -4274,8 +4274,8 @@ function n1Live(c){
         <div class="modal-foot"><span></span><button class="btn btn-primary" type="button" data-act="n1send">${t('sendBtn')}</button></div>`;
     }
     const tc = TECHS.find(z => z.id === m.id); if (!tc) return '';
-    /* n149d: không mời thợ vào tin đã đóng / bị từ chối / còn là nháp */
-    const mine = n1MyAds().filter(a => !a.filled && a.mod !== 'rejected' && a.mod !== 'draft');
+    /* n151: chỉ mời bằng tin đang mở và đã duyệt */
+    const mine = n1MyAds().filter(n51Invitable);
     return `<div class="modal-head"><h2 id="m-title">${esc(t(m.urgent ? 'offerToUrgent' : 'offerTo', tc.name))}</h2>${x}</div><p class="hint" style="margin:0">${t('offerLead')}</p>
       ${mine.length ? `<div class="fq"><label class="flabel" for="n1-ad">${t('offerAd')}</label><select id="n1-ad">${mine.map(a => `<option value="${esc(a.id)}"${m.adId === a.id ? ' selected' : ''}>${esc(adBiz(a))} – ${esc(titleOf(a))}</option>`).join('')}</select></div>` : ''}
       <div class="fq"><label class="flabel" for="n1-note">${t('noteOpt')}</label><textarea id="n1-note" rows="3" maxlength="300" placeholder="${esc(t(m.urgent ? 'notePhUrgent' : 'notePhOffer'))}"></textarea></div>
@@ -5875,7 +5875,7 @@ function clLive(c){
       const m = {};
       s.docs.forEach(d => { m[d.id] = Object.assign({tok:d.id}, d.data()); });
       state.cl.map = m; if (typeof softRender === 'function') softRender(); else render();
-    }, e => { console.warn('claims', e); watching = false; });
+    }, e => { console.warn('claims', e); if (!/permission|insufficient/i.test(String(e && (e.code || e.message)))) watching = false; });
   }, 700);
 
   async function load(tok){
@@ -6355,7 +6355,7 @@ function n5Live(c){
     db.collection('threads').limit(300).onSnapshot(s => {
       state.tr.threads = s.docs.map(d => Object.assign({id:d.id}, d.data()));
       if (typeof softRender === 'function') softRender();
-    }, e => { console.warn('track', e); watching = false; });
+    }, e => { console.warn('track', e); if (!/permission|insufficient/i.test(String(e && (e.code || e.message)))) watching = false; });
   }, 900);
 
   function readInto(which){
@@ -6686,7 +6686,7 @@ function n6Live(c){
       s.docs.forEach(d => { m[d.id] = Object.assign({phone:d.id}, d.data()); });
       state.ct.map = m;
       if (typeof softRender === 'function') softRender();
-    }, e => { console.warn('contacts', e); watching = false; });
+    }, e => { console.warn('contacts', e); if (!/permission|insufficient/i.test(String(e && (e.code || e.message)))) watching = false; });
   }, 800);
 
   function blank(){ return {phone:'', name:'', person:'', kind:'tiem', city:'San Antonio', status:'new',
@@ -17765,9 +17765,8 @@ n44UrgForm = function(){
     + n47Chip(S.day === 'pick', 'n47day', 'pick', esc(t('n44Pick')));
   const hrs = N47_HRS.map(([k, f, to]) => n47Chip(S.hp === k, 'n47hr', k, `${esc(t({full:'n47HrFull', am:'n47HrAm', pm:'n47HrPm'}[k]))} <small>${esc(n47Hm(f))}–${esc(n47Hm(to))}</small>`)).join('')
     + n47Chip(S.hp === 'c', 'n47hr', 'c', esc(t('n47HrOther')));
-  const amts = N47_AMT[S.pt] || [], pre = amts.indexOf(Number(S.amt)) >= 0 && !S.amtC;
-  const pay = amts.map(a => n47Chip(!S.amtC && Number(S.amt) === a, 'n47amt', String(a), `$${a}<small>${esc(t(S.pt === 'per_day' ? 'n47Dy' : 'n47Hr'))}</small>`)).join('')
-    + n47Chip(!!S.amtC || (!!S.amt && !pre), 'n47amt', 'c', esc(t('n47AmtOther')));
+  /* n151: bỏ các mức tiền gợi ý sẵn – tiệm tự ghi số, giống form đăng tin thường */
+  const pay = '';
   const sec = (n, title, body, hint) => `<section class="card n47s"><h2><span class="n47n" aria-hidden="true">${n}</span>${esc(title)}</h2>${hint ? `<p class="hint">${esc(hint)}</p>` : ''}${body}</section>`;
   return `<div class="wrap narrow page n47u"><a class="back" href="#home">${ICON.back}${t('back')}</a>
     <h1 class="pg-title">${esc(t('n44UrgT'))}</h1><p class="hint">${esc(t('n44UrgD'))}</p>
@@ -17775,7 +17774,7 @@ n44UrgForm = function(){
     ${sec(2, t('n47S2'), `<div class="n47cs">${day}</div>${S.day === 'pick' ? `<input id="n44-ud" class="n47in" type="date" min="${n44Today()}" value="${esc(S.date)}" aria-label="${esc(t('n44Pick'))}">` : ''}${er('day')}`)}
     ${sec(3, t('n47S3'), `<div class="n47cs">${hrs}</div>${S.hp === 'c' ? `<div class="n47two"><label>${esc(t('n47From'))}<input id="n44-uf" class="n47in" type="time" value="${esc(S.from)}"></label><label>${esc(t('n47To'))}<input id="n44-ut" class="n47in" type="time" value="${esc(S.to)}"></label></div>` : ''}${er('hrs')}`)}
     ${sec(4, t('n47S4'), `<div class="n47seg" role="group">${[['per_hour', t('n47PerH')], ['per_day', t('n47PerD')]].map(([v, l]) => `<button type="button" class="${S.pt === v ? 'on' : ''}" data-act="n47pt" data-v="${v}" aria-pressed="${S.pt === v}">${esc(l)}</button>`).join('')}</div>
-      <div class="n47cs">${pay}</div>${S.amtC || (S.amt && !pre) ? `<div class="n47money"><span>$</span><input id="n44-ua" class="n47in" type="number" inputmode="decimal" min="1" placeholder="${esc(t('n47AmtPh'))}" value="${esc(S.amt)}" aria-label="${esc(t('n47AmtPh'))}"><span>${esc(t(S.pt === 'per_day' ? 'n47Dy' : 'n47Hr'))}</span></div>` : ''}${er('amt')}`)}
+      ${pay}<div class="n47money"><span>$</span><input id="n44-ua" class="n47in" type="number" inputmode="decimal" min="1" placeholder="${esc(t('n47AmtPh'))}" value="${esc(S.amt)}" aria-label="${esc(t('n47AmtPh'))}"><span>${esc(t(S.pt === 'per_day' ? 'n47Dy' : 'n47Hr'))}</span></div>${er('amt')}`)}
     ${sec(5, t('n47S5'), `${needZip ? `<div class="fq"><label class="flabel" for="n44-uz">${esc(t('n44UrgZip'))}</label><input id="n44-uz" class="n47in" type="text" inputmode="numeric" maxlength="5" value="${esc(S.zip)}">${er('zip')}</div>` : ''}
       <div class="fq"><label class="flabel" for="n44-un">${esc(t('n44UrgNote'))}</label><textarea id="n44-un" rows="2" maxlength="300">${esc(S.note)}</textarea></div>`)}
     <div class="n47bar"><p class="n47sum"><b>${esc(t('n47Sum'))}:</b> <span id="n47-sum">${esc(n47Sum(S))}</span></p>
@@ -18734,9 +18733,11 @@ viewThread = function(id){
   const gone = /Tài khoản đã xoá|Deleted account/.test(nm) || !!(th.gone && th.gone[o]);
   const blocked = th.status === 'blocked' || n48IsBlocked(o);
   /* dòng tiêu đề phụ: "<tin> · <tiệm>" – bấm mở tin / hồ sơ */
-  const ad = ADS.find(a => a.id === th.adId), amTech = n48AmTech(th);
+  /* n151: lấy tin của lần ứng tuyển / lời mời gần nhất, không phải tin cũ nhất của cuộc trò chuyện */
+  const adId2 = n51ThreadAdId(th);
+  const ad = ADS.find(a => a.id === adId2), amTech = n48AmTech(th);
   const subTxt = ad ? `${titleOf(ad)} · ${adBiz(ad) || ''}` : n48AboutTxt(th);
-  const subHref = amTech ? (th.adId ? '#ad-' + th.adId : '') : (th.techId ? '#tech-' + th.techId : '');
+  const subHref = amTech ? (adId2 ? '#ad-' + adId2 : '') : (th.techId ? '#tech-' + th.techId : '');
   /* tin nhắn + dòng hệ thống, xếp theo giờ */
   const own = x ? L.msgs[id] : [];
   const items = [];
@@ -18886,8 +18887,8 @@ function n48Bar(){
 ACT.n48invite = async function(){
   const S = state.n48.sel.slice(), u = state.user; if (!u || !S.length) return;
   if (S.length > N48.ofBatch){ toast(t('n48Max10')); return; }
-  /* n149d: không mời thợ vào tin đã đóng / bị từ chối / còn là nháp */
-  const mine = (n1MyAds() || []).filter(a => !a.filled && a.mod !== 'rejected' && a.mod !== 'draft');
+  /* n151: chỉ mời bằng tin đang mở và đã duyệt (thợ bấm vào phải xem được tin) */
+  const mine = (n1MyAds() || []).filter(n51Invitable);
   if (!mine.length){ toast(t('n48NeedAd')); location.hash = '#post-hiring'; return; }
   if (state.n45.rlUid !== u.uid) await n45RlLoad();
   const pre = n45Can('of', S.length); if (pre){ toast(pre); return; }
@@ -20449,6 +20450,266 @@ Object.assign(T.en, {n44AdmDeal:() => ''});
 .adm-card{border-radius:16px}
 .adm-item{border-radius:16px}
 .n34tl a{text-decoration:none}
+`; document.head.appendChild(st); })();
+
+/* ================= n151: đợt sửa 28/11 chiều (sau lượt chạy thử thứ hai) =================
+   01 nút "Sẵn sàng đi làm" bật không lên (hồ sơ đang chờ duyệt)
+   02 khung chat còn khoảng trắng lớn phía trên
+   03 mục lương của tin gấp: bỏ mức tiền sẵn, thêm "Tự ghi"; chữ "Theo giờ" bị xanh
+   04 thanh dưới trên điện thoại nhỏ và sát đáy
+   05 tiêu đề chat luôn ghi tin cũ nhất
+   06 bấm "Tôi muốn làm" thì trang nhảy xuống cuối
+   07 banner "Bạn có tuyển được người?" nằm quá lâu
+   08 hộp "Mời làm" bỏ tin đang chờ duyệt
+   09 "Nhận / Từ chối" -> "Quan tâm / Không hợp", hiện đồng nhất ở mọi lời mời
+   10 chỉ admin mới tải dữ liệu quản trị
+   11 giới hạn 3 tin: chặn chắc hơn + báo trước khi đủ                                     */
+
+Object.assign(T.vi, {
+  n48Accept:'Quan tâm', n48Decline:'Không hợp', n48StAcc:'Đã quan tâm', n48StDec:'Đã trả lời: không hợp',
+  n51Left:n => n === 0 ? 'Bạn đã dùng hết 3 tin đang mở.' : `Còn ${n} tin nữa là đủ 3 tin đang mở.`,
+  n51LeftD:'Mỗi tiệm mở tối đa 3 tin cùng lúc. Tin "Cần thợ gấp" không tính.',
+  n51PayHour:'Theo giờ', n51PayDay:'Theo ngày', n51PayOwn:'+ Tự ghi', n51PayAsk:'Trả lương thế nào?'
+});
+Object.assign(T.en, {
+  n48Accept:'Interested', n48Decline:'Not a fit', n48StAcc:'Interested', n48StDec:'Replied: not a fit',
+  n51Left:n => n === 0 ? 'You have used all 3 open posts.' : `${n} more before you reach 3 open posts.`,
+  n51LeftD:'Each salon can keep 3 posts open at once. Urgent posts do not count.',
+  n51PayHour:'Per hour', n51PayDay:'Per day', n51PayOwn:'+ Type it in', n51PayAsk:'How is the pay?'
+});
+
+/* ---------- 01: bật "Sẵn sàng" xong màn hình phải đổi theo ----------
+   ACT.n1ready chỉ sửa state.myProfile. Trang Hồ sơ lại vẽ từ danh sách TECHS,
+   nên khi hai bên không còn là cùng một đối tượng (hồ sơ chờ duyệt, tài khoản Cả hai…)
+   thì dữ liệu lưu đúng mà nút gạt đứng im. Đồng bộ lại ngay sau khi bấm. */
+/* NGUYÊN NHÂN GỐC: isTechReadyNow() (n130) có thêm điều kiện n2Hide(tc).
+   Hồ sơ đang chờ duyệt thì n2Hide = true, nên n1Ready() luôn trả về null và nút gạt
+   không bao giờ bật lên được, dù dữ liệu đã lưu đúng. Điều kiện đó đúng cho danh sách
+   công khai (người khác không được thấy hồ sơ chưa duyệt) nhưng sai cho chính chủ hồ sơ. */
+(() => {
+  const R0 = n1Ready;
+  if (typeof R0 !== 'function') return;
+  n1Ready = function(tc){
+    const r = R0.apply(this, arguments);
+    if (r) return r;
+    const u = state.user;
+    if (!u || !tc || !(tc.id === u.uid || tc.id === u.uid + '-2' || tc.ownerUid === u.uid)) return r;
+    const x = tc.ready;
+    return (x && x.on && Number(x.until) > Date.now() && !tc.hired) ? x : r;
+  };
+})();
+
+function n51SyncProf(){
+  try {
+    const u = state.user, mp = state.myProfile;
+    if (!u || !mp) return;
+    const tc = TECHS.find(x => x.live && x.id === mp.id) || TECHS.find(x => x.live && x.id === u.uid);
+    if (tc && tc !== mp){ tc.ready = mp.ready; tc.hired = mp.hired; }
+    else if (!tc && mp.live) TECHS.unshift(mp);
+  } catch (e) { console.warn('n51 sync', e); }
+}
+(() => {
+  const r0 = ACT.n1ready;
+  if (typeof r0 !== 'function') return;
+  ACT.n1ready = async function(){
+    const res = await r0.apply(this, arguments);
+    n51SyncProf(); render();
+    return res;
+  };
+})();
+/* chủ hồ sơ luôn thấy hồ sơ của mình, kể cả khi đang chờ duyệt */
+(() => {
+  if (typeof n48MyProfs !== 'function') return;
+  const p0 = n48MyProfs;
+  n48MyProfs = function(){
+    const L = p0.apply(this, arguments);
+    const mp = state.myProfile;
+    return (mp && !L.some(x => x.id === mp.id)) ? [mp].concat(L) : L;
+  };
+})();
+
+/* ---------- 08 + 11: tin dùng được để mời / tính vào giới hạn ---------- */
+function n51Open(a){
+  return a && a.type === 'hiring' && !a.quick && !a.filled && !a.delAt
+    && a.mod !== 'rejected' && a.mod !== 'draft'
+    && !(typeof n2Expired === 'function' ? n2Expired(a) : (a.expMs && a.expMs < Date.now()));
+}
+/* mời làm: ngoài các điều kiện trên, tin phải đã duyệt (thợ bấm vào phải xem được) */
+function n51Invitable(a){ return n51Open(a) && a.mod !== 'pending'; }
+(() => {
+  /* 11: giới hạn 3 tin – tính cả tin chờ duyệt, không phụ thuộc layer nào nạp sau */
+  n47MyActive = function(){ try { return (n1MyAds() || []).filter(n51Open); } catch (e) { return []; } };
+  n47Full = function(){ return !(state.adm && state.adm.on) && n47MyActive().length >= (window.__n47max || N48.adMax); };
+})();
+
+/* nút gạt được vẽ lại từ dữ liệu sau MỖI lần render.
+   Lớp dọn giao diện n149 chỉ chạy một lần cho mỗi thẻ, nên sau khi bấm,
+   lớp class "on" của thẻ không được cập nhật -> nút đứng im dù đã lưu xong. */
+function n51SyncSwitch(){
+  const box = document.querySelector('.card.n1rbox'); if (!box) return;
+  const mp = state.myProfile;
+  const on = !!(mp && typeof n1Ready === 'function' && n1Ready(mp));
+  box.classList.toggle('on', on);
+  const sw = box.querySelector('.n1sw');
+  if (sw){ sw.classList.toggle('on', on); sw.setAttribute('aria-checked', on ? 'true' : 'false'); }
+  const t2 = box.querySelector('.n49t2');
+  if (t2){
+    if (!on) t2.textContent = t('n49Off');
+    else if (t2.textContent === t('n49Off')){
+      let line = '';
+      try { line = typeof n1ReadyLine === 'function' ? String(n1ReadyLine(n1Ready(mp))).replace(/<[^>]*>/g, '').trim() : ''; } catch (e) {}
+      t2.textContent = line || t('n49On') || '';
+    }
+  }
+}
+(() => {
+  const r0 = render;
+  render = function(){ const out = r0.apply(this, arguments); try { n51SyncSwitch(); } catch (e) { console.warn('n51 sw', e); } return out; };
+})();
+/* Vài lớp cũ gọi render() đã giữ lại từ trước nên không chạy qua các lớp sau.
+   Soát lại nút gạt theo nhịp chậm để nó không bao giờ lệch với dữ liệu. */
+setInterval(() => { try { n51SyncSwitch(); } catch (e) {} }, 1000);
+
+/* ---------- 05: tiêu đề chat theo tin mới nhất ---------- */
+function n51ThreadAdId(th){
+  try {
+    const A = (th && th.apps) || [];
+    for (let i = A.length - 1; i >= 0; i--) if (A[i] && A[i].adId) return A[i].adId;
+  } catch (e) {}
+  return th ? th.adId : '';
+}
+
+/* ---------- 09: lời mời – "Quan tâm / Không hợp", hiện đồng nhất ----------
+   Trước đây 2 nút chỉ hiện khi cuộc trò chuyện ở trạng thái "chờ trả lời".
+   Cặp nào đã nhắn tin với nhau rồi thì lời mời mới không có nút nào -> không đồng nhất.
+   Nay ghi câu trả lời vào chính cuộc trò chuyện nên lúc nào cũng trả lời được. */
+function n51LastOffer(th){
+  try {
+    const u = state.user && state.user.uid, A = (th && th.apps) || [];
+    for (let i = A.length - 1; i >= 0; i--){
+      const a = A[i];
+      if (a && a.kind === 'offer' && a.from && a.from !== u) return a;
+    }
+  } catch (e) {}
+  return null;
+}
+ACT.n51ans = async function(el){
+  const id = el.dataset.v, v = el.dataset.m, u = state.user;
+  if (!id || !u) return;
+  el.disabled = true;
+  try {
+    await firebase.firestore().collection('threads').doc(id)
+      .set({offerAns:{v, by:u.uid, at:Date.now()}}, {merge:true});
+    toast(t(v === 'yes' ? 'n48StAcc' : 'n48StDec'));
+  } catch (e) { console.warn('n51 ans', e); el.disabled = false; toast(typeof errText === 'function' ? errText(e) : String(e)); }
+};
+(() => {
+  if (typeof viewThread !== 'function') return;
+  const v0 = viewThread;
+  viewThread = function(id){
+    let h = v0.apply(this, arguments);
+    if (typeof h !== 'string') return h;
+    let th = null;
+    try { th = n48Ths().find(z => z.id === id); } catch (e) {}
+    if (!th || th.status === 'pending' || th.status === 'blocked') return h;   /* đã có sẵn 2 nút */
+    const of = n51LastOffer(th); if (!of) return h;
+    const ans = th.offerAns && th.offerAns.by === (state.user || {}).uid ? th.offerAns.v : '';
+    const box = ans
+      ? `<p class="n51ansd">${esc(t(ans === 'yes' ? 'n48StAcc' : 'n48StDec'))}</p>`
+      : `<div class="n51ans"><button type="button" class="btn btn-primary" data-act="n51ans" data-v="${esc(id)}" data-m="yes">${esc(t('n48Accept'))}</button>` +
+        `<button type="button" class="btn btn-ghost" data-act="n51ans" data-v="${esc(id)}" data-m="no">${esc(t('n48Decline'))}</button></div>`;
+    return h.indexOf('class="n48send reply"') >= 0 ? h.replace('<div class="n48send reply">', box + '<div class="n48send reply">') : h + box;
+  };
+})();
+
+/* ---------- 11: báo trước khi sắp đủ 3 tin ---------- */
+(() => {
+  if (typeof n3MyAds !== 'function') return;
+  const m0 = n3MyAds;
+  n3MyAds = function(){
+    let h = m0.apply(this, arguments);
+    if (typeof h !== 'string') return h;
+    let left = 3;
+    try { left = Math.max(0, (window.__n47max || N48.adMax) - n47MyActive().length); } catch (e) { return h; }
+    const bar = `<p class="n51left${left === 0 ? ' n51full' : ''}"><b>${esc(t('n51Left', left))}</b> ${esc(t('n51LeftD'))}</p>`;
+    return h.replace(/(<h1 class="pg-title">[\s\S]*?<\/h1>)/, `$1${bar}`);
+  };
+})();
+
+/* ---------- 06: bấm "Tôi muốn làm" thì trang không nhảy ---------- */
+(() => {
+  const o0 = typeof openModal === 'function' ? openModal : null;
+  if (!o0) return;
+  openModal = function(){
+    const y = window.scrollY || window.pageYOffset || 0;
+    const out = o0.apply(this, arguments);
+    requestAnimationFrame(() => { if (Math.abs((window.scrollY || 0) - y) > 4) window.scrollTo(0, y); });
+    return out;
+  };
+})();
+
+/* ---------- 02 + 07: chat và banner ---------- */
+(() => {
+  /* banner "Bạn có tuyển được người?" tự tắt sau 7 ngày */
+  if (typeof n49AskHtml !== 'function') return;
+  const a0 = n49AskHtml;
+  n49AskHtml = function(){
+    try {
+      let raw = ''; try { raw = localStorage.getItem('n49askAt') || ''; } catch (e) {}
+      const now = Date.now();
+      if (!raw){ try { localStorage.setItem('n49askAt', String(now)); } catch (e) {} }
+      else if (now - Number(raw) > 7 * 86400000) return '';
+    } catch (e) {}
+    return a0.apply(this, arguments);
+  };
+})();
+/* mở cuộc trò chuyện thì cuộn xuống tin mới nhất */
+(() => {
+  const r0 = render;
+  let last = '';
+  render = function(){
+    const out = r0.apply(this, arguments);
+    try {
+      const r = route();
+      if (r.view !== 'thread'){ last = ''; return out; }
+      if (last === r.id) return out;
+      last = r.id;
+      requestAnimationFrame(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    } catch (e) {}
+    return out;
+  };
+})();
+
+/* ---------- CSS ---------- */
+(() => { const st = document.createElement('style'); st.textContent = `
+/* 02: tin nhắn chạy từ trên xuống, không dồn xuống đáy để trống nửa trang */
+.n48cm .bubbles{margin-top:0}
+.n48cm{justify-content:flex-start}
+
+/* 03: "Theo giờ / Theo ngày" không còn chữ xanh lạc lõng */
+.n47seg button{color:var(--ink,#1F1A1C);background:#fff;font-weight:700}
+.n47seg button.on{background:var(--primary,#9B1D4F);color:#fff}
+.n47money{display:flex;align-items:center;gap:8px;margin-top:10px}
+.n47money .n47in{max-width:170px}
+
+/* 04: thanh dưới dễ bấm hơn, không sát đáy */
+@media (max-width:960px){
+  .tabbar{padding:8px 4px calc(16px + env(safe-area-inset-bottom))}
+  .tabbar a,.n1tabs.n3t4 a,.tabbar.n3t4 a{min-height:56px;font-size:12px;gap:3px;padding:0 2px}
+  .tabbar a svg{width:24px;height:24px}
+  body.has-mbar{padding-bottom:86px}
+}
+
+/* 09 */
+.n51ans{position:fixed;left:0;right:0;bottom:calc(66px + env(safe-area-inset-bottom));max-width:640px;margin:0 auto;
+  box-sizing:border-box;z-index:19;display:flex;gap:8px;padding:9px 12px;background:#fff}
+.n51ans .btn{flex:1;min-height:42px}
+.n51ansd{margin:0 12px 8px;font-size:13px;font-weight:700;color:var(--muted,#5E5458)}
+
+/* 11 */
+.n51left{margin:0 0 12px;font-size:13.5px;line-height:1.45;color:var(--muted,#5E5458)}
+.n51left b{color:var(--ink,#1F1A1C)}
+.n51left.n51full{background:#FFF6E2;border:1px solid #E8B43A;border-radius:12px;padding:10px 12px}
 `; document.head.appendChild(st); })();
 
 render();
