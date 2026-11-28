@@ -14922,8 +14922,9 @@ async function n42Ping(login){
         const th = (state.live.threads || []).find(x => x.id === tid) || {};
         const to = (th.members || []).find(m => m !== u.uid) || '';
         const nm = th.names || {};
-        await db.collection('msgLog').add({tid, from:u.uid, to, fromName:String(nm[u.uid] || u.name || '').slice(0, 80), toName:String(nm[to] || '').slice(0, 80), at:n42TS()});
-        await db.collection('threads').doc(tid).update({msgN:firebase.firestore.FieldValue.increment(1)});
+        /* n149c: ghi nhật ký chạy nền – không giữ nút gửi quay vòng */
+        db.collection('msgLog').add({tid, from:u.uid, to, fromName:String(nm[u.uid] || u.name || '').slice(0, 80), toName:String(nm[to] || '').slice(0, 80), at:n42TS()}).catch(e => console.warn('n42log', e));
+        db.collection('threads').doc(tid).update({msgN:firebase.firestore.FieldValue.increment(1)}).catch(e => console.warn('n42log', e));
       }
     } catch (e) { console.warn('n42log', e); }
     return r;
@@ -18349,12 +18350,13 @@ function n48Key(el){ const d = (el && el.dataset) || {}; return [d.act, d.v, d.f
 function n48Busy(k, el, quiet){
   state.n48.busy[k] = {at:Date.now(), quiet:!!quiet};
   if (!quiet && el && el.classList){ el.classList.add('is-busy'); el.setAttribute('aria-busy', 'true'); if (!el.querySelector('.n48spin')) el.insertAdjacentHTML('beforeend', '<span class="n48spin" aria-hidden="true"></span>'); }
-  setTimeout(() => { const b = state.n48.busy[k]; if (b && Date.now() - b.at >= 25000) n48Unbusy(k, el); }, 25100);
+  setTimeout(() => { const b = state.n48.busy[k]; if (b && Date.now() - b.at >= 8000) n48Unbusy(k, el); }, 8100);
 }
 function n48Unbusy(k, el){
   delete state.n48.busy[k];
   const clear = e => { if (!e || !e.classList) return; e.classList.remove('is-busy'); e.removeAttribute('aria-busy'); const s = e.querySelector('.n48spin'); if (s) s.remove(); };
-  clear(el); document.querySelectorAll('.is-busy').forEach(e => { if (n48Key(e) === k) clear(e); });
+  clear(el); document.querySelectorAll('.is-busy,[aria-busy="true"]').forEach(e => { if (n48Key(e) === k) clear(e); });
+  document.querySelectorAll('.n48spin').forEach(s2 => { const p2 = s2.parentNode; if (p2 && n48Key(p2) === k) clear(p2); });
 }
 function n48BusyPaint(){
   const ks = Object.keys(state.n48.busy).filter(k => !state.n48.busy[k].quiet); if (!ks.length) return;
@@ -19406,7 +19408,7 @@ function n49MyPhone(){
     const out = r0.apply(this, arguments);
     try {
       document.querySelectorAll('.n30statrow').forEach(el => el.remove());
-      document.querySelectorAll('.hdr .inbox-btn').forEach(el => el.remove());
+      /* n149c: giữ lại nút thư ở header – màn rộng không có thanh dưới (ẩn bằng CSS dưới 961px) */
       if ((route().view || '') === 'home'){
         document.querySelectorAll('#main .card.n1me, #main .card.n30box').forEach(el => el.remove());
       }
@@ -19636,9 +19638,14 @@ function n49Tidy(){
   document.querySelectorAll('.n44rems').forEach(box => {
     if (box.dataset.n49 === '1') return; box.dataset.n49 = '1';
     box.querySelectorAll('.n44rem').forEach(a => {
-      const raw = n49Strip(a.textContent);
-      const i = raw.indexOf(' · ');
-      const t1 = i > 0 ? raw.slice(0, i) : raw, t2 = i > 0 ? raw.slice(i + 3) : '';
+      const b = a.querySelector('b');
+      const head = n49Strip(b ? b.textContent : a.textContent);
+      let extra = n49Strip(a.textContent);
+      if (b) extra = n49Strip(extra.replace(n49Strip(b.textContent), ''));
+      const parts = head.split(' · ').map(x => x.trim()).filter(Boolean);
+      const t1 = parts.shift() || head;
+      if (extra) parts.push(extra);
+      const t2 = parts.join(' · ');
       a.classList.add('n49row');
       a.innerHTML = `<span class="n49ic">${N49I.cal}</span>` +
         `<span class="n49gr"><span class="n49t1">${esc(t1)}</span>${t2 ? `<span class="n49t2">${esc(t2)}</span>` : ''}</span>` +
@@ -19735,6 +19742,9 @@ function n49Tidy(){
   /* B5: bỏ ★ lưu tin + lọc "Đã lưu" + "Xem hồ sơ như tiệm thấy" */
   document.querySelectorAll('[data-act=n2save]').forEach(el => el.remove());
   document.querySelectorAll('#q-sort option').forEach(o => { if (/Đã lưu|Saved/i.test(o.textContent)) o.remove(); });
+  document.querySelectorAll('#main .n28bars button, #main .n28bars a, #main .n1flt button').forEach(el => {
+    if (/^\s*[\u2605\u2B50\uFE0F]?\s*(Đã lưu|Saved)\s*$/i.test(el.textContent || '')) el.remove();
+  });
   document.querySelectorAll('.n41as').forEach(el => el.remove());
   document.querySelectorAll('#main button, #main a').forEach(el => {
     const x = (el.textContent || '').trim();
@@ -19838,6 +19848,220 @@ a.n49cross:after{content:" \\203A";font-weight:800}
     return d0.apply(this, arguments);
   };
 })();
+
+/* ---------- B9: sửa thẻ danh sách trên màn hình rộng ----------
+   n148 đặt 2 nút (Ứng tuyển / Mời làm + Nhắn tin) rộng 100%, nhưng thẻ .n1c
+   trên màn rộng xếp ngang → phần chữ bị ép còn một cột hẹp, nút đè lên chữ.
+   Từ 561px trở lên: 2 nút chỉ rộng vừa đủ, chữ giữ nguyên chỗ. */
+(() => { const st = document.createElement('style'); st.textContent = `
+@media (min-width:561px){
+  .n1c{align-items:flex-start}
+  .n1c>.n1cb,.n1c>.n1cmain,.n1c>div:first-of-type{min-width:0}
+  .n1act:has(.n48two){width:auto!important;flex:0 0 auto!important;align-items:flex-start}
+  .n1act .n48two{width:auto!important;flex:0 0 auto!important;grid-template-columns:auto auto}
+  .n48two{width:auto!important;grid-template-columns:auto auto}
+  .n48two.n48one{grid-template-columns:auto}
+  .n48two>*{width:auto!important;padding-left:16px;padding-right:16px;white-space:nowrap}
+}
+`; document.head.appendChild(st); })();
+
+/* ================= n149c: đợt sửa 28/11 (gộp 1 lần) =================
+   A1 màn hình rộng: trả lại nút thư trên header (thanh dưới bị ẩn >960px)
+   A3 nút gửi kẹt vòng xoay → gửi trùng tin
+   B4 câu trả lời mẫu trong chat
+   B5 hội thoại ngắn: tin nhắn nằm sát ô nhập, không để trống nửa trang
+   B6 Inbox: không lặp lại tên tin ở mọi dòng
+   C7 2 hồ sơ: đổi cách chuyển cho gọn
+   D10 thẻ CẦN GẤP: viền vàng nhạt thay viền đỏ
+   D11 nhãn "Chưa có ảnh tiệm" bị vỡ dọc
+   E12 bỏ emoji ở tiêu đề mục trong form
+   E13 Ăn chia / Lương cố định: bỏ dấu + / ✓ lệch nhau, đọc ra là một lựa chọn
+   E14 form tin gấp: đánh số lại 1-2-3-4-5-6
+   16  nút Đăng xuất: màu đỏ, tách khỏi nhóm nút khác                      */
+
+Object.assign(T.vi, {
+  n48AddProf:'+ Hồ sơ 2',
+  n37G_info:'Thông tin tiệm', n37G_me:'Thông tin', n37G_job:'Công việc',
+  n37G_skill:'Tay nghề', n37G_pay:'Lương', n37G_want:'Lương mong muốn'
+});
+Object.assign(T.en, {
+  n48AddProf:'+ Profile 2',
+  n37G_info:'Salon info', n37G_me:'About you', n37G_job:'The job',
+  n37G_skill:'Skills', n37G_pay:'Pay', n37G_want:'Pay you want'
+});
+
+/* ---------- A3: nút gửi kẹt vòng xoay → gửi trùng tin ----------
+   Nguyên nhân: sau khi tin đã gửi xong, lớp ghi nhật ký (n142) còn chờ 2 lượt ghi
+   nữa mới trả kết quả; mất mạng là chờ mãi, nút quay hoài, người dùng bấm lại.
+   Đã cho 2 lượt ghi đó chạy nền (n142) + hạ mức chờ tối đa xuống 8 giây (n148).
+   Thêm khoá theo từng cuộc trò chuyện: đang gửi thì bỏ qua lần bấm thứ hai. */
+(() => {
+  const s0 = ACT.thsend;
+  if (typeof s0 !== 'function') return;
+  const busy = {};
+  ACT.thsend = async function(el){
+    const tid = (el && el.dataset && el.dataset.v) || '';
+    if (busy[tid] && Date.now() - busy[tid] < 15000) return;
+    busy[tid] = Date.now();
+    try { return await s0.apply(this, arguments); }
+    finally { delete busy[tid]; }
+  };
+})();
+
+/* ---------- B4: câu trả lời mẫu ----------
+   n147 chèn trước <div class="reply">; n148 đổi ô nhập thành .n48send nên mất. */
+(() => {
+  if (typeof viewThread !== 'function') return;
+  const v0 = viewThread;
+  viewThread = function(id){
+    let h = v0.apply(this, arguments);
+    if (typeof h !== 'string' || h.indexOf('class="n48send reply"') < 0) return h;
+    if (h.indexOf('class="n2q"') >= 0) return h;
+    let amTech = false;
+    try { const th = n48Ths().find(z => z.id === id); if (th) amTech = !!n48AmTech(th); } catch (e) {}
+    const list = t(amTech ? 'qr' : 'qrS');
+    if (!Array.isArray(list) || !list.length) return h;
+    const chips = `<div class="n2q n49cq">` + list.map((q, i) =>
+      `<button type="button" class="pill sm" data-act="n2qr" data-v="${i}" data-r="${amTech ? '1' : '0'}">${esc(q)}</button>`).join('') + `</div>`;
+    return h.replace('<div class="n48send reply">', chips + '<div class="n48send reply">');
+  };
+})();
+
+/* ---------- B6: Inbox không lặp tên tin ở mọi dòng ---------- */
+(() => {
+  if (typeof viewInbox !== 'function') return;
+  const v0 = viewInbox;
+  viewInbox = function(){
+    let h = v0.apply(this, arguments);
+    if (typeof h !== 'string') return h;
+    const re = /<span class="n48rs biz">([\s\S]*?)(?=<span class="n48rl)/g;
+    const abouts = [];
+    let m;
+    while ((m = re.exec(h))) abouts.push(m[1].replace(/<span class="n48tag">[\s\S]*?<\/span>/g, '').replace(/<\/span>\s*$/, '').trim());
+    if (abouts.length < 2) return h;
+    if (abouts.some(x => x !== abouts[0]) || !abouts[0]) return h;
+    return h.replace(re, (full, inner) => {
+      const tag = (/<span class="n48tag">[\s\S]*?<\/span>/.exec(inner) || [''])[0];
+      return tag ? `<span class="n48rs biz">${tag}</span>` : '';
+    });
+  };
+})();
+
+/* ---------- E14: form tin gấp đánh số liền mạch ---------- */
+(() => {
+  if (typeof n44UrgForm !== 'function') return;
+  const f0 = n44UrgForm;
+  n44UrgForm = function(){
+    let s = f0.apply(this, arguments);
+    if (typeof s !== 'string') return s;
+    let i = 0;
+    return s.replace(/(<span class="n47n" aria-hidden="true">)[^<]*(<\/span>)/g, (m, a, b) => a + (++i) + b);
+  };
+})();
+
+/* ---------- 16: nút Đăng xuất đứng riêng, màu đỏ ---------- */
+(() => {
+  if (typeof viewAccount !== 'function') return;
+  const a0 = viewAccount;
+  const RE = /<button type="button" class="n48ar n48al2" data-act="signout">([\s\S]*?)<\/button>/;
+  viewAccount = function(){
+    let h = a0.apply(this, arguments);
+    if (typeof h !== 'string') return h;
+    const m = RE.exec(h);
+    if (!m) return h;
+    h = h.replace(RE, '');
+    const btn = `<button type="button" class="n49out" data-act="signout">${m[1]}</button>`;
+    return h.indexOf('<button type="button" class="n48del"') >= 0
+      ? h.replace('<button type="button" class="n48del"', btn + '<button type="button" class="n48del"')
+      : h.replace(/<\/div>\s*$/, btn + '</div>');
+  };
+})();
+
+/* ---------- G: form đăng tin – thành phố tự lấy theo ZIP ----------
+   Trước đây ô Thành phố luôn mặc định "San Antonio"; gõ ZIP ở nơi khác là báo lỗi
+   "ZIP ... cách ... dặm" rồi không đăng được. Nay gõ đủ 5 số là tự đổi thành phố. */
+document.addEventListener('input', e => {
+  const i = e.target;
+  if (!i || !i.matches || !i.matches('input[data-fk="zip"]')) return;
+  const zip = String(i.value || '').replace(/\D/g, '');
+  if (zip.length !== 5 || typeof cityOf !== 'function') return;
+  const city = cityOf(zip);
+  if (!city) return;
+  const form = i.closest('form, .page, #main') || document;
+  const sel = form.querySelector('select[data-fk="city"]') || document.querySelector('select[data-fk="city"]');
+  if (!sel) return;
+  const has = [].slice.call(sel.options).some(o => o.value === city);
+  if (has){
+    if (sel.value === city) return;
+    sel.value = city;
+    sel.dispatchEvent(new Event('change', {bubbles:true}));
+    return;
+  }
+  /* thành phố không có trong danh sách → chọn "Thành phố khác" rồi điền tên */
+  if (![].slice.call(sel.options).some(o => o.value === '__other')) return;
+  const ft = sel.dataset.ft || i.dataset.ft || '';
+  const fs = (state.forms || {})[ft];
+  if (fs && fs.data && fs.data.city === city) return;
+  if (sel.value !== '__other'){ sel.value = '__other'; sel.dispatchEvent(new Event('change', {bubbles:true})); }
+  setTimeout(() => {
+    const x = document.getElementById('n43-city-x-' + ft);
+    if (x && x.value !== city){ x.value = city; x.dispatchEvent(new Event('input', {bubbles:true})); }
+  }, 60);
+});
+
+/* ---------- dọn thêm sau mỗi lần vẽ ---------- */
+function n49cTidy(){
+}
+(() => {
+  const r0 = render;
+  render = function(){ const out = r0.apply(this, arguments); try { n49cTidy(); } catch (e) { console.warn('n49c tidy', e); } return out; };
+})();
+
+/* ---------- CSS ---------- */
+(() => { const st = document.createElement('style'); st.textContent = `
+/* A1: thanh dưới bị ẩn trên màn rộng → giữ nút thư ở header cho màn rộng */
+@media (max-width:960px){ .hdr .inbox-btn{display:none} }
+@media (min-width:961px){ .hdr .inbox-btn{display:inline-flex} }
+
+/* B4: chip câu mẫu nằm ngay trên ô nhập */
+.n49cq{position:fixed;left:0;right:0;bottom:calc(66px + env(safe-area-inset-bottom));max-width:640px;margin:0 auto;box-sizing:border-box;z-index:19;
+  display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;padding:8px 12px;background:#fff;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.n49cq::-webkit-scrollbar{display:none}
+.n49cq .pill{flex:0 0 auto;font-size:13px;padding:7px 13px;border:1px solid var(--n48bd,#EFE6E8);border-radius:999px;background:#FBF7F8;color:var(--n48tx,#1F1A1C);white-space:nowrap}
+@media (max-width:960px){ .n48cm{padding-bottom:60px} }
+@media (min-width:961px){ .n48cm{padding-bottom:130px} }
+
+/* B5: hội thoại ngắn – tin nhắn sát ô nhập */
+.n48cm{display:flex;flex-direction:column}
+.n48cm .bubbles{margin-top:auto}
+
+/* C7: 2 hồ sơ – một hàng chọn gọn, bỏ "1/2" */
+.n48pcnt{display:none!important}
+.n48ptabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.n48ptab{min-height:38px;padding:0 14px;border:1px solid var(--line,#EFE6E8);border-radius:999px;background:#fff;
+  font:inherit;font-size:14px;font-weight:600;color:var(--muted,#5E5458);cursor:pointer}
+.n48ptab.on{border-color:var(--primary,#9B1D4F);background:var(--primary,#9B1D4F);color:#fff}
+.n48ptab.n48padd{font-weight:600;color:var(--primary,#9B1D4F);border-style:dashed;background:#fff}
+
+/* D10: CẦN GẤP – vàng nhạt, không còn viền đỏ */
+.card.n1c.n28urg{border:1.5px solid #E8B43A!important;box-shadow:0 0 0 3px #FFF6E2!important}
+.n28lbl-u{background:#FFF1CF!important;color:#8A5A09!important}
+.n44uc{border-left-color:#E8B43A!important}
+
+/* D11: nhãn "Chưa có ảnh tiệm" không vỡ dọc */
+.n30nopic{white-space:nowrap;justify-self:start;align-self:start;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+
+/* E13 */
+.n33famb i{display:none}
+
+/* 16: Đăng xuất */
+.n49out{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;margin:18px 0 10px;
+  border:1px solid #F0C9C4;border-radius:14px;background:#FFF6F5;font:inherit;font-size:15px;font-weight:700;
+  color:#B3261E;cursor:pointer;padding:0 16px}
+.n49out:hover{background:#FDECEA;border-color:#E09A92}
+.n49out .n48i,.n49out svg{flex:0 0 auto;width:19px;height:19px;color:#B3261E}
+.n49out>*{flex:0 0 auto}
+`; document.head.appendChild(st); })();
 
 render();
 })();
