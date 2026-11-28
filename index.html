@@ -3467,11 +3467,16 @@ function initLive(){
       const ta = document.getElementById('th-text'), text = ta.value.trim(); if (!text) return;
       const tid = el.dataset.v, ref = db.collection('threads').doc(tid), uid = state.user.uid;
       el.disabled = true;
+      /* n149d: xoá chữ ngay khi bấm gửi cho cảm giác tức thì; gửi hỏng thì trả chữ về ô */
+      ta.value = '';
       try {
         await n45MsgAdd(ref, {from:uid, text, at:TS()});   /* n145: tin nhắn trước, bị chặn thì không đổi lastText */
         await ref.update({lastText:text.slice(0, 200), lastAt:TS(), lastFrom:uid, ['readAt.' + uid]:TS()});
-        const n = document.getElementById('th-text'); if (n) n.value = '';
-      } catch (e) { console.warn(e); toast(n45ErrMsg(e, errText)); }
+      } catch (e) {
+        console.warn(e);
+        const n = document.getElementById('th-text'); if (n && !n.value.trim()) n.value = text;
+        toast(n45ErrMsg(e, errText));
+      }
       el.disabled = false;
     },
     msgclear(){}, thchan(){}
@@ -4269,7 +4274,8 @@ function n1Live(c){
         <div class="modal-foot"><span></span><button class="btn btn-primary" type="button" data-act="n1send">${t('sendBtn')}</button></div>`;
     }
     const tc = TECHS.find(z => z.id === m.id); if (!tc) return '';
-    const mine = n1MyAds();
+    /* n149d: không mời thợ vào tin đã đóng / bị từ chối / còn là nháp */
+    const mine = n1MyAds().filter(a => !a.filled && a.mod !== 'rejected' && a.mod !== 'draft');
     return `<div class="modal-head"><h2 id="m-title">${esc(t(m.urgent ? 'offerToUrgent' : 'offerTo', tc.name))}</h2>${x}</div><p class="hint" style="margin:0">${t('offerLead')}</p>
       ${mine.length ? `<div class="fq"><label class="flabel" for="n1-ad">${t('offerAd')}</label><select id="n1-ad">${mine.map(a => `<option value="${esc(a.id)}"${m.adId === a.id ? ' selected' : ''}>${esc(adBiz(a))} – ${esc(titleOf(a))}</option>`).join('')}</select></div>` : ''}
       <div class="fq"><label class="flabel" for="n1-note">${t('noteOpt')}</label><textarea id="n1-note" rows="3" maxlength="300" placeholder="${esc(t(m.urgent ? 'notePhUrgent' : 'notePhOffer'))}"></textarea></div>
@@ -4886,9 +4892,14 @@ n1Today = function(k){ return admParts(new Date(Date.now() + (k || 0) * DAY2)); 
 const admFmt = ms0 => new Date(ms0).toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US', {timeZone:admTZ(), day:'numeric', month:'numeric', hour:'numeric', minute:'2-digit'});
 
 /* ---------- visibility: moderation + unapproved drafts ---------- */
+/* n149d: tin đăng từ 28/11/2026 mà chưa có trạng thái duyệt thì coi như đang chờ duyệt.
+   Tin cũ hơn và tin gấp (quick) vẫn hiện bình thường. Nhờ vậy nếu lượt ghi mod:'pending'
+   hỏng giữa chừng thì tin nằm im chờ duyệt, chứ không lên thẳng. */
+const ADM_MOD_FROM = Date.UTC(2026, 10, 28, 6, 0, 0);
 function admHidden(o){
   if (!o || !o.live) return false;
-  return o.mod === 'pending' || o.mod === 'rejected' || o.mod === 'banned' || o.mod === 'draft';
+  if (o.mod === 'pending' || o.mod === 'rejected' || o.mod === 'banned' || o.mod === 'draft') return true;
+  return !o.mod && !o.quick && (o.postedMs || 0) >= ADM_MOD_FROM;
 }
 const n2Hide0 = n2Hide;
 n2Hide = function(o){ return n2Hide0(o) || admHidden(o); };
@@ -5010,7 +5021,7 @@ function admItemCard(o, draft){
   const card = tech ? n1TechCard(o) : n1JobCard(o);
   const body = card.replace(/<div class="n1act">[\s\S]*?<\/div>\s*<\/div>\s*$/, '</div>');
   return `<div class="adm-item">${body}
-    ${ph ? `<p class="n1sub" style="padding:0 14px">📞 ${esc(t('admContact'))}: ${esc(admPretty(ph))}</p>` : ''}
+    ${ph ? `<p class="n1sub" style="padding:0 14px">${esc(t('admContact'))}: ${esc(admPretty(ph))}</p>` : ''}
     <div class="adm-acts">
       <button class="btn btn-ghost" type="button" data-act="admcopytxt" data-v="${esc(admText(o))}">${t('admCopy')}</button>
       <button class="btn btn-ghost" type="button" data-act="liveedit" data-k="${k}" data-v="${id}">${t('admEdit')}</button>
@@ -5190,8 +5201,10 @@ function admLive(c){
         log('draft', admPretty(cre.phone));
         render();
       } else if (!state.adm.on && !fs.editId){
-        const trusted = !!u.trusted;
-        if (!trusted) await db.collection(coll).doc(fs.liveId).update({mod:'pending'});
+        /* n149d: duyệt mọi tin, mọi người, mọi lần – bỏ cờ "trusted".
+           Sửa tin cũ (fs.editId) vẫn không phải duyệt lại.
+           Tin gấp lên ngay, admin kiểm sau (state.n44.urg đang mở nghĩa là đang đăng tin gấp). */
+        if (!(state.n44 && state.n44.urg)) await db.collection(coll).doc(fs.liveId).update({mod:'pending'});
       }
     } catch (e) { console.warn('mod', e); }
   };
@@ -5224,7 +5237,7 @@ function admLive(c){
     try {
       await db.collection(el.dataset.k).doc(el.dataset.v).update({mod:m});
       const o = admAll().find(x => x.id === el.dataset.v);
-      if (m === 'ok' && o && n1Owner(o)) await db.collection('users').doc(n1Owner(o)).set({trusted:true}, {merge:true}).catch(() => {});
+      /* n149d: không còn gắn cờ "trusted" cho chủ tin sau khi duyệt – tin sau vẫn phải duyệt */
       log('mod_' + m, el.dataset.v); toast(t(m === 'ok' ? 'admApproved' : 'admRejected')); render();
     } catch (e) { console.warn(e); el.disabled = false; toast(errText(e)); }
   };
@@ -11475,7 +11488,7 @@ n2Status = function(o){
   else if (!closed && left <= 7) warn = `<p class="n2note warn">${esc(t('expSoon', left))} – ${t(tech ? 'stillLooking' : 'stillHiring')}</p>`;
   const renew = !closed && (exp || left <= 7) ? `<div class="n2btns"><button class="btn btn-primary" type="button" data-act="n2renew" data-k="${k}" data-v="${id}">${t('renewBtn')}</button></div>` : '';
   const key = (tech ? 'n32T' : 'n32S') + (closed ? 'Off' : 'On');
-  const sw = `<div class="n32st"><span class="n32badge${closed ? '' : ' on'}">${closed ? '🔒' : '●'} ${esc(t(key))}</span>
+  const sw = `<div class="n32st"><span class="n32badge${closed ? '' : ' on'}">${closed ? '○' : '●'} ${esc(t(key))}</span>
     <button type="button" class="n32big${closed ? ' prim' : ''}" data-act="n2close" data-k="${k}" data-v="${id}" data-on="${closed ? '0' : '1'}">${esc(t(key + 'B'))}</button></div>`;
   return `<div class="card n2box n30box">${n2Stats(o)}${warn}${renew}${sw}</div>`;
 };
@@ -13295,7 +13308,7 @@ function n34TodayItems(){
 }
 function n34TodayCard(){
   const L = n34TodayItems();
-  return `<div class="card adm-card n34today"><h2 class="sec" style="margin-top:0">📋 ${t('n34Today')}${L.length ? ` (${L.length})` : ''}</h2>
+  return `<div class="card adm-card n34today"><h2 class="sec" style="margin-top:0">${t('n34Today')}${L.length ? ` (${L.length})` : ''}</h2>
     ${L.length ? `<ul class="n34tl">${L.map(x => `<li><a ${x.act}${x.act.indexOf('href') === 0 ? '' : ' href="javascript:void 0" role="button"'}>${x.ic} ${esc(x.txt)}</a></li>`).join('')}</ul>`
       : `<p class="empty-s">${t('n34TodayNone')}</p>`}</div>`;
 }
@@ -14837,7 +14850,7 @@ n3MyProf = function(){
    4 phễu người dùng   5 thời gian tiệm trả lời (threads.answeredAt)   6 lỗi web (errLog)
    ============================================================ */
 Object.assign(T.vi, {
-  n42Act:'Hoạt động', n42On:'🟢 Đang online', n42OnF:'Đang online', n42UOn:'— Đang online',
+  n42Act:'Hoạt động', n42On:'● Đang online', n42OnF:'Đang online', n42UOn:'— Đang online',
   n42Never:'chưa ghi nhận', n42Ago:(n, u) => `${n} ${u} trước`, n42Min:'phút', n42Hr:'giờ', n42Yest:'Hôm qua',
   n42Login:'Đăng nhập', n42TLate:(a, b, h) => `${a} → ${b}: chưa trả lời ${h >= 72 ? Math.floor(h / 24) + ' ngày' : h + ' giờ'}`,
   n42Msgs:'Tin nhắn', n42Log:'Nhật ký tin nhắn', n42LogD:'Ai nhắn cho ai, lúc nào. Không có nội dung tin nhắn.',
@@ -14851,7 +14864,7 @@ Object.assign(T.vi, {
   n42QTech:'Chúc mừng bạn có việc! Có phải nhờ Nail101 không?', n42QYes:'Có, nhờ Nail101', n42QNo:'Không', n42Skip:'Bỏ qua', n42Thx:'Cảm ơn bạn đã cho biết!'
 });
 Object.assign(T.en, {
-  n42Act:'Activity', n42On:'🟢 Online now', n42OnF:'Online now', n42UOn:'— Online now',
+  n42Act:'Activity', n42On:'● Online now', n42OnF:'Online now', n42UOn:'— Online now',
   n42Never:'not seen yet', n42Ago:(n, u) => `${n} ${u} ago`, n42Min:'min', n42Hr:'h', n42Yest:'Yesterday',
   n42Login:'Signed in', n42TLate:(a, b, h) => `${a} → ${b}: no reply for ${h >= 72 ? Math.floor(h / 24) + ' days' : h + 'h'}`,
   n42Msgs:'Messages', n42Log:'Message log', n42LogD:'Who messaged whom, and when. No message content.',
@@ -18589,7 +18602,14 @@ function n48SubMsgs(tid){
   const un = n48Db().collection('threads').doc(tid).collection('messages').orderBy('at').limit(500).onSnapshot(s => {
     L.msgs[tid] = s.docs.map(d => d.data({serverTimestamps:'estimate'}));
     const r = route(); if (r.view === 'thread' && r.id === tid){ (state.n1ctx ? state.n1ctx.renderKeep : render)(); n48MarkRead(tid); }
-  }, e => console.warn('n48 msgs', e));
+  }, e => {
+    /* n149d: lỗi (thường là rules) thì thôi treo "Đang tải…" – báo rõ để người dùng biết đường thử lại */
+    console.warn('n48 msgs', e);
+    const L2 = state.live; if (!L2) return;
+    L2.msgs[tid] = L2.msgs[tid] || [];
+    L2.msgErr = Object.assign({}, L2.msgErr, {[tid]:true});
+    const r = route(); if (r.view === 'thread' && r.id === tid) render();
+  });
   L.msgSub = {id:tid, un};
 }
 function n48MarkRead(tid){
@@ -18866,7 +18886,8 @@ function n48Bar(){
 ACT.n48invite = async function(){
   const S = state.n48.sel.slice(), u = state.user; if (!u || !S.length) return;
   if (S.length > N48.ofBatch){ toast(t('n48Max10')); return; }
-  const mine = n1MyAds() || [];
+  /* n149d: không mời thợ vào tin đã đóng / bị từ chối / còn là nháp */
+  const mine = (n1MyAds() || []).filter(a => !a.filled && a.mod !== 'rejected' && a.mod !== 'draft');
   if (!mine.length){ toast(t('n48NeedAd')); location.hash = '#post-hiring'; return; }
   if (state.n45.rlUid !== u.uid) await n45RlLoad();
   const pre = n45Can('of', S.length); if (pre){ toast(pre); return; }
@@ -19507,7 +19528,8 @@ ACT.n49hired = async function(el){
     const out = r0.apply(this, arguments);
     try {
       const v = (route().view || '');
-      if (v !== 'myads' && v !== 'home') return out;
+      /* n149d: chỉ hiện ở "Tin của tôi" – trang chủ bị chắn, và bên thợ thấy câu hỏi này thì vô nghĩa */
+      if (v !== 'myads') return out;
       const main = document.getElementById('main');
       if (!main || main.querySelector('.n49ask')) return out;
       const h = n49AskHtml(); if (!h) return out;
@@ -20061,6 +20083,372 @@ function n49cTidy(){
 .n49out:hover{background:#FDECEA;border-color:#E09A92}
 .n49out .n48i,.n49out svg{flex:0 0 auto;width:19px;height:19px;color:#B3261E}
 .n49out>*{flex:0 0 auto}
+`; document.head.appendChild(st); })();
+
+/* ================= n149d: đợt sửa 28/11 (phản hồi chạy thử trên web thật) =================
+   10 thợ chỉ còn 1 hồ sơ (hồ sơ -2 cũ giữ dữ liệu nhưng ẩn)
+   11 ứng tuyển: bỏ 3 phút chờ, 8 -> 20 lần / ngày
+   12 duyệt mọi tin, mọi người, mọi lần (bỏ cờ trusted – sửa trong admin.js)
+   13 sửa tin cũ không phải duyệt lại · 14 tin gấp lên ngay, kiểm sau
+   01 tin nhắn hiện ngay, gửi hỏng thì giữ chữ + nút Gửi lại, không treo "Đang tải…"
+   02 tin đã đóng không còn trong hộp "Mời làm"
+   03 form "Ăn chia" báo đúng chỗ còn thiếu
+   04 "Tin của tôi" gộp 1 thẻ + "Tin 1 · thành phố · ngày đăng"
+   05 nút "Sửa tin" bị gạch chân, xuống 2 dòng
+   06 quét sạch emoji còn sót · 07 banner hỏi tuyển người chuyển sang "Tin của tôi"
+   08 bỏ chữ "Thợ đồng ý thì hai bên nhắn tin được"
+   09 sửa chữ "tiệm không thấy bạn"
+   24 IndexedDB hỏng thì lùi sang lưu tạm, không treo trang                              */
+
+/* ---------- 11: ứng tuyển không phải chờ ---------- */
+N45.ap = {cd:0, max:20};
+
+/* ---------- 10: thợ chỉ còn 1 hồ sơ ---------- */
+N48.profMax = 1;
+(() => {
+  const p0 = n48MyProfs;
+  n48MyProfs = function(){ return p0.apply(this, arguments).filter(x => !/-2$/.test(x.id)); };
+  /* hồ sơ -2 cũ: còn trong Firestore nhưng không hiện ở đâu nữa */
+  if (typeof n2Hide === 'function'){
+    const h0 = n2Hide;
+    n2Hide = function(o){ return h0.apply(this, arguments) || !!(o && o.id && /-2$/.test(String(o.id)) && TECHS.includes(o)); };
+  }
+  ACT.n48addprof = function(){ toast(t('n49dOneProf')); };
+  /* 1 hồ sơ thì không cần hàng chọn hồ sơ nữa */
+  if (typeof n3MyProf === 'function'){
+    const v0 = n3MyProf;
+    n3MyProf = function(){
+      const s = v0.apply(this, arguments);
+      return typeof s === 'string' ? s.replace(/<div class="n48ptabs"[\s\S]*?<\/div>\s*/, '') : s;
+    };
+  }
+})();
+
+Object.assign(T.vi, {
+  n49dOneProf:'Mỗi thợ chỉ có 1 hồ sơ. Bấm "Sửa" để đổi nội dung hồ sơ.',
+  n49dSendFail:'Không gửi được. Kiểm tra mạng rồi gửi lại.',
+  n49dRetry:'Gửi lại', n49dSending:'Đang gửi…',
+  n49dChatErr:'Không mở được cuộc trò chuyện. Thử lại sau giây lát.',
+  n49dPost:n => `Tin ${n}`,
+  n49dOffNote:'Đang tắt · không nằm trong mục thợ rảnh hôm nay',
+  n49dOffHint:'Tiệm vẫn tìm thấy hồ sơ của bạn. Muốn ẩn hẳn thì bấm “Tôi đã có việc – ẩn hồ sơ”.',
+  n49dPayKind:'Chọn kiểu ăn chia.', n49dPayAmt:'Nhập số phần trăm hoặc số tiền.'
+});
+Object.assign(T.en, {
+  n49dOneProf:'Each tech has one profile. Tap “Edit” to change it.',
+  n49dSendFail:'Could not send. Check your connection and try again.',
+  n49dRetry:'Send again', n49dSending:'Sending…',
+  n49dChatErr:'Could not open the conversation. Try again in a moment.',
+  n49dPost:n => `Post ${n}`,
+  n49dOffNote:'Off · not listed under techs free today',
+  n49dOffHint:'Salons can still find your profile. To hide it, tap “I found a job – hide my profile”.',
+  n49dPayKind:'Choose a split type.', n49dPayAmt:'Enter the percentage or amount.'
+});
+
+/* ---------- 09: "tiệm không thấy bạn" là sai ----------
+   Danh sách "Tìm thợ" của tiệm luôn hiện mọi hồ sơ. Công tắc này chỉ quyết định
+   thợ có nằm trong mục "rảnh hôm nay" hay không. Muốn ẩn hồ sơ thì dùng nút riêng. */
+T.vi.n49Off = T.vi.n49dOffNote;
+T.en.n49Off = T.en.n49dOffNote;
+
+/* ---------- 06 + 08: chữ và emoji ---------- */
+Object.assign(T.vi, {
+  offerLead:'Gửi lời mời cho thợ. Hai bên vẫn nhắn tin được ngay, không cần chờ đồng ý.',
+  btnChat:'Nhắn tin', btnEditAd:'Sửa tin', btnEditProf:'Sửa hồ sơ', btnOfferUrgent:'Mời làm gấp',
+  offerToUrgent:n => `Mời ${n} làm gấp`
+});
+Object.assign(T.en, {
+  offerLead:'Send an offer. You can message each other right away — no need to wait.',
+  btnChat:'Message', btnEditAd:'Edit post', btnEditProf:'Edit profile', btnOfferUrgent:'Offer urgently',
+  offerToUrgent:n => `Offer ${n} an urgent job`
+});
+/* quét những emoji còn sót trong mọi chuỗi hiển thị (giữ ⚡ của tin gấp vì đã chốt dùng) */
+(() => {
+  /* không đụng tới mũi tên (\u2190-\u21FF): → ⇄ là ký hiệu, không phải emoji */
+  const RE = /[\u{1F300}-\u{1FAFF}\u{2300}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{20E3}]/gu;
+  const KEEP = /[⚡✓✔★☆●·›‹•]/u;
+  const strip = v => {
+    if (typeof v === 'string'){
+      if (!RE.test(v)) return v;
+      const out = v.replace(RE, c => KEEP.test(c) ? c : '').replace(/\s{2,}/g, ' ').trim();
+      return out || v;
+    }
+    return v;
+  };
+  [T.vi, T.en].forEach(D => Object.keys(D).forEach(k => { const v = D[k]; if (typeof v === 'string') D[k] = strip(v); }));
+})();
+
+/* ---------- 04 + 05: "Tin của tôi" gộp 1 thẻ, có số và thông tin phân biệt ---------- */
+function n49dWhen(ms){
+  if (!ms) return '';
+  const d = new Date(ms);
+  return `${d.getDate()}/${d.getMonth() + 1}`;
+}
+function n49dMeta(a){
+  const biz = typeof adBiz === 'function' ? (adBiz(a) || '') : '';
+  const place = (typeof placeName === 'function' ? placeName(a.zip, a.city) : '') || 'TX';
+  const when = n49dWhen(a.postedMs);
+  return [biz, place, when ? `${t('n49dOn')} ${when}` : ''].filter(Boolean).join(' · ');
+}
+Object.assign(T.vi, {n49dOn:'đăng'});
+Object.assign(T.en, {n49dOn:'posted'});
+if (typeof n3MyAds === 'function') n3MyAds = function(){
+  const ads = n1MyAds().filter(a => a.mod !== 'rejected');
+  /* đánh số theo thứ tự đăng (cũ nhất là Tin 1) để số không nhảy khi đăng thêm */
+  const order = ads.slice().sort((x, y) => (x.postedMs || 0) - (y.postedMs || 0));
+  const body = ads.length ? ads.map(a => {
+    const n = order.indexOf(a) + 1;
+    const st = typeof n2Status === 'function' ? n2Status(a) : '';
+    const bd = typeof n2Badges === 'function' ? n2Badges(a) : '';
+    return `<div class="card n1me n3me n49dcard">
+      <div class="n49dhead"><span class="n49dnum">${esc(t('n49dPost', n))}</span>
+        <button class="btn-link n49dedit" type="button" data-act="liveedit" data-k="ads" data-v="${esc(a.id)}">${esc(t('btnEditAd'))}</button></div>
+      <a class="n1row n49drow" href="#ad-${esc(a.id)}"><div>
+        <b>${esc(titleOf(a))}</b>
+        <div class="n1sub n49dmeta">${esc(n49dMeta(a))}</div>${bd}</div></a>
+      ${st ? `<div class="n49dst">${st}</div>` : ''}</div>`;
+  }).join('') : `<div class="card n1empty n3empty"><p><b>${t('n3NoAd')}</b><br><span class="hint">${t('n3NoAdD')}</span></p></div>`;
+  return `<div class="wrap narrow page"><h1 class="pg-title">${t('n3MyAdsTitle')}</h1>${body}
+    <a class="btn btn-primary btn-block n1big" href="#post-hiring">${t('postHiringBtn')}</a></div>`;
+};
+
+/* ---------- 24: IndexedDB hỏng (Safari riêng tư, máy hết chỗ) thì không treo trang ---------- */
+(() => {
+  if (typeof firebase === 'undefined' || !firebase.auth) return;
+  try {
+    const A = firebase.auth.Auth.Persistence;
+    firebase.auth().setPersistence(A.LOCAL).catch(() => firebase.auth().setPersistence(A.SESSION)
+      .catch(() => firebase.auth().setPersistence(A.NONE).catch(e => console.warn('n49d persist', e))));
+  } catch (e) { console.warn('n49d persist', e); }
+})();
+
+/* ---------- 01: chat không treo "Đang tải…" khi hỏng ---------- */
+(() => {
+  if (typeof viewThread !== 'function') return;
+  const v0 = viewThread;
+  viewThread = function(id){
+    let h = v0.apply(this, arguments);
+    const L = state.live;
+    if (typeof h !== 'string' || !L || !L.msgErr || !L.msgErr[id]) return h;
+    const note = `<p class="n2note warn n49derr">${esc(t('n49dChatErr'))}</p>`;
+    return h.indexOf('class="bubbles"') >= 0
+      ? h.replace(/(<div class="bubbles"[^>]*>)/, `${note}$1`)
+      : note + h;
+  };
+  /* vào lại cuộc trò chuyện thì thử nghe lại từ đầu */
+  if (typeof n48SubMsgs === 'function'){
+    const s0 = n48SubMsgs;
+    n48SubMsgs = function(tid){
+      const L = state.live;
+      if (L && L.msgErr && L.msgErr[tid] && (!L.msgSub || L.msgSub.id !== tid)) delete L.msgErr[tid];
+      return s0.apply(this, arguments);
+    };
+  }
+})();
+
+/* ---------- dọn sau mỗi lần vẽ ---------- */
+function n49dTidy(){
+  /* 03: "Chọn ít nhất 1" không nói rõ thiếu gì khi đã bấm Ăn chia / Lương cố định */
+  const generic = String(t('errPick')).trim();
+  document.querySelectorAll('[id$="payType-e"], [id$="payWanted-e"]').forEach(p => {
+    if (p.textContent.trim() !== generic) return;
+    if (document.querySelector('.n33famb.on')) p.textContent = t('n49dPayKind');
+  });
+  /* 09: thêm một dòng chỉ sang nút ẩn hồ sơ khi công tắc đang tắt */
+  document.querySelectorAll('.card.n1rbox').forEach(box => {
+    if (box.classList.contains('on') || box.querySelector('.n49dhint')) return;
+    const sub = box.querySelector('.n49sub') || box.querySelector('.n1rhead');
+    if (!sub) return;
+    const p = document.createElement('p');
+    p.className = 'hint n49dhint'; p.textContent = t('n49dOffHint');
+    box.appendChild(p);
+  });
+}
+(() => {
+  const r0 = render;
+  render = function(){ const out = r0.apply(this, arguments); try { n49dTidy(); } catch (e) { console.warn('n49d tidy', e); } return out; };
+})();
+
+/* ---------- CSS ---------- */
+(() => { const st = document.createElement('style'); st.textContent = `
+/* 04 + 05: "Tin của tôi" – mỗi tin đúng một thẻ */
+.n49dcard{display:block;padding:14px 15px}
+.n49dhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 6px}
+.n49dnum{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#5E5458)}
+.n49dedit{flex:0 0 auto;white-space:nowrap;text-decoration:none;font-weight:700;font-size:14px;padding:4px 0}
+.n49dedit:hover{text-decoration:underline}
+.n49drow{display:block;text-decoration:none;color:inherit}
+.n49drow b{font-size:16px;line-height:1.3}
+.n49dmeta{color:var(--muted,#5E5458);font-size:13.5px;margin-top:2px}
+.n49dst{margin-top:12px;padding-top:12px;border-top:1px solid var(--line,#EFE6E8)}
+.n49dst .card{border:0!important;box-shadow:none!important;background:transparent!important;padding:0!important;margin:0!important;border-radius:0!important}
+.n49dst .n32st{margin:0}
+.n49dst > :first-child{margin-top:0}
+.n49dst > :last-child{margin-bottom:0}
+
+/* 01: báo lỗi trong khung chat */
+.n49derr{margin:10px 12px}
+
+/* 09 */
+.n49dhint{margin:8px 0 0;font-size:13px}
+`; document.head.appendChild(st); })();
+
+/* ================= n150adm: đồng bộ phần admin với giao diện người dùng =================
+   19 admin dùng chung khuôn với tiệm / thợ; trang Tài khoản admin giống trang của người dùng
+   20 tab "Nháp" / nút "Nhập" dễ nhầm nhau -> đổi tên
+   21 số liệu còn nói theo luồng cũ ("Được kết nối", "Chốt việc trong chat")
+   22 "Hôm nay cần làm" bỏ sót tin nhắn trực tiếp chưa ai trả lời
+   23 "Xem như người dùng" cho xem đúng trang chủ tiệm / thợ                              */
+
+/* ---------- 20: tên tab và nút rõ ràng hơn ---------- */
+Object.assign(T.vi, {
+  admT_draft:'Tin nháp', admT_imp:'Nhập CSV', admImport:'Nhập từ CSV',
+  admT_mod:'Chờ duyệt', admT_ad:'Tạo tin tiệm', admT_tech:'Tạo hồ sơ thợ',
+  n50Preview:'Đang xem như người dùng', n50PreviewOff:'Thoát xem thử',
+  n50AsSalon:'Trang chủ tiệm', n50AsTech:'Trang chủ thợ',
+  n50AdmCard:'Quản trị', n50AdmOpen:'Mở trang quản trị',
+  n50Chat:'Có nhắn tin trực tiếp', n50Reply:'Được trả lời',
+  n50NoReply:(a, b, h) => `${a} nhắn ${b} đã ${h} giờ, chưa ai trả lời`
+});
+Object.assign(T.en, {
+  admT_draft:'Draft posts', admT_imp:'Import CSV', admImport:'Import from CSV',
+  admT_mod:'To review', admT_ad:'New salon post', admT_tech:'New tech profile',
+  n50Preview:'Previewing as a user', n50PreviewOff:'Exit preview',
+  n50AsSalon:'Salon home', n50AsTech:'Tech home',
+  n50AdmCard:'Admin', n50AdmOpen:'Open admin',
+  n50Chat:'Started a direct chat', n50Reply:'Got a reply',
+  n50NoReply:(a, b, h) => `${a} messaged ${b} ${h}h ago, no reply yet`
+});
+
+/* ---------- 23: xem như người dùng ----------
+   n3Role() là chỗ duy nhất quyết định web vẽ theo vai nào, nên chỉ cần ghi đè ở đây. */
+state.n50 = state.n50 || {as:''};
+(() => {
+  if (typeof n3Role !== 'function') return;
+  const r0 = n3Role;
+  n3Role = function(){
+    const a = state.n50 && state.n50.as;
+    return a && state.adm && state.adm.on ? a : r0.apply(this, arguments);
+  };
+})();
+ACT.n50as = function(el){ state.n50.as = el.dataset.v || ''; location.hash = '#home'; render(); };
+ACT.n50asoff = function(){ state.n50.as = ''; location.hash = '#admin'; render(); };
+(() => {
+  const r0 = render;
+  render = function(){
+    const out = r0.apply(this, arguments);
+    try {
+      if (!state.n50.as || !(state.adm && state.adm.on)) return out;
+      const app = document.getElementById('app');
+      if (!app || app.querySelector('.n50bar')) return out;
+      app.insertAdjacentHTML('afterbegin',
+        `<div class="n50bar"><span>${esc(t('n50Preview'))} · ${esc(t(state.n50.as === 'tech' ? 'n3RoleTech' : 'n3RoleSalon'))}</span>` +
+        `<button type="button" data-act="n50asoff">${esc(t('n50PreviewOff'))}</button></div>`);
+    } catch (e) { console.warn('n50 bar', e); }
+    return out;
+  };
+})();
+/* thay 2 nút cũ (vốn chỉ mở danh sách) bằng 2 nút xem đúng trang chủ */
+if (typeof admOver === 'function'){
+  const o0 = admOver;
+  admOver = function(){
+    let h = o0.apply(this, arguments);
+    if (typeof h !== 'string') return h;
+    return h.replace(/<a class="btn btn-ghost" href="#salon">[\s\S]*?<\/a>\s*<a class="btn btn-ghost" href="#jobs">[\s\S]*?<\/a>/,
+      `<button class="btn btn-ghost" type="button" data-act="n50as" data-v="salon">${esc(t('n50AsSalon'))}</button>` +
+      `<button class="btn btn-ghost" type="button" data-act="n50as" data-v="tech">${esc(t('n50AsTech'))}</button>`);
+  };
+}
+
+/* ---------- 21: số liệu theo luồng mới ----------
+   Cuộc trò chuyện trực tiếp có status 'open', trước đây bị bỏ qua nên phễu đếm thiếu. */
+Object.assign(T.vi, {n42Fun:['Đăng ký', 'Có bài', 'Có liên hệ', 'Nhắn tin qua lại', 'Tuyển được / có việc']});
+Object.assign(T.en, {n42Fun:['Signed up', 'Has a post', 'Made contact', 'Two-way chat', 'Hired / found work']});
+Object.assign(T.vi, {n42FunNote:'% = so với bước trước. Không tính tài khoản admin. "Có bài" tính cả bài nháp và bài đã đóng. "Có liên hệ" = đã mở cuộc trò chuyện, ứng tuyển hoặc mời. "Nhắn tin qua lại" = cả hai bên đều đã gửi tin.'});
+Object.assign(T.en, {n42FunNote:'% = against the previous step. Admin accounts excluded. "Has a post" includes drafts and closed posts. "Made contact" = opened a chat, applied or offered. "Two-way chat" = both sides sent a message.'});
+(() => {
+  if (typeof n42Stats !== 'function') return;
+  const s0 = n42Stats;
+  n42Stats = function(){
+    const ths = (state.tr && state.tr.threads) || [];
+    const keep = ths.filter(x => x.status === 'accepted');
+    /* n150: tính cả cuộc nhắn trực tiếp (open) và đơn / lời mời đang chờ */
+    const patched = ths.map(x => (x.status === 'open' || x.status === 'pending') ? Object.assign({}, x, {status:'accepted'}) : x);
+    if (!state.tr) return s0.apply(this, arguments);
+    const orig = state.tr.threads;
+    state.tr.threads = patched;
+    try { return s0.apply(this, arguments); } finally { state.tr.threads = orig; void keep; }
+  };
+})();
+/* bỏ dòng "Chốt việc trong chat" – tính năng Đã chốt đã gỡ khỏi giao diện người dùng */
+Object.assign(T.vi, {n44AdmDeal:() => ''});
+Object.assign(T.en, {n44AdmDeal:() => ''});
+
+/* ---------- 22: "Hôm nay cần làm" thêm tin nhắn trực tiếp chưa ai trả lời ---------- */
+(() => {
+  if (typeof n34TodayItems !== 'function') return;
+  const i0 = n34TodayItems;
+  n34TodayItems = function(){
+    const out = i0.apply(this, arguments) || [];
+    try {
+      const now = Date.now(), DAY = 86400000;
+      (state.tr && state.tr.threads || []).forEach(x => {
+        if (x.kind !== 'chat' || x.status === 'blocked') return;
+        if (!x.lastFrom || x.lastFrom !== x.from) return;          /* đã có người trả lời */
+        const age = now - (n34Ms(x.lastAt) || n34Ms(x.createdAt) || 0);
+        if (age < 2 * DAY) return;
+        const nm = x.names || {}, to = (x.members || []).find(m => m !== x.from);
+        out.push({ic:'', txt:t('n50NoReply', n34Nm(nm[x.from]), n34Nm(nm[to]), Math.floor(age / 3600000)), act:'href="#admin-track"'});
+      });
+    } catch (e) { console.warn('n50 todo', e); }
+    /* bỏ emoji ở đầu mỗi dòng cho đồng bộ với phần còn lại của web */
+    return out.map(x => Object.assign({}, x, {ic:''}));
+  };
+})();
+
+/* ---------- 19: trang Tài khoản của admin dùng chung khuôn với tiệm / thợ ----------
+   n148 cố tình trả về trang cũ cho admin. Nay dựng trang mới rồi gắn thêm thẻ Quản trị. */
+(() => {
+  const a0 = viewAccount;
+  viewAccount = function(){
+    if (!(state.adm && state.adm.on)) return a0.apply(this, arguments);
+    const on = state.adm.on;
+    let h;
+    state.adm.on = false;
+    try { h = a0.apply(this, arguments); } finally { state.adm.on = on; }
+    if (typeof h !== 'string') return h;
+    /* phần đổi vai của người dùng thường không hợp với admin */
+    h = h.replace(/<section style="margin-top:18px">[\s\S]*?<\/section>/, '');
+    /* giữ đúng vai "Quản trị viên" thay vì Tiệm / Thợ */
+    h = h.replace(/(<div class="n48grow"><b>[^<]*<\/b><span>)[^<]*(<\/span>)/,
+      (m, x, y) => x + esc(t('nmRole')) + y);
+    const I = (k) => typeof N48I === 'function' ? N48I(k, 'n48mut') : '';
+    const chev = typeof N48I === 'function' ? N48I('chev', 'n48mut n48sm') : '';
+    const card = `<section class="n48sec n50admsec"><h2 class="n48h">${esc(t('n50AdmCard'))}</h2><div class="n48card">
+        <a class="n48ar n48al2" href="#admin">${I('doc')}<span class="n48grow">${esc(t('n50AdmOpen'))}</span>${chev}</a>
+        <button type="button" class="n48ar n48al2" data-act="n50as" data-v="salon">${I('swap')}<span class="n48grow">${esc(t('n50AsSalon'))}</span>${chev}</button>
+        <button type="button" class="n48ar n48al2" data-act="n50as" data-v="tech">${I('swap')}<span class="n48grow">${esc(t('n50AsTech'))}</span>${chev}</button>
+      </div></section>`;
+    return h.indexOf('class="n49out"') >= 0 ? h.replace('<button type="button" class="n49out"', card + '<button type="button" class="n49out"')
+         : h.indexOf('class="n48del"') >= 0 ? h.replace('<button type="button" class="n48del"', card + '<button type="button" class="n48del"')
+         : h.replace(/<\/div>\s*$/, card + '</div>');
+  };
+})();
+
+/* ---------- CSS: admin dùng cùng nét với phần còn lại ---------- */
+(() => { const st = document.createElement('style'); st.textContent = `
+.n50bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 14px;
+  background:#2B2227;color:#fff;font-size:13.5px;font-weight:600}
+.n50bar button{border:1px solid rgba(255,255,255,.45);background:none;color:#fff;font:inherit;font-size:13px;
+  font-weight:700;border-radius:999px;padding:5px 13px;cursor:pointer}
+.n50bar button:hover{background:rgba(255,255,255,.14)}
+/* tab admin: cùng kiểu viên thuốc với bộ lọc ở Tin nhắn */
+.adm-tabs{gap:8px}
+.adm-tabs a{border-color:var(--line,#EFE6E8);background:#fff;font-weight:600;padding:9px 15px;font-size:14px}
+.adm-tabs a.on{box-shadow:none}
+.adm-card{border-radius:16px}
+.adm-item{border-radius:16px}
+.n34tl a{text-decoration:none}
 `; document.head.appendChild(st); })();
 
 render();
